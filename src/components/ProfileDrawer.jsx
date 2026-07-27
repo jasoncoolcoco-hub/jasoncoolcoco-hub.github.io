@@ -57,7 +57,9 @@ export default function ProfileDrawer({
 
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    closeButtonRef.current?.focus()
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus()
+    })
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -86,6 +88,7 @@ export default function ProfileDrawer({
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      window.cancelAnimationFrame(focusFrame)
       document.body.style.overflow = previousOverflow
       document.removeEventListener('keydown', handleKeyDown)
       triggerRef.current?.focus()
