@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+
+# Local-only source material and pre-development snapshots.
+source_assets/
+90_Backup/
