@@ -59,6 +59,9 @@
   title, and scroll sequence.
 - Slowed the Profile Drawer to a synchronized 0.88-second opening and
   0.49-second closing, using shorter transform distances without adding delay.
+- Deferred the Drawer's initial focus by one animation frame so the close
+  control reliably receives focus after the permanently mounted overlay becomes
+  visible.
 
 ### Not included
 
