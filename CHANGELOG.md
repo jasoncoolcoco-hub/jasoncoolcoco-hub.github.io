@@ -1,5 +1,107 @@
 # Changelog
 
+## 0.2.0 — 2026-07-28
+
+### Added
+
+- Full-screen Footprints chapter with a black cinematic field and restrained
+  CSS grain.
+- Scroll-linked Home darkening plus globe entrance, settled, and reverse-exit
+  states.
+- Official-example-based Three.js TSL Earth with realistic local day, night,
+  cloud, roughness, bump, city-light, and atmosphere textures.
+- WebGPU rendering with automatic WebGL2 backend fallback and an error-only
+  static poster fallback.
+- State-specific quaternion controls, keyboard accessibility, and globe-only
+  two-preset zoom.
+- Five independent Footprints layers for background, chapter navigation, globe,
+  future Photo Space, and future Memory Transition.
+- Explicit `GLOBE_IDLE`, `GLOBE_HOVER`, `GLOBE_SELECTED`,
+  `ENTERING_MEMORY`, `PHOTO_SPACE`, and `EXITING_MEMORY` scene states.
+- Slow idle rotation, visibility-aware frame pausing, capped pixel ratio,
+  reduced-motion behavior, and reduced 2048px textures for mobile or
+  lower-capability devices.
+- Third-party source, licence, and texture attribution documentation.
+- Maintainable base-location and primary-route configuration for Huizhou,
+  Changchun, and Kuala Lumpur.
+- Static Earth-local base nodes with a bright point, tangent ring, and
+  restrained halo.
+- Static elevated Huizhou–Changchun and Changchun–Kuala Lumpur life routes,
+  built from spherical interpolation, a sinusoidal altitude profile,
+  Catmull–Rom curves, and two-layer TubeGeometry.
+
+### Changed
+
+- Made the chapter navigation derive its active state from the visible chapter,
+  including the compact mobile control.
+- Marked Footprints as available while keeping Lab and Thanks in the `SOON`
+  state.
+- Lifted shadow-side detail with restrained hemispheric and ambient fill while
+  preserving the natural day-night transition and subtle city lights.
+- Shifted the viewer-facing composition toward the darker hemisphere while
+  keeping ocean, land, cloud, atmosphere, and city-light detail readable.
+- Replaced object-group zoom with Earth-camera distance zoom, keeping material
+  world space stable and eliminating the zoom-black failure.
+- Set a `1.70` requested Explore zoom while deriving the actual maximum from
+  live canvas dimensions, camera FOV, and a safety margin so the globe cannot
+  be clipped on smaller viewports.
+- Replaced continuous globe wheel and pinch zoom with a desktop-only,
+  empty-globe double-click toggle between the approved `1.00` and responsive
+  maximum
+  camera-distance presets, with Enter and Space as keyboard alternatives.
+- Reframed both normal and enlarged Earth states on the right at the same `8vw`
+  desktop offset (`4vw` on narrower desktops), removing all extra horizontal
+  movement during enlargement.
+- Split idle rotation into a faster `0.0277` radians-per-second Default rate and
+  a calmer `0.0147` Explore rate, blended over `0.58s`.
+- Corrected Explore horizontal drag so the visible surface follows the pointer
+  direction while retaining the approved local-axis constraint.
+- Added direct, restrained Explore vertical drag with an absolute `±18°`
+  transformed-axis pitch clamp.
+- Reduced Explore horizontal and vertical sensitivity again to `0.42` and
+  `0.32` multipliers for more precise close inspection without affecting
+  Default automatic rotation.
+- Added exponential drag-target damping at rate `14`, producing a short,
+  non-inertial catch-up of about `0.16s` without bounce or orientation reset.
+- Preserved the wide-screen canvas safety area and calibrated camera distances
+  while allowing the responsive maximum to approach the largest unclipped
+  framing.
+- Removed edge sparkle by increasing limb geometry resolution, reducing bump
+  strength, raising roughness, stabilizing atmosphere alpha/depth compositing,
+  and reducing the background grain contribution.
+- Disabled Default manual rotation and removed its trackball, pre-drag
+  quaternion, and restoration states; Default now supports automatic rotation,
+  native scrolling, and the empty-globe size toggle only.
+- Kept Explore drag orientation permanent and removed all pre-enlarge snapshots,
+  hard resets, and exit-pose restoration; shrinking still changes camera
+  distance and rotation-speed target only.
+- Restored native mouse-wheel, trackpad scroll, and browser pinch behavior over
+  the canvas; mobile now keeps a fixed, non-draggable `1.00` globe and native
+  vertical page scrolling.
+- Added a drag-distance guard so globe rotation cannot accidentally trigger the
+  size toggle, while keeping deliberate double-click zoom immediately available
+  and future routes and nodes retain priority through a reserved interaction
+  marker.
+- Isolated navigation and background from every Globe Scene and camera
+  transform, with documented normal and transition-only z-index order.
+- Removed the DOM pulse-pin, cluster, label, and focus-to-expand system.
+
+### Removed
+
+- Removed the earlier Kuala Lumpur–Singapore validation route and its dormant
+  placeholder configuration.
+
+### Deferred
+
+- Route growth, energy flow, moving points, labels, secondary routes, spatial
+  Photo Space, memory tunnel, photo colour extraction, and transition animation
+  remain deferred.
+
+### Preserved
+
+- Approved Home V0.1 visual implementation, Profile Drawer, custom domain, and
+  deployment configuration.
+
 ## 0.1.0 — 2026-07-27
 
 ### Added

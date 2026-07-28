@@ -5,8 +5,14 @@ export default function SideNavigation({
   chapters,
   navigation,
   reducedMotion,
+  activeChapterId,
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const currentChapter =
+    chapters.find((chapter) => chapter.id === activeChapterId) ??
+    chapters.find((chapter) => chapter.status === 'current') ??
+    chapters[0]
+  const mobileMenuId = `mobile-chapter-menu-${currentChapter.id}`
 
   useEffect(() => {
     if (!isMenuOpen) return undefined
@@ -22,13 +28,15 @@ export default function SideNavigation({
   const renderChapterList = (animateEntrance = false) => (
     <ol className="chapter-list">
       {chapters.map((chapter, index) => {
-        const isCurrent = chapter.status === 'current'
+        const isCurrent = chapter.id === currentChapter.id
+        const isSoon = chapter.status === 'soon'
         const rowDelay = 1.3 + index * 0.15
 
         return (
           <motion.li
             key={chapter.id}
             className={`chapter-list__item${isCurrent ? ' is-current' : ''}`}
+            aria-current={isCurrent ? 'page' : undefined}
             initial={
               animateEntrance
                 ? { opacity: 0, y: reducedMotion ? 0 : 7 }
@@ -43,7 +51,7 @@ export default function SideNavigation({
           >
             <span className="chapter-list__number">{chapter.number}</span>
             <span className="chapter-list__name">{chapter.name}</span>
-            {!isCurrent && (
+            {!isCurrent && isSoon && (
               <motion.span
                 className="chapter-list__status"
                 initial={animateEntrance ? { opacity: 0 } : false}
@@ -82,14 +90,14 @@ export default function SideNavigation({
         }}
       >
         <span className="mobile-navigation__current">
-          {chapters[0].number} {chapters[0].name}
+          {currentChapter.number} {currentChapter.name}
         </span>
         <button
           type="button"
           className="mobile-navigation__toggle"
           onClick={() => setIsMenuOpen((value) => !value)}
           aria-expanded={isMenuOpen}
-          aria-controls="mobile-chapter-menu"
+          aria-controls={mobileMenuId}
         >
           {isMenuOpen ? navigation.menuClose : navigation.menuOpen}
         </button>
@@ -98,7 +106,7 @@ export default function SideNavigation({
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            id="mobile-chapter-menu"
+            id={mobileMenuId}
             className="mobile-chapter-menu"
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}

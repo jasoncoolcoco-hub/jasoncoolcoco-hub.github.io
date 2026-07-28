@@ -1,0 +1,254 @@
+.home-transition-shell {
+  position: relative;
+  height: 150svh;
+  background: #020305;
+}
+
+.home-transition-shell__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  min-height: 640px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.home-transition-shell__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #020305;
+  pointer-events: none;
+}
+
+.footprints-section {
+  position: relative;
+  height: 320svh;
+  min-height: 1920px;
+  background: #020305;
+}
+
+.footprints-section__sticky {
+  --footprints-layer-background: 0;
+  --footprints-layer-globe: 20;
+  --footprints-layer-photo-space: 25;
+  --footprints-layer-navigation: 30;
+  --footprints-layer-globe-transition: 40;
+  --footprints-layer-transition: 50;
+  --footprints-background-tint: rgba(14, 25, 32, 0.34);
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100svh;
+  min-height: 640px;
+  overflow: hidden;
+  isolation: isolate;
+  background: #020305;
+}
+
+.footprints-background-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--footprints-layer-background);
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 44%,
+      var(--footprints-background-tint),
+      transparent 42%
+    ),
+    #020305;
+  pointer-events: none;
+}
+
+.footprints-section__grain {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.09;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.055) 0 0.35px, transparent 0.7px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.032) 0 0.3px, transparent 0.65px);
+  background-position: 0 0, 3px 5px;
+  background-size: 5px 5px, 7px 7px;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.footprints-navigation-layer,
+.footprints-globe-layer,
+.footprints-photo-space-layer,
+.footprints-memory-transition-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.footprints-navigation-layer {
+  z-index: var(--footprints-layer-navigation);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.footprints-navigation-layer[data-being-covered="true"] {
+  opacity: 0.58;
+}
+
+.footprints-navigation-layer .mobile-navigation,
+.footprints-navigation-layer .mobile-chapter-menu {
+  pointer-events: auto;
+}
+
+.footprints-globe-layer {
+  z-index: var(--footprints-layer-globe);
+  pointer-events: none;
+}
+
+.footprints-globe-layer[data-elevated="true"] {
+  z-index: var(--footprints-layer-globe-transition);
+}
+
+.footprints-photo-space-layer {
+  z-index: var(--footprints-layer-photo-space);
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.footprints-photo-space-layer[data-active="true"] {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.footprints-memory-transition-layer {
+  z-index: var(--footprints-layer-transition);
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.footprints-memory-transition-layer[data-active="true"] {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.footprints-globe-entrance,
+.footprints-globe-exit {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.earth-canvas {
+  position: relative;
+  width: min(76vw, 98svh, 1050px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: drop-shadow(0 34px 60px rgba(0, 0, 0, 0.4));
+  outline: 1px solid transparent;
+  outline-offset: 8px;
+  touch-action: pan-y pinch-zoom;
+  pointer-events: auto;
+  transform: translateX(8vw);
+  transition:
+    outline-color 180ms ease,
+    outline-offset 180ms ease;
+}
+
+.earth-canvas[data-controls-enabled="false"] {
+  pointer-events: none;
+}
+
+.earth-canvas canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y pinch-zoom;
+}
+
+.earth-canvas:focus-visible {
+  outline-color: rgba(134, 189, 216, 0.62);
+  outline-offset: 5px;
+}
+
+.earth-canvas[data-renderer="webgpu"],
+.earth-canvas[data-renderer="webgl2"] {
+  cursor: pointer;
+}
+
+.earth-canvas[data-interaction-mode="explore"][data-renderer="webgpu"],
+.earth-canvas[data-interaction-mode="explore"][data-renderer="webgl2"] {
+  cursor: grab;
+}
+
+.earth-canvas[data-interaction-mode="explore"][data-renderer="webgpu"]:active,
+.earth-canvas[data-interaction-mode="explore"][data-renderer="webgl2"]:active {
+  cursor: grabbing;
+}
+
+.earth-fallback,
+.earth-fallback__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.earth-fallback__image {
+  display: block;
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .earth-canvas {
+    width: min(96vw, 90svh, 780px);
+  }
+}
+
+@media (min-width: 701px) and (max-width: 959px) {
+  .earth-canvas {
+    transform: translateX(4vw);
+  }
+
+}
+
+@media (max-width: 700px) {
+  .home-transition-shell__sticky,
+  .footprints-section__sticky {
+    min-height: 560px;
+  }
+
+  .footprints-section {
+    min-height: 1680px;
+  }
+
+  .earth-canvas {
+    width: min(104vw, 78svh, 620px);
+    transform: none;
+  }
+
+  .footprints-section__grain {
+    opacity: 0.07;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footprints-navigation-layer {
+    transition: none;
+  }
+
+  .earth-canvas {
+    cursor: default;
+    transition:
+      outline-color 180ms ease,
+      outline-offset 180ms ease;
+  }
+}
+
+.earth-canvas[data-reduced-motion="true"] {
+  cursor: default;
+}
