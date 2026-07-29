@@ -143,18 +143,33 @@
 
 .earth-canvas {
   position: relative;
-  width: min(76vw, 98svh, 1050px);
-  aspect-ratio: 1;
-  border-radius: 50%;
+  width: 84vw;
+  height: 100svh;
+  max-height: 1050px;
+  border-radius: 0;
   filter: drop-shadow(0 34px 60px rgba(0, 0, 0, 0.4));
-  outline: 1px solid transparent;
-  outline-offset: 8px;
+  outline: none;
   touch-action: pan-y pinch-zoom;
   pointer-events: auto;
   transform: translateX(8vw);
   transition:
-    outline-color 180ms ease,
-    outline-offset 180ms ease;
+    filter 180ms ease;
+}
+
+.earth-canvas::after {
+  content: "";
+  position: absolute;
+  top: auto;
+  bottom: 16px;
+  left: 50%;
+  z-index: 3;
+  width: 44px;
+  height: 3px;
+  border-radius: 999px;
+  background: transparent;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: background-color 180ms ease;
 }
 
 .earth-canvas[data-controls-enabled="false"] {
@@ -170,9 +185,170 @@
   touch-action: pan-y pinch-zoom;
 }
 
+.footprints-label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.footprints-label-debug-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  display: none;
+  padding: 7px 0 0 8px;
+  color: rgba(122, 232, 255, 0.96);
+  font: 8px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0;
+  text-shadow: 0 1px 3px #000;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.footprints-label-layer[data-debug="true"]
+  .footprints-label-debug-anchor[data-visible="true"] {
+  display: block;
+}
+
+.footprints-label-debug-anchor::before,
+.footprints-label-debug-anchor::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(255, 103, 103, 0.96);
+  transform: translate(-50%, -50%);
+}
+
+.footprints-label-debug-anchor::before {
+  width: 9px;
+  height: 1px;
+}
+
+.footprints-label-debug-anchor::after {
+  width: 1px;
+  height: 9px;
+}
+
+.footprints-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  min-width: max-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  gap: 2px;
+  color: rgba(235, 245, 250, 0.78);
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 550;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(-100vw, -100vh, 0);
+  transition:
+    opacity 150ms ease,
+    color 150ms ease;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.84);
+  text-align: left;
+  white-space: nowrap;
+  will-change: transform, opacity;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.footprints-label[data-kind="base"] {
+  color: rgba(244, 248, 249, 0.86);
+  font-size: 10px;
+  font-weight: 620;
+}
+
+.footprints-label[data-visible="true"] {
+  visibility: visible;
+  opacity: 0.58;
+}
+
+.footprints-label[data-kind="base"][data-visible="true"] {
+  opacity: 0.76;
+}
+
+.footprints-label[data-selected="true"] {
+  color: rgba(255, 255, 255, 0.96);
+  opacity: 1;
+}
+
+.footprints-label:focus-visible {
+  outline: 1px solid rgba(210, 232, 242, 0.58);
+  outline-offset: 4px;
+}
+
+.footprints-label__secondary,
+.footprints-label__visits,
+.footprints-label__route-details {
+  display: none;
+  color: rgba(222, 235, 241, 0.7);
+  font-size: 8px;
+  font-weight: 450;
+  letter-spacing: 0.055em;
+  text-transform: none;
+}
+
+.footprints-label__visits {
+  color: rgba(206, 222, 230, 0.62);
+  font-size: 7.5px;
+  letter-spacing: 0.04em;
+}
+
+.footprints-label__route-details,
+.footprints-label__route-detail {
+  gap: 2px;
+}
+
+.footprints-label__route-detail {
+  display: grid;
+}
+
+.footprints-label__route-source {
+  color: rgba(222, 235, 241, 0.7);
+  font-size: 7.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.footprints-label[data-expanded="true"]
+  .footprints-label__secondary,
+.footprints-label[data-expanded="true"]
+  > .footprints-label__visits,
+.footprints-label[data-expanded="true"]
+  .footprints-label__route-details {
+  display: block;
+}
+
+.footprints-label[data-expanded="true"]
+  .footprints-label__route-details {
+  display: grid;
+}
+
+.footprints-label[data-expanded="true"]
+  .footprints-label__route-detail
+  .footprints-label__visits {
+  display: block;
+}
+
 .earth-canvas:focus-visible {
-  outline-color: rgba(134, 189, 216, 0.62);
-  outline-offset: 5px;
+  outline: none;
+}
+
+.earth-canvas:focus-visible::after {
+  background: rgba(134, 189, 216, 0.72);
 }
 
 .earth-canvas[data-renderer="webgpu"],
@@ -190,6 +366,13 @@
   cursor: grabbing;
 }
 
+.earth-canvas[data-intro-locked="true"][data-renderer="webgpu"],
+.earth-canvas[data-intro-locked="true"][data-renderer="webgl2"],
+.earth-canvas[data-intro-locked="true"][data-renderer="webgpu"]:active,
+.earth-canvas[data-intro-locked="true"][data-renderer="webgl2"]:active {
+  cursor: pointer;
+}
+
 .earth-fallback,
 .earth-fallback__image {
   position: absolute;
@@ -205,7 +388,7 @@
 
 @media (max-width: 900px) {
   .earth-canvas {
-    width: min(96vw, 90svh, 780px);
+    width: 92vw;
   }
 }
 
@@ -227,7 +410,12 @@
   }
 
   .earth-canvas {
+    position: relative;
     width: min(104vw, 78svh, 620px);
+    height: auto;
+    max-height: none;
+    aspect-ratio: 1;
+    border-radius: 50%;
     transform: none;
   }
 
@@ -243,9 +431,11 @@
 
   .earth-canvas {
     cursor: default;
-    transition:
-      outline-color 180ms ease,
-      outline-offset 180ms ease;
+    transition: filter 180ms ease;
+  }
+
+  .footprints-label {
+    transition-duration: 80ms;
   }
 }
 

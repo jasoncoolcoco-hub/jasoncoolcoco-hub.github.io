@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { footprintsEntryThresholds } from '../../data/footprintsView'
 import FallbackEarthPoster from './FallbackEarthPoster'
 import { footprintsSceneStates } from './footprintsSceneState'
 
@@ -16,7 +17,6 @@ export default function EarthCanvas({
   reducedMotion,
   instructions,
   label,
-  onHoverChange,
   onSelectionChange,
   sceneState,
   toggleLabel,
@@ -27,8 +27,13 @@ export default function EarthCanvas({
     reducedMotion ? 0 : scrollRotation.get(),
   )
   const isVisibleRef = useRef(false)
+  const entryStateRef = useRef({
+    inside: false,
+    sequence: 0,
+  })
   const pointerRecordsRef = useRef(new Map())
   const suppressDoubleClickUntilRef = useRef(0)
+  const suppressSelectionClickUntilRef = useRef(0)
   const [isNearViewport, setIsNearViewport] = useState(false)
   const [renderState, setRenderState] = useState('idle')
   const [zoomMode, setZoomMode] = useState('default')
@@ -76,13 +81,49 @@ export default function EarthCanvas({
       },
       { threshold: 0.01 },
     )
+    const entryObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          !entryStateRef.current.inside &&
+          entry.isIntersecting &&
+          entry.intersectionRatio >= footprintsEntryThresholds.enter
+        ) {
+          entryStateRef.current.inside = true
+          entryStateRef.current.sequence += 1
+          runtimeRef.current?.enterFootprints({
+            entryId: entryStateRef.current.sequence,
+            reason: 'external-section',
+          })
+          return
+        }
+
+        if (
+          entryStateRef.current.inside &&
+          (
+            !entry.isIntersecting ||
+            entry.intersectionRatio <= footprintsEntryThresholds.leave
+          )
+        ) {
+          entryStateRef.current.inside = false
+          runtimeRef.current?.prepareFootprintsEntry()
+        }
+      },
+      {
+        threshold: [
+          footprintsEntryThresholds.leave,
+          footprintsEntryThresholds.enter,
+        ],
+      },
+    )
 
     preloadObserver.observe(host)
     visibilityObserver.observe(host)
+    entryObserver.observe(host)
 
     return () => {
       preloadObserver.disconnect()
       visibilityObserver.disconnect()
+      entryObserver.disconnect()
     }
   }, [])
 
@@ -111,6 +152,7 @@ export default function EarthCanvas({
         const runtime = await createEarthRenderer({
           forceWebGL: rendererTestMode === 'webgl2',
           mount: host,
+          onSelectionChange,
           reducedMotion,
         })
 
@@ -138,6 +180,15 @@ export default function EarthCanvas({
         host.dataset.rotationSpeedEnlarged = String(
           runtime.rotationSpeeds.enlarged,
         )
+        host.dataset.introAngularSpeed = String(
+          runtime.introTiming.angularSpeed,
+        )
+        host.dataset.introDuration = String(
+          runtime.introTiming.duration,
+        )
+        host.dataset.introRotationDistance = String(
+          runtime.introTiming.rotationDistance,
+        )
         host.dataset.exploreHorizontalSensitivity = String(
           runtime.exploreControls.horizontalSensitivity,
         )
@@ -150,13 +201,64 @@ export default function EarthCanvas({
         host.dataset.exploreDragDamping = String(
           runtime.exploreControls.dampingRate,
         )
+        host.dataset.routeAnimationDuration = String(
+          runtime.routeAnimationTiming.total,
+        )
+        host.dataset.changchunRouteOrder =
+          runtime.routeAnimationTiming.changchunSecondary
+            .map((route) => route.destinationId)
+            .join(',')
+        host.dataset.kualaLumpurRouteOrder =
+          runtime.routeAnimationTiming.kualaLumpurSecondary
+            .map((route) => route.destinationId)
+            .join(',')
+        host.dataset.secondaryRouteDurations = JSON.stringify(
+          [
+            ...runtime.routeAnimationTiming.changchunSecondary,
+            ...runtime.routeAnimationTiming.kualaLumpurSecondary,
+          ].map(({ destinationId, growthDuration }) => ({
+            destinationId,
+            growthDuration: Math.round(growthDuration),
+          })),
+        )
+        host.dataset.footprintsEnterThreshold = String(
+          footprintsEntryThresholds.enter,
+        )
+        host.dataset.footprintsLeaveThreshold = String(
+          footprintsEntryThresholds.leave,
+        )
+        host.dataset.destinationCount = String(
+          runtime.secondaryRouteSummary.destinationCount,
+        )
+        host.dataset.secondaryRouteCount = String(
+          runtime.secondaryRouteSummary.routeCount,
+        )
+        host.dataset.destinationVisitCount = String(
+          runtime.secondaryRouteSummary.visitCount,
+        )
         runtime.setScrollRotation(scrollRotationRef.current)
+        if (entryStateRef.current.inside) {
+          runtime.enterFootprints({
+            entryId: entryStateRef.current.sequence,
+            reason: 'external-section',
+          })
+        } else {
+          runtime.prepareFootprintsEntry()
+        }
         runtime.setVisible(isVisibleRef.current)
 
         const resize = () => {
-          const bounds = host.getBoundingClientRect()
+          // Keep the renderer and HTML label projection in the mount's
+          // transform-independent layout space. The Footprints entrance
+          // scales an ancestor with Motion, so getBoundingClientRect() would
+          // report a transient visual size that ResizeObserver does not
+          // revisit when that transform settles.
+          const layoutWidth = host.clientWidth
+          const layoutHeight = host.clientHeight
+          host.dataset.projectionWidth = String(layoutWidth)
+          host.dataset.projectionHeight = String(layoutHeight)
           host.dataset.zoomMaximum = String(
-            runtime.setSize(bounds.width, bounds.height),
+            runtime.setSize(layoutWidth, layoutHeight),
           )
           if (!window.matchMedia(desktopZoomQuery).matches) {
             runtime.setZoomPreset('default')
@@ -184,7 +286,7 @@ export default function EarthCanvas({
       runtimeRef.current?.dispose()
       runtimeRef.current = null
     }
-  }, [isNearViewport, reducedMotion])
+  }, [isNearViewport, onSelectionChange, reducedMotion])
 
   const localPointerPosition = (event) => {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -194,8 +296,17 @@ export default function EarthCanvas({
     }
   }
 
+  const introIsLocked = () =>
+    runtimeRef.current?.isIntroLocked?.() ?? false
+
   const handlePointerDown = (event) => {
-    if (!controlsEnabled || renderState !== 'ready') return
+    if (
+      !controlsEnabled ||
+      renderState !== 'ready' ||
+      introIsLocked()
+    ) {
+      return
+    }
 
     const position = localPointerPosition(event)
     pointerRecordsRef.current.set(event.pointerId, {
@@ -235,10 +346,11 @@ export default function EarthCanvas({
   }
 
   const handlePointerMove = (event) => {
+    if (introIsLocked()) return
+    const position = localPointerPosition(event)
     const pointer = pointerRecordsRef.current.get(event.pointerId)
     if (!pointer || pointer.cancelled) return
 
-    const position = localPointerPosition(event)
     pointer.x = position.x
     pointer.y = position.y
 
@@ -300,6 +412,8 @@ export default function EarthCanvas({
 
     if (pointer.rotationStarted) {
       runtimeRef.current?.endDrag()
+      suppressSelectionClickUntilRef.current =
+        performance.now() + 250
     }
 
     if (
@@ -315,7 +429,8 @@ export default function EarthCanvas({
       !desktopZoomAvailable ||
       !controlsEnabled ||
       renderState !== 'ready' ||
-      !runtimeRef.current
+      !runtimeRef.current ||
+      introIsLocked()
     ) {
       return
     }
@@ -335,6 +450,33 @@ export default function EarthCanvas({
     toggleGlobeSize()
   }
 
+  const handleClick = (event) => {
+    if (
+      !controlsEnabled ||
+      renderState !== 'ready' ||
+      !runtimeRef.current ||
+      performance.now() < suppressSelectionClickUntilRef.current
+    ) {
+      return
+    }
+
+    const interactiveTarget =
+      event.target instanceof Element
+        ? event.target.closest('[data-globe-interactive="true"]')
+        : null
+    if (interactiveTarget) return
+
+    const position = localPointerPosition(event)
+    const selectedEntity = runtimeRef.current.selectAt(
+      position.x,
+      position.y,
+    )
+    if (selectedEntity) {
+      suppressDoubleClickUntilRef.current =
+        performance.now() + 350
+    }
+  }
+
   const handleKeyDown = (event) => {
     if (
       event.target !== event.currentTarget ||
@@ -347,9 +489,11 @@ export default function EarthCanvas({
 
     if (event.key === 'Escape') {
       event.preventDefault()
-      onSelectionChange(false)
+      runtimeRef.current.clearSelection()
       return
     }
+
+    if (introIsLocked()) return
 
     if (event.key === 'Enter' || event.key === ' ') {
       if (!desktopZoomAvailable) return
@@ -392,12 +536,9 @@ export default function EarthCanvas({
     <div
       ref={hostRef}
       className="earth-canvas"
-      role={desktopZoomAvailable ? 'button' : 'group'}
+      role="group"
       aria-label={
         desktopZoomAvailable ? `${label}. ${toggleLabel}` : label
-      }
-      aria-pressed={
-        desktopZoomAvailable ? zoomMode === 'maximum' : undefined
       }
       aria-describedby="footprints-globe-instructions"
       aria-busy={renderState === 'idle' || renderState === 'loading'}
@@ -409,16 +550,9 @@ export default function EarthCanvas({
       data-scene-state={sceneState}
       data-zoom-mode={zoomMode}
       tabIndex={renderState === 'ready' && controlsEnabled ? 0 : -1}
+      onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
-      onPointerEnter={(event) => {
-        if (controlsEnabled && event.pointerType !== 'touch') {
-          onHoverChange(true)
-        }
-      }}
-      onPointerLeave={(event) => {
-        if (event.pointerType !== 'touch') onHoverChange(false)
-      }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointer}

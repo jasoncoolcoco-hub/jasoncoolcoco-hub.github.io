@@ -1,5 +1,92 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- One-time Footprints life-line activation sequence: Huizhou base,
+  Huizhou–Changchun growth, Changchun base, Changchun–Kuala Lumpur growth, and
+  Kuala Lumpur base.
+- Ease-in-out cubic route growth using synchronized index draw ranges on the
+  approved core and glow TubeGeometry.
+- One restrained, slow draw-range energy highlight per completed primary route.
+- Reduced-motion completion state with no growth sequence or continuous energy
+  movement.
+- Sixteen unique Footprints destinations connected by seventeen Earth-local
+  secondary routes, including one shared Seoul node reached from Changchun and
+  Kuala Lumpur.
+- Thirty sorted visit-month records stored on explicit route records, retaining
+  each visit's origin-base relationship without duplicating destination nodes.
+- Distance-mapped cool-blue secondary arcs and compact tangent-plane
+  destination nodes with shared materials and correct Earth depth occlusion.
+- Kuala Lumpur initial-view quaternion derived from its real surface vector,
+  with centralized `-10°` yaw and `+3.5°` pitch composition offsets that retain
+  East Asia above Kuala Lumpur while bringing Hawaii to the Pacific limb.
+- Hysteresis-based external Footprints entry detection at 55%/8%, allowing one
+  replay per genuine section entry without resets from zoom, drag, resize, or
+  React rerenders.
+- Coordinated secondary route growth in `firstVisit` order: `150ms` staggering
+  for Changchun and `130ms` for Kuala Lumpur, with cached-curve-length growth
+  durations between `700ms` and `1850ms`.
+- One restrained `320ms` destination-node activation when each route arrives.
+- Reduced-motion entry that keeps the Kuala Lumpur composition and directly
+  exposes the complete static route state.
+- Earth-local HTML label anchors for all three bases and sixteen destinations,
+  including hysteresis-stabilized front-face visibility and automatic
+  camera projection during rotation, drag, zoom, scroll, and resize.
+- Place labels that show restrained English names by default and
+  expand to Chinese names plus visit months derived from the canonical
+  `visits` arrays only when selected.
+- Single-place selection through destination/base nodes or their English labels,
+  with blank-space and Escape clearing plus rear-Earth hit rejection.
+
+### Changed
+
+- Corrected Footprints label drift by sizing both renderer and projection from
+  the Earth mount's transform-independent layout dimensions instead of a
+  Motion-scaled bounding rectangle.
+- Bound every base and destination label to its actual rendered node-dot Mesh,
+  then derived front-face visibility and 2D overlay coordinates from the
+  Mesh's live world position on every frame.
+- Added an off-by-default, development-only
+  `?footprints-label-debug=1` anchor cross with place ID and projected
+  coordinates for validating node-to-label binding.
+- Separated destination identity from secondary-route visit history so one
+  destination can safely connect to multiple bases while existing single-route
+  labels continue deriving the same compact visit display.
+- Added Hong Kong, Macau, Taipei, Tokyo, and Seoul with six new secondary
+  routes and eleven new visit-month records. Seoul selection highlights only
+  its two incoming routes and groups visits by origin base.
+- Kept the unchanged `0.0277rad/s` globe rotation active throughout the
+  complete route-entry timeline. The renderer derives its start quaternion
+  from the Malaysia–Asia target and the timeline's actual duration, arriving
+  without pause, speed easing, reverse motion, or completion snapping.
+- Retained the intro interaction lock for zoom, drag, and keyboard orientation
+  while allowing page scroll and the constant-speed globe rotation to continue.
+- Replaced the former circular desktop render boundary with a transparent
+  `84vw × 100svh` scene surface (`92vw` on compact desktops), removing the
+  right-edge canvas clipping that truncated enlarged atmosphere and route glow.
+- Constrained Explore zoom with separate `1.04` atmosphere and `1.10` route
+  visual radii plus at least `24px` browser-edge padding, while preserving the
+  requested `1.70` target wherever the viewport can safely contain it.
+- Added a restrained Earth-local Explore framing correction of `x: -0.08` and
+  `y: -0.045`; navigation, grain, section layout, and canvas position remain
+  fixed.
+- Replaced runtime label collision shifting with one permanent 2D offset per
+  place; expanded details grow below a fixed English-name anchor without moving
+  it.
+- Separated Huizhou and Hong Kong with opposing fixed label offsets while
+  preserving their real 3D anchors and selected-state positions.
+- Removed all route hit geometry, route hover, hover dimming, and cross-endpoint
+  reactions. Selecting a destination now brightens only its own secondary route
+  and node, while every unrelated route, node, and base remains unchanged.
+
+### Preserved
+
+- Approved Earth geometry, camera, lighting, materials, interaction, route
+  shape, primary-node coordinates, primary-route appearance and animation, and
+  depth occlusion.
+
 ## 0.2.0 — 2026-07-28
 
 ### Added
@@ -16,7 +103,7 @@
   two-preset zoom.
 - Five independent Footprints layers for background, chapter navigation, globe,
   future Photo Space, and future Memory Transition.
-- Explicit `GLOBE_IDLE`, `GLOBE_HOVER`, `GLOBE_SELECTED`,
+- Explicit `GLOBE_IDLE`, `GLOBE_SELECTED`,
   `ENTERING_MEMORY`, `PHOTO_SPACE`, and `EXITING_MEMORY` scene states.
 - Slow idle rotation, visibility-aware frame pausing, capped pixel ratio,
   reduced-motion behavior, and reduced 2048px textures for mobile or
@@ -93,9 +180,8 @@
 
 ### Deferred
 
-- Route growth, energy flow, moving points, labels, secondary routes, spatial
-  Photo Space, memory tunnel, photo colour extraction, and transition animation
-  remain deferred.
+- Touch destination selection, spatial Photo Space, memory tunnel, photo colour
+  extraction, and transition animation remain deferred.
 
 ### Preserved
 

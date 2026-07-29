@@ -16,6 +16,37 @@ export const routeLayerGeometry = {
   nodeSurfaceOffset: earthRadius * 0.005,
 }
 
+export const routeAnimationTiming = {
+  earthSettle: 800,
+  originActivation: 420,
+  originRoutePause: 160,
+  firstRouteGrowth: 1450,
+  stageActivation: 420,
+  stageRoutePause: 220,
+  secondRouteGrowth: 2050,
+  currentActivation: 450,
+  finalSettle: 520,
+}
+
+export const routeEnergyStyles = {
+  'huizhou-changchun': {
+    color: '#ffd18a',
+    cycleDuration: 5.4,
+    length: 0.1,
+    opacity: 0.22,
+    phaseOffset: 0,
+    radiusMultiplier: 1.3,
+  },
+  'changchun-kuala-lumpur': {
+    color: '#ffd590',
+    cycleDuration: 6.2,
+    length: 0.12,
+    opacity: 0.24,
+    phaseOffset: 0.22,
+    radiusMultiplier: 1.32,
+  },
+}
+
 export const baseNodeStyles = {
   origin: {
     dotRadius: earthRadius * 0.0036,

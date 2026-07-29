@@ -51,22 +51,10 @@ export default function FootprintsSection() {
     },
   )
 
-  const handleHoverChange = useCallback((isHovered) => {
-    setSceneState((currentState) => {
-      if (currentState === footprintsSceneStates.GLOBE_SELECTED) {
-        return currentState
-      }
-      if (!globeBrowsingStates.has(currentState)) return currentState
-      return isHovered
-        ? footprintsSceneStates.GLOBE_HOVER
-        : footprintsSceneStates.GLOBE_IDLE
-    })
-  }, [])
-
-  const handleSelectionChange = useCallback((isSelected) => {
-    setSelectedTargetId(isSelected ? 'earth-preview' : null)
+  const handleSelectionChange = useCallback((selection) => {
+    setSelectedTargetId(selection?.id ?? null)
     setSceneState(
-      isSelected
+      selection
         ? footprintsSceneStates.GLOBE_SELECTED
         : footprintsSceneStates.GLOBE_IDLE,
     )
@@ -107,7 +95,6 @@ export default function FootprintsSection() {
           exitY={exitY}
           instructions={footprints.globeInstructions}
           label={footprints.globeLabel}
-          onHoverChange={handleHoverChange}
           onSelectionChange={handleSelectionChange}
           reducedMotion={reducedMotion}
           sceneState={sceneState}

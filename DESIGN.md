@@ -60,8 +60,9 @@ orientation markers and never navigate to empty pages.
   graphics failures reveal a static poster captured from this integrated Earth
   renderer. The fallback never appears during normal loading or successful
   rendering.
-- There are no stars, dense networks, pulse markers, labels, or dashboard
-  decoration.
+- There are no stars, dense networks, pulse-marker fields, or dashboard
+  decoration. Geographic labels remain a restrained HTML overlay rather than a
+  texture or 3D dashboard layer.
 
 ### Independent scene layers
 
@@ -82,10 +83,9 @@ During the future `ENTERING_MEMORY` state only the Globe Scene z-index rises to
 `40`; the navigation stays physically fixed at `30` and may fade to `58%`
 opacity over 280ms before the transition overlay takes control.
 
-The single Footprints scene state uses `GLOBE_IDLE`, `GLOBE_HOVER`,
-`GLOBE_SELECTED`, `ENTERING_MEMORY`, `PHOTO_SPACE`, and `EXITING_MEMORY`.
-Idle and hover are active now, while selection remains available for future
-route and node controls. Those controls will use
+The Footprints scene state uses `GLOBE_IDLE`, `GLOBE_SELECTED`,
+`ENTERING_MEMORY`, `PHOTO_SPACE`, and `EXITING_MEMORY`.
+Idle and single-place selection are active now. Place controls use
 `data-globe-interactive="true"` so their selection action takes priority over
 the empty-globe zoom gesture. The three memory states currently define only
 layer ownership, pointer behavior, and control disabling; they do not render a
@@ -102,7 +102,7 @@ parameter outside the renderer.
 coordinate system used by the Earth textures. `createRouteCurve.js` samples the
 shortest spherical direction and raises it with
 `sin(pi * progress) * maxAltitude` before constructing a centripetal
-Catmull–Rom curve. `createFootprintsRouteLayer.js` builds the two static,
+Catmull–Rom curve. `createFootprintsRouteLayer.js` builds the two persistent,
 double-layer TubeGeometry routes and the three tangent-plane base nodes.
 
 The Huizhou–Changchun route peaks at `0.145` Earth radii and the longer
@@ -114,8 +114,203 @@ alignment. Earth and core routes write depth normally; transparent halo and
 glow materials keep depth testing enabled but do not write depth, allowing the
 Earth to occlude every rear-facing segment without transparent-layer artifacts.
 
-This stage is intentionally static. It contains no growth, flow, moving point,
-hover, click, labels, secondary destinations, photo space, or transition.
+The life-line activation uses the existing renderer frame loop. Its approved
+primary timings remain unchanged: it waits `800ms`, activates Huizhou over
+`420ms`, pauses `160ms`, grows Huizhou–Changchun over `1450ms`, activates
+Changchun over `420ms`, later pauses `220ms`, grows Changchun–Kuala Lumpur over
+`2050ms`, and activates Kuala Lumpur over `450ms`. After the last secondary
+destination activation, the completed route composition remains unchanged for
+`520ms` while the globe continues at the same normal angular speed.
+
+Growth uses an ease-in-out cubic value to update the existing core and glow
+TubeGeometry index draw ranges together. No route geometry or material is
+allocated per frame, and the final draw range is identical to the approved
+static route. Node activation interpolates the existing group from `0.85` to
+`1` scale while bringing its point, tangent ring, and halo to their configured
+final opacity.
+
+After completion, each route has one preallocated, depth-tested highlight tube
+whose draw-range window moves in the approved route direction. The short route
+uses a `10%` window over `5.4s`; the long route uses a `12%` window over `6.2s`
+with a `0.22` phase offset. Each segment fades at the loop boundary, and the
+base core and glow remain unchanged beneath it.
+
+### Secondary destinations and routes
+
+`src/data/destinations.js` is the single source of truth for sixteen unique
+ordinary places. It owns only place identity, display names, coordinates, and
+role; visits and origin-base relationships belong to explicit route records in
+`src/data/secondaryRoutes.js`. The seventeen routes contain thirty visit-month
+records. This separation allows one Seoul node to serve both
+Changchun–Seoul and Kuala Lumpur–Seoul without duplicating its coordinates,
+node, or label.
+
+Development validation rejects duplicate destination IDs, route IDs,
+base/destination route pairs, duplicate or unsorted visit months, missing
+destinations, and unknown bases. Route helpers derive per-destination route
+groups and aggregate visits for existing label behavior without creating a
+second source of visit data.
+
+`src/data/secondaryRoutes.js` also centralizes the secondary altitude,
+geometry, colour, opacity, and node tokens. `createSecondaryRouteLayer.js`
+reuses the primary layer's
+latitude/longitude conversion and shortest-direction spherical curve
+generator. Route height maps angular distance through a square-root curve from
+`0.045` to `0.13` Earth radii, keeping nearby Southeast Asian arcs low while
+allowing Chicago, Hawaii, and Los Angeles to clear the globe without competing
+with the primary life line.
+
+The secondary route core uses `#78c8ff` at `0.68` opacity and a radius of
+`0.00135` Earth radii. Its `#4a9bd8` glow uses `0.09` opacity and `2.4` times
+the core radius. Ordinary destination nodes use a `0.0025`-radius dot, a
+`0.0048–0.0063` tangent ring, and a restrained `0.0105` halo, all expressed
+relative to the Earth radius. Shared materials and node geometry keep the
+seventeen-route layer lightweight; route segment counts vary from `40` to `92`
+according to angular distance.
+
+Secondary routes join the same draw-range animation controller as the primary
+life line. Changchun routes begin Seoul, Chicago, Vladivostok in `firstVisit`
+order with a `150ms` stagger. Kuala Lumpur routes are sorted by each route's
+`visits[0]` and start with a `130ms` stagger; equal dates preserve route
+configuration order, including Tokyo before Seoul and Hawaii before Los
+Angeles. Route duration is derived from cached curve length and clamped to
+`700–1850ms`.
+
+Each destination begins one `320ms` point/ring/halo activation after its first
+incoming route arrives. When multiple routes share a destination, the node
+controller keeps the maximum completed activation progress, so the later route
+cannot reset an already visible Seoul node. Repeated visit months never create
+another geometry or animation. Secondary routes have no continuing energy
+movement or photo-space behavior. Their destination labels and single-place
+selection are described below. Reduced motion exposes the complete static layer
+immediately.
+
+The whole secondary layer is a child of the existing Earth-local route group,
+so automatic rotation, Explore drag, camera-distance zoom, resize, and scroll
+composition cannot separate it from the globe. Core, glow, dot, ring, and halo
+materials keep depth testing enabled. Transparent materials do not write depth,
+allowing the Earth depth buffer to hide rear-facing routes and nodes without
+creating transparent-shell artifacts.
+
+An external Footprints entry is recognized when at least 55% of the Earth
+canvas intersects after previously falling to 8% or less. This hysteresis
+prevents observer-edge oscillation from resetting the scene. Each external
+entry receives a monotonically increasing entry ID, restores the configured
+initial Earth view, and restarts the complete route sequence once. React
+rerenders, resize, zoom, drag, release, and automatic rotation do not generate
+entry IDs and cannot restart it. Leaving prepares an empty timeline for the
+next external entry. A future return from Photo Space can use a distinct entry
+reason and preserve orientation instead of entering this external path.
+
+`footprintsView.js` defines Kuala Lumpur as the initial focus plus a `-10°` yaw
+and `+3.5°` pitch offset. The renderer converts Kuala Lumpur with the shared
+`geoToVector3`, aligns that surface vector with the camera-facing `+Z`
+direction using a quaternion, applies the offset quaternion, and compensates
+the current scroll-group rotation. This produces a focus vector of
+approximately `(-0.173, -0.061, 0.983)`, placing Kuala Lumpur left and slightly
+below center while bringing Hawaii to the right-hand limb. With zero scroll
+rotation, the canonical orientation quaternion is approximately
+`(0.259412, 0.947293, 0.052121, 0.180621)` in `x/y/z/w` order. While the scene
+is outside, scroll changes recompute this prepared orientation before
+rendering; after entry, ordinary rerenders and resize never reset it.
+
+The confirmed composition is the intro target rather than its first frame.
+Every external entry reads the route layer's complete timeline, multiplies it
+by the approved Default angular speed (`0.0277rad/s`), and rotates backward
+around the globe's local north axis to derive the intro start quaternion.
+The start quaternion is applied and world matrices are updated before the
+scene is exposed. During the route timeline the orientation is calculated
+from `introStartQuaternion × rotationY(normalAngularSpeed × elapsedTime)`,
+so it arrives at the target composition on the completion frame without
+speed changes, easing, reverse motion, or a visible correction. Current
+scroll rotation is removed from this calculation so page scrolling does not
+disturb the scheduled world-space composition.
+
+Empty-globe double-click, Enter/Space size toggles, Explore drag, and arrow-key
+rotation are ignored while `introLocked`; destination selection, page scroll,
+and chapter navigation remain available. `introLocked` now controls input
+only: automatic rotation continues at the unchanged Default speed throughout
+the complete timeline, including the final `520ms` settle. On completion the
+lock clears and the same incremental delta-time rotation continues from the
+target quaternion with no resume ramp. Reduced motion completes the route
+state immediately at the target orientation and retains the existing
+no-idle-rotation behavior.
+
+### Entry composition and enlarged framing
+
+`footprintsView.js` is also the single source of truth for the enlarged visual
+envelope. The transparent desktop render surface spans `84vw × 100svh`
+(`92vw` on compact desktops) so routes can leave the globe without being
+clipped by the former circular canvas boundary. The section, navigation, and
+background retain their existing isolation.
+
+The requested Explore zoom remains `1.70`, but the live maximum is constrained
+independently by a `1.04` atmospheric radius and a `1.10` route/glow radius.
+Each resize reserves at least `24px` at every browser edge, updates the camera
+aspect and WebGL/WebGPU renderer size, then chooses the stricter horizontal or
+vertical camera-distance limit. Explore adds only a small Earth-local
+translation of `x: -0.08`, `y: -0.045`; it does not move or scale the canvas,
+navigation, grain, or page. At the 1280×708 Chrome review viewport the resulting
+maximum was approximately `1.2691`; 1024×768 and 900×700 produced
+approximately `1.2759` and `1.2681`.
+
+### Fixed labels and place selection
+
+The renderer owns a sibling HTML label layer inside the Earth canvas. Every
+label anchor is a stable reference to the actual visible node-dot Mesh. On each
+render frame, the renderer updates the scene and camera matrices, reads that
+Mesh with `getWorldPosition()`, and projects the resulting world position with
+the active Three.js camera. This includes the complete Earth parent chain, so
+labels follow automatic rotation, Explore drag, camera-distance zoom, scroll
+composition, and resize without storing page coordinates.
+
+The WebGL canvas and HTML overlay are siblings inside the same positioned
+`.earth-canvas` mount. Camera aspect, renderer size, and 2D label projection all
+use the mount's transform-independent `clientWidth` and `clientHeight`; they do
+not use a `getBoundingClientRect()` size contaminated by the Motion entrance
+transform.
+
+Every visible base and ordinary destination shows only its low-contrast English
+name by default. `footprintsLabels.js` supplies one permanent pixel offset for
+each place. The runtime adds that offset directly to the projected anchor and
+never performs collision shifts, side swapping, selected-state repositioning,
+or automatic avoidance. Labels stay horizontal in screen space. Expanded
+information is a child block below the English name, so adding Chinese text and
+visits never changes the primary label's top-left anchor.
+
+The close Huizhou/Hong Kong pair uses intentionally opposing fixed offsets:
+Huizhou is `(-22px, -22px)` from its projected anchor and Hong Kong is
+`(22px, 8px)`. These offsets separate the two English names in the confirmed
+Asia–Pacific composition without moving either geographic anchor or changing
+the selected-state layout.
+
+Visibility requires both a projected point inside the canvas and a positive
+surface-normal/camera-direction dot product. Hidden labels need `0.06` to become
+visible; visible labels remain until the value drops to `0.015`. This hysteresis
+reduces silhouette flicker. Rear-facing labels receive `aria-hidden` and
+`tabindex="-1"`, while node raycasting rejects hits behind the nearest Earth
+intersection.
+
+Development builds support an off-by-default coordinate overlay through
+`?footprints-label-debug=1`. It draws a cross at the un-offset projected node
+anchor and prints the place ID plus overlay coordinates. The debug layer is
+pointer-transparent and is never created in production builds.
+
+Only base and destination node hit meshes participate in raycasting. Routes
+have no hit geometry and cannot respond to hover or click. Clicking a
+destination node or its English label selects exactly that destination,
+slightly strengthens its node, and raises only routes whose `destinationId`
+matches to `1.42` material emphasis. A normal destination therefore highlights
+one route; Seoul highlights its Changchun and Kuala Lumpur routes together
+without changing either base. Every unrelated route and node remains at its
+configured default value.
+
+Clicking a base only strengthens that base to `1.12` and reveals its Chinese
+name. A new place replaces the prior selection, while Earth or canvas
+whitespace clears it. A single-route destination keeps the compact visit line.
+Seoul groups details by `From Changchun` and `From Kuala Lumpur`, with each
+group formatting its own route-level visits; for example `2024-01` becomes
+`2024.01`.
 
 ### Footprints performance and accessibility
 
@@ -129,30 +324,35 @@ hover, click, labels, secondary destinations, photo space, or transition.
   globe and complete glass/material treatment visible immediately. Enlarged
   manual orientation remains permanent and preset camera changes are direct.
 - The globe interaction area remains keyboard-focusable with a visible focus
-  ring. Arrow keys rotate only in Explore. On desktop, Enter or Space provides
+  marker. Arrow keys rotate only in Explore. On desktop, Enter or Space provides
   the keyboard equivalent of the empty-globe double-click size toggle; Escape
-  clears a future route or node selection.
+  clears the current place selection. Visible place labels expose keyboard
+  button semantics and use Enter or Space for the same selection action.
 - Desktop zoom has exactly two user-facing presets: `DEFAULT` at `1.00` and
   a viewport-safe `MAXIMUM`. The requested maximum is `1.70`, but every resize
   derives the actual camera-distance limit from canvas width, height, the
-  `28°` camera FOV, and a small safety margin before applying that target.
+  `28°` camera FOV, the atmospheric and route envelopes, and at least `24px`
+  of browser-edge safety before applying that target.
   Double-clicking empty globe space toggles these presets
   by changing only the dedicated Three.js camera distance. Exponential damping
   at `6.1` reaches visual rest in about 0.75 seconds without overshoot. The
   internal `0.90` minimum anchor remains reserved for entrance or exit work and
   is not exposed as a manual stop. Both presets share the same right-weighted
-  position: `8vw` on standard desktops, `4vw` on narrower desktops, and zero on
-  mobile. Enlarging therefore changes only camera distance and never introduces
-  a second horizontal motion.
-  The wide-desktop canvas uses up to `98svh`/`1050px` of transparent render
-  space, balanced by a `5.83` base camera distance. This preserves the approved
-  default apparent size while the dynamic maximum keeps the complete atmosphere
+  canvas position: `8vw` on standard desktops, `4vw` on narrower desktops, and
+  zero on mobile. Explore applies the small world-space `-0.08/-0.045` framing
+  correction described above without moving the canvas.
+  The wide-desktop canvas uses `84vw × 100svh`, capped at `1050px` high, and a
+  `5.83` base camera distance. This preserves the approved default apparent
+  size while the dynamic maximum keeps the complete atmosphere and route glow
   inside the canvas. Compact desktop viewports retain the `5.35` camera distance
   and receive their own calculated maximum.
 - Default idle rotation runs at `0.0277` radians per second. Enlarged idle
   rotation runs at `0.0147` radians per second, approximately 53% of the default
   rate. The active speed exponentially reaches 90% of its new target over
   `0.58s` when entering or leaving Explore, preventing a freeze or speed step.
+  The route intro always uses the Default `0.0277rad/s` rate. Its interaction
+  lock does not multiply, blend, or otherwise alter that angular speed, and
+  completion continues directly into the same Default idle update.
 - Explore drag uses positive horizontal pointer delta and post-multiplies a
   quaternion around the Earth's local north axis, so the visible surface follows
   the grab direction directly. Horizontal sensitivity uses a `0.42` multiplier.
@@ -370,9 +570,9 @@ domain so Vite includes it in a future `dist/` deployment artifact.
 
 ## Future extension
 
-- **Footprints:** replace the validation route with an approved personal route
-  set, then refine route hierarchy, active-route motion, and optional labels
-  without turning the chapter into a dashboard.
+- **Footprints:** preserve the approved route and fixed-label hierarchy while
+  future work adds only explicitly reviewed place-detail or photo-space
+  transitions without turning the chapter into a dashboard.
 - **Lab:** introduce a reusable project data model before creating project
   views.
 - **Thanks:** create a quiet closing chapter that follows the same typographic

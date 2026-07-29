@@ -14,6 +14,8 @@ export const footprintBaseLocations = [
   {
     id: 'huizhou',
     city: 'Huizhou',
+    displayName: 'Huizhou',
+    displayNameZh: '惠州',
     latitude: 23.1115,
     longitude: 114.4152,
     role: 'origin',
@@ -21,6 +23,8 @@ export const footprintBaseLocations = [
   {
     id: 'changchun',
     city: 'Changchun',
+    displayName: 'Changchun',
+    displayNameZh: '长春',
     latitude: 43.8171,
     longitude: 125.3235,
     role: 'stage',
@@ -28,6 +32,8 @@ export const footprintBaseLocations = [
   {
     id: 'kuala-lumpur',
     city: 'Kuala Lumpur',
+    displayName: 'Kuala Lumpur',
+    displayNameZh: '吉隆坡',
     latitude: 3.139,
     longitude: 101.6869,
     role: 'current',

@@ -12,7 +12,6 @@ export default function GlobeScene({
   exitY,
   instructions,
   label,
-  onHoverChange,
   onSelectionChange,
   reducedMotion,
   sceneState,
@@ -56,7 +55,6 @@ export default function GlobeScene({
             controlsEnabled={controlsEnabled}
             instructions={instructions}
             label={label}
-            onHoverChange={onHoverChange}
             onSelectionChange={onSelectionChange}
             reducedMotion={reducedMotion}
             sceneState={sceneState}
