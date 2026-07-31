@@ -2,11 +2,15 @@ import * as THREE from 'three/webgpu'
 import { destinations } from '../../data/destinations'
 import {
   getSecondaryRouteAltitude,
+  getSecondaryRouteAltitudeProfileExponent,
+  getSecondaryRouteDepartureBias,
   getSecondaryRouteGrowthDuration,
   getSecondaryRouteSegments,
+  getSecondaryRouteVisualStyle,
   getSecondaryRoutesForBase,
   getSecondaryRoutesForDestination,
   secondaryNodeStyle,
+  secondaryRouteDeparture,
   secondaryRoutes,
   secondaryRouteStyle,
   validateSecondaryRouteData,
@@ -34,6 +38,22 @@ function setTubeProgress(geometry, progress, tubularSegments) {
     ),
   )
   geometry.setDrawRange(0, visibleSegments * indicesPerSegment)
+}
+
+function setTubeWindow(geometry, start, end, tubularSegments) {
+  const indicesPerSegment = secondaryRouteStyle.radialSegments * 6
+  const firstSegment = Math.max(
+    0,
+    Math.floor(start * tubularSegments),
+  )
+  const finalSegment = Math.min(
+    tubularSegments,
+    Math.ceil(end * tubularSegments),
+  )
+  geometry.setDrawRange(
+    firstSegment * indicesPerSegment,
+    Math.max(0, finalSegment - firstSegment) * indicesPerSegment,
+  )
 }
 
 function createHaloTexture() {
@@ -129,7 +149,16 @@ export function createSecondaryRouteLayer() {
     )
     const angularDistance = angularDistanceBetween(start, end)
     const tubularSegments = getSecondaryRouteSegments(angularDistance)
+    const visualStyle = getSecondaryRouteVisualStyle(angularDistance)
+    const routeCoreRadius =
+      secondaryRouteStyle.coreRadius *
+      visualStyle.coreRadiusMultiplier
     const curve = createRouteCurve({
+      altitudeProfileExponent:
+        getSecondaryRouteAltitudeProfileExponent(angularDistance),
+      departureBias: getSecondaryRouteDepartureBias(route),
+      departureFalloffPower:
+        secondaryRouteDeparture.falloffPower,
       start,
       end,
       earthRadius,
@@ -140,15 +169,31 @@ export function createSecondaryRouteLayer() {
     const coreGeometry = new THREE.TubeGeometry(
       curve,
       tubularSegments,
-      secondaryRouteStyle.coreRadius,
+      routeCoreRadius,
       secondaryRouteStyle.radialSegments,
       false,
     )
     const glowGeometry = new THREE.TubeGeometry(
       curve,
       tubularSegments,
-      secondaryRouteStyle.coreRadius *
+      routeCoreRadius *
         secondaryRouteStyle.glowRadiusMultiplier,
+      secondaryRouteStyle.radialSegments,
+      false,
+    )
+    const tailGeometry = new THREE.TubeGeometry(
+      curve,
+      tubularSegments,
+      routeCoreRadius *
+        secondaryRouteStyle.head.tailRadiusMultiplier,
+      secondaryRouteStyle.radialSegments,
+      false,
+    )
+    const tipGeometry = new THREE.TubeGeometry(
+      curve,
+      tubularSegments,
+      routeCoreRadius *
+        secondaryRouteStyle.head.tipRadiusMultiplier,
       secondaryRouteStyle.radialSegments,
       false,
     )
@@ -167,33 +212,117 @@ export function createSecondaryRouteLayer() {
       opacity: secondaryRouteStyle.glowOpacity,
       transparent: true,
     })
+    const tailMaterial = new THREE.MeshBasicMaterial({
+      blending: THREE.AdditiveBlending,
+      color: secondaryRouteStyle.head.tailColor,
+      depthTest: true,
+      depthWrite: false,
+      opacity: 0,
+      transparent: true,
+    })
+    const tipMaterial = new THREE.MeshBasicMaterial({
+      blending: THREE.AdditiveBlending,
+      color: secondaryRouteStyle.head.tipColor,
+      depthTest: true,
+      depthWrite: false,
+      opacity: 0,
+      transparent: true,
+    })
     const routeGroup = new THREE.Group()
     routeGroup.name = `footprints-secondary-route-${route.id}`
     routeGroup.add(
       new THREE.Mesh(coreGeometry, coreMaterial),
       new THREE.Mesh(glowGeometry, glowMaterial),
+      new THREE.Mesh(tailGeometry, tailMaterial),
+      new THREE.Mesh(tipGeometry, tipMaterial),
     )
-    routeGeometries.push(coreGeometry, glowGeometry)
-    routeMaterials.push(coreMaterial, glowMaterial)
+    routeGeometries.push(
+      coreGeometry,
+      glowGeometry,
+      tailGeometry,
+      tipGeometry,
+    )
+    routeMaterials.push(
+      coreMaterial,
+      glowMaterial,
+      tailMaterial,
+      tipMaterial,
+    )
     group.add(routeGroup)
 
     const curveLength = curve.getLength()
     let progress = 0
     let emphasis = 1
+    let settleProgress = 0
     const applyVisualState = () => {
+      const activeCoreOpacity =
+        secondaryRouteStyle.coreOpacity *
+        visualStyle.coreOpacityMultiplier
+      const activeGlowOpacity =
+        secondaryRouteStyle.glowOpacity *
+        visualStyle.glowOpacityMultiplier
       coreMaterial.opacity = THREE.MathUtils.clamp(
-        secondaryRouteStyle.coreOpacity * emphasis,
+        THREE.MathUtils.lerp(
+          activeCoreOpacity,
+          activeCoreOpacity *
+            secondaryRouteStyle.settledCoreOpacityMultiplier,
+          settleProgress,
+        ) * emphasis,
         0,
-        0.94,
+        0.78,
       )
       glowMaterial.opacity = THREE.MathUtils.clamp(
-        secondaryRouteStyle.glowOpacity * emphasis,
+        THREE.MathUtils.lerp(
+          activeGlowOpacity,
+          activeGlowOpacity *
+            secondaryRouteStyle.settledGlowOpacityMultiplier,
+          settleProgress,
+        ) * emphasis,
         0,
-        0.16,
+        0.08,
       )
       const easedProgress = easeInOutCubic(progress)
       setTubeProgress(coreGeometry, easedProgress, tubularSegments)
       setTubeProgress(glowGeometry, easedProgress, tubularSegments)
+
+      if (progress <= 0 || progress >= 1) {
+        tailGeometry.setDrawRange(0, 0)
+        tipGeometry.setDrawRange(0, 0)
+        tailMaterial.opacity = 0
+        tipMaterial.opacity = 0
+        return
+      }
+
+      const arrivalFade =
+        1 - THREE.MathUtils.smoothstep(progress, 0.975, 1)
+      const departureFade = THREE.MathUtils.smoothstep(
+        progress,
+        0,
+        0.045,
+      )
+      const headOpacity = arrivalFade * departureFade * emphasis
+      setTubeWindow(
+        tailGeometry,
+        Math.max(
+          0,
+          easedProgress - secondaryRouteStyle.head.tailLength,
+        ),
+        easedProgress,
+        tubularSegments,
+      )
+      setTubeWindow(
+        tipGeometry,
+        Math.max(
+          0,
+          easedProgress - secondaryRouteStyle.head.tipLength,
+        ),
+        easedProgress,
+        tubularSegments,
+      )
+      tailMaterial.opacity =
+        secondaryRouteStyle.head.tailOpacity * headOpacity
+      tipMaterial.opacity =
+        secondaryRouteStyle.head.tipOpacity * headOpacity
     }
 
     routeControllers.set(route.id, {
@@ -209,6 +338,10 @@ export function createSecondaryRouteLayer() {
       },
       setProgress: (value) => {
         progress = THREE.MathUtils.clamp(value, 0, 1)
+        applyVisualState()
+      },
+      setSettleProgress: (value) => {
+        settleProgress = THREE.MathUtils.clamp(value, 0, 1)
         applyVisualState()
       },
     })
@@ -335,12 +468,18 @@ export function createSecondaryRouteLayer() {
     )
 
   const reset = () => {
-    routeControllers.forEach((controller) => controller.setProgress(0))
+    routeControllers.forEach((controller) => {
+      controller.setSettleProgress(0)
+      controller.setProgress(0)
+    })
     nodeControllers.forEach((controller) => controller.setProgress(0))
   }
 
   const complete = () => {
-    routeControllers.forEach((controller) => controller.setProgress(1))
+    routeControllers.forEach((controller) => {
+      controller.setProgress(1)
+      controller.setSettleProgress(1)
+    })
     nodeControllers.forEach((controller) => controller.setProgress(1))
   }
 

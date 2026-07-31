@@ -8,15 +8,39 @@ import {
 } from './locations'
 import { earthRadius } from './routes'
 
+function lerp(start, end, progress) {
+  return start + (end - start) * progress
+}
+
 export const secondaryRouteStyle = {
-  coreColor: '#78c8ff',
-  coreOpacity: 0.68,
-  coreRadius: earthRadius * 0.00135,
-  glowColor: '#4a9bd8',
-  glowOpacity: 0.09,
-  glowRadiusMultiplier: 2.4,
+  coreColor: '#91bdd2',
+  coreOpacity: 0.48,
+  coreRadius: earthRadius * 0.00108,
+  distance: {
+    longCoreOpacityMultiplier: 1,
+    longCoreRadiusMultiplier: 0.98,
+    longGlowOpacityMultiplier: 1,
+    shortCoreOpacityMultiplier: 0.84,
+    shortCoreRadiusMultiplier: 0.88,
+    shortGlowOpacityMultiplier: 0.56,
+  },
+  glowColor: '#5f91aa',
+  glowOpacity: 0.032,
+  glowRadiusMultiplier: 1.9,
+  head: {
+    tailColor: '#abd9e8',
+    tailLength: 0.046,
+    tailOpacity: 0.18,
+    tailRadiusMultiplier: 1.07,
+    tipColor: '#e3f7ff',
+    tipLength: 0.013,
+    tipOpacity: 0.7,
+    tipRadiusMultiplier: 1.08,
+  },
   radialSegments: 6,
   routeSurfaceOffset: earthRadius * 0.0035,
+  settledCoreOpacityMultiplier: 0.72,
+  settledGlowOpacityMultiplier: 0.48,
 }
 
 export const secondaryNodeStyle = {
@@ -34,10 +58,18 @@ export const secondaryNodeStyle = {
 }
 
 export const secondaryRouteAltitude = {
-  maximum: earthRadius * 0.13,
-  maximumAngularDistance: 2.2,
-  minimum: earthRadius * 0.045,
+  distanceExponent: 0.92,
+  longProfileExponent: 0.82,
+  maximum: earthRadius * 0.205,
+  maximumAngularDistance: 2.25,
+  minimum: earthRadius * 0.055,
   minimumAngularDistance: 0.04,
+  shortProfileExponent: 1.08,
+}
+
+export const secondaryRouteDeparture = {
+  falloffPower: 4.2,
+  maximumBias: 0.05,
 }
 
 export const secondaryRouteAnimation = {
@@ -213,6 +245,43 @@ export function getSecondaryRouteGrowthDuration(curveLength) {
 }
 
 export function getSecondaryRouteAltitude(angularDistance) {
+  const normalizedDistance = getSecondaryRouteDistanceProgress(
+    angularDistance,
+  )
+  const distanceWeight =
+    normalizedDistance ** secondaryRouteAltitude.distanceExponent
+
+  return (
+    secondaryRouteAltitude.minimum +
+    (
+      secondaryRouteAltitude.maximum -
+      secondaryRouteAltitude.minimum
+    ) *
+      distanceWeight
+  )
+}
+
+export function getSecondaryRouteAltitudeProfileExponent(
+  angularDistance,
+) {
+  return lerp(
+    secondaryRouteAltitude.shortProfileExponent,
+    secondaryRouteAltitude.longProfileExponent,
+    getSecondaryRouteDistanceProgress(angularDistance),
+  )
+}
+
+export function getSecondaryRouteDepartureBias(route) {
+  if (route.baseId !== 'kuala-lumpur') return 0
+
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5))
+  return (
+    Math.sin((route.configIndex + 1) * goldenAngle) *
+    secondaryRouteDeparture.maximumBias
+  )
+}
+
+export function getSecondaryRouteDistanceProgress(angularDistance) {
   const normalizedDistance = Math.min(
     1,
     Math.max(
@@ -227,16 +296,32 @@ export function getSecondaryRouteAltitude(angularDistance) {
         ),
     ),
   )
-  const distanceWeight = Math.sqrt(normalizedDistance)
+  return normalizedDistance
+}
 
-  return (
-    secondaryRouteAltitude.minimum +
-    (
-      secondaryRouteAltitude.maximum -
-      secondaryRouteAltitude.minimum
-    ) *
-      distanceWeight
+export function getSecondaryRouteVisualStyle(angularDistance) {
+  const distanceProgress = getSecondaryRouteDistanceProgress(
+    angularDistance,
   )
+  const { distance } = secondaryRouteStyle
+
+  return {
+    coreOpacityMultiplier: lerp(
+      distance.shortCoreOpacityMultiplier,
+      distance.longCoreOpacityMultiplier,
+      distanceProgress,
+    ),
+    coreRadiusMultiplier: lerp(
+      distance.shortCoreRadiusMultiplier,
+      distance.longCoreRadiusMultiplier,
+      distanceProgress,
+    ),
+    glowOpacityMultiplier: lerp(
+      distance.shortGlowOpacityMultiplier,
+      distance.longGlowOpacityMultiplier,
+      distanceProgress,
+    ),
+  }
 }
 
 export function getSecondaryRouteSegments(angularDistance) {

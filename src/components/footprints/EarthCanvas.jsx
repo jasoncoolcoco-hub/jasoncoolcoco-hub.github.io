@@ -516,12 +516,12 @@ export default function EarthCanvas({
       ArrowUp: () =>
         runtimeRef.current.rotateByKeyboard(
           'vertical',
-          -keyboardRotationStep,
+          keyboardRotationStep,
         ),
       ArrowDown: () =>
         runtimeRef.current.rotateByKeyboard(
           'vertical',
-          keyboardRotationStep,
+          -keyboardRotationStep,
         ),
     }
     const action = keyActions[event.key]

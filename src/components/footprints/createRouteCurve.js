@@ -23,6 +23,9 @@ function slerpUnitVectors(start, end, progress, target) {
 }
 
 export function createRouteCurve({
+  altitudeProfileExponent = 1,
+  departureBias = 0,
+  departureFalloffPower = 4,
   end,
   earthRadius,
   maxAltitude,
@@ -33,6 +36,7 @@ export function createRouteCurve({
   const startDirection = start.clone().normalize()
   const endDirection = end.clone().normalize()
   const direction = new THREE.Vector3()
+  const pathNormal = new THREE.Vector3()
   const points = []
   const samples = Math.max(8, pointCount)
 
@@ -43,20 +47,44 @@ export function createRouteCurve({
     endDirection.copy(fallbackDirection)
   }
 
+  pathNormal.crossVectors(startDirection, endDirection)
+  if (pathNormal.lengthSq() > 0.000001) {
+    pathNormal.normalize()
+  } else {
+    pathNormal.set(0, 0, 0)
+  }
+
   for (let index = 0; index <= samples; index += 1) {
     const progress = index / samples
-    const altitude = Math.sin(Math.PI * progress) * maxAltitude
+    const altitudeEnvelope = Math.max(
+      0,
+      Math.sin(Math.PI * progress),
+    )
+    const altitude =
+      altitudeEnvelope ** altitudeProfileExponent * maxAltitude
     const radius = earthRadius + surfaceOffset + altitude
 
+    slerpUnitVectors(
+      startDirection,
+      endDirection,
+      progress,
+      direction,
+    )
+
+    if (departureBias !== 0 && pathNormal.lengthSq() > 0) {
+      const departureEnvelope =
+        altitudeEnvelope *
+        (1 - progress) ** departureFalloffPower
+      direction
+        .addScaledVector(
+          pathNormal,
+          departureBias * departureEnvelope,
+        )
+        .normalize()
+    }
+
     points.push(
-      slerpUnitVectors(
-        startDirection,
-        endDirection,
-        progress,
-        direction,
-      )
-        .clone()
-        .multiplyScalar(radius),
+      direction.clone().multiplyScalar(radius),
     )
   }
 

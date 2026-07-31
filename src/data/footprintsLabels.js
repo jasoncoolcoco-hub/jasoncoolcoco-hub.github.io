@@ -21,8 +21,16 @@ export const footprintLabelOffsets = {
 }
 
 export const footprintLabelVisibility = {
-  hideThreshold: 0.015,
-  showThreshold: 0.06,
+  boundsPaddingPx: 2,
+  hideFacingThreshold: 0.3,
+  hideSafeRadiusRatio: 0.89,
+  hideTransitionMs: 90,
+  showFacingThreshold: 0.39,
+  showSafeRadiusRatio: 0.84,
+  showStableFrames: 6,
+  showTransitionMs: 160,
+  unlockTransitionMs: 350,
+  viewportMarginPx: 18,
 }
 
 export function formatVisitMonth(visit) {

@@ -21,16 +21,12 @@ import {
   initialFootprintsView,
 } from '../../data/footprintsView'
 import {
-  footprintLabelOffsets,
-  footprintLabelVisibility,
-  formatVisitMonth,
-} from '../../data/footprintsLabels'
-import {
   footprintBaseLocations,
   footprintBaseLocationsById,
 } from '../../data/locations'
 import { destinations } from '../../data/destinations'
 import { getSecondaryRoutesForDestination } from '../../data/secondaryRoutes'
+import { createFootprintsLabelLayer } from './createFootprintsLabelLayer'
 import { createFootprintsRouteLayer } from './createFootprintsRouteLayer'
 import { geoToVector3 } from './geoToVector3'
 
@@ -69,6 +65,20 @@ const explorePitchLimit = Math.PI / 10
 const localNorthAxis = new THREE.Vector3(0, 1, 0)
 const cameraVerticalAxis = new THREE.Vector3(1, 0, 0)
 const cameraFacingDirection = new THREE.Vector3(0, 0, 1)
+
+function screenDeltaToDirectRotation(
+  delta,
+  viewportSize,
+  axisMultiplier,
+  sensitivity,
+) {
+  return (
+    (delta / Math.max(1, viewportSize)) *
+    exploreDragSensitivity *
+    axisMultiplier *
+    sensitivity
+  )
+}
 
 function shouldUseReducedTextures() {
   const narrowViewport = window.matchMedia('(max-width: 700px)').matches
@@ -143,11 +153,6 @@ export async function createEarthRenderer({
   camera.position.set(0, 0, baseCameraDistance)
 
   const scene = new THREE.Scene()
-  const labelDebugEnabled =
-    import.meta.env.DEV &&
-    new URLSearchParams(window.location.search).get(
-      'footprints-label-debug',
-    ) === '1'
 
   const sun = new THREE.DirectionalLight('#dceeff', 2)
   sun.position.set(-2.15, 1.25, -0.45)
@@ -287,7 +292,22 @@ export async function createEarthRenderer({
   }
 
   const earthVisualGroup = new THREE.Group()
+  let footprintsLabelLayer = null
+  const pendingLabelUnlocks = new Map()
+  const resetFootprintsLabels = () => {
+    pendingLabelUnlocks.clear()
+    footprintsLabelLayer?.reset()
+  }
+  const unlockFootprintsLabel = (location) => {
+    pendingLabelUnlocks.set(
+      `${location.kind}:${location.id}`,
+      location,
+    )
+    footprintsLabelLayer?.unlock(location)
+  }
   const footprintsRouteLayer = createFootprintsRouteLayer({
+    onLabelReset: resetFootprintsLabels,
+    onLabelUnlock: unlockFootprintsLabel,
     onPhaseChange: (phase) => {
       mount.dataset.routeAnimationPhase = phase
     },
@@ -303,6 +323,35 @@ export async function createEarthRenderer({
   })
   mount.dataset.routeAnimationState = 'idle'
   setIntroLocked(true)
+  const labelLocations = [
+    ...footprintBaseLocations.map((location) => ({
+      ...location,
+      kind: 'base',
+      entity: {
+        baseId: location.id,
+        baseIds: [location.id],
+        id: location.id,
+        kind: 'base',
+        priority: 2,
+        routeIds: [],
+      },
+    })),
+    ...destinations.map((destination) => {
+      const routes = getSecondaryRoutesForDestination(destination.id)
+      return {
+        ...destination,
+        kind: 'destination',
+        entity: {
+          baseIds: routes.map((route) => route.baseId),
+          destinationId: destination.id,
+          id: destination.id,
+          kind: 'destination',
+          priority: 3,
+          routeIds: routes.map((route) => route.id),
+        },
+      }
+    }),
+  ]
   earthVisualGroup.add(
     globe,
     atmosphere,
@@ -318,147 +367,7 @@ export async function createEarthRenderer({
 
   let selectedEntity = null
 
-  const labelLayer = document.createElement('div')
-  labelLayer.className = 'footprints-label-layer'
-  labelLayer.dataset.debug = labelDebugEnabled ? 'true' : 'false'
-  const labelElements = new Map()
-  const labelMetadata = new Map()
-  const labelDebugElements = new Map()
-
-  const createLabelElement = ({
-    displayName,
-    displayNameZh,
-    id,
-    kind,
-    routeGroups = [],
-  }) => {
-    const key = `${kind}:${id}`
-    const element = document.createElement('span')
-    element.className = 'footprints-label'
-    element.dataset.entityKey = key
-    element.dataset.kind = kind
-    element.dataset.visible = 'false'
-    element.dataset.selected = 'false'
-    element.dataset.expanded = 'false'
-    element.dataset.globeInteractive = 'true'
-    element.setAttribute('aria-hidden', 'true')
-    element.setAttribute('role', 'button')
-    element.setAttribute('tabindex', '-1')
-    element.setAttribute('aria-label', `Select ${displayName}`)
-
-    const primary = document.createElement('span')
-    primary.className = 'footprints-label__primary'
-    primary.textContent = displayName
-    const secondary = document.createElement('span')
-    secondary.className = 'footprints-label__secondary'
-    secondary.textContent = displayNameZh
-    element.append(primary, secondary)
-
-    if (routeGroups.length === 1) {
-      const visitLine = document.createElement('span')
-      visitLine.className = 'footprints-label__visits'
-      visitLine.textContent = routeGroups[0].visits
-        .map(formatVisitMonth)
-        .join(' · ')
-      element.append(visitLine)
-    }
-
-    if (routeGroups.length > 1) {
-      const routeDetails = document.createElement('span')
-      routeDetails.className = 'footprints-label__route-details'
-      routeGroups.forEach((routeGroup) => {
-        const routeDetail = document.createElement('span')
-        routeDetail.className = 'footprints-label__route-detail'
-
-        const routeSource = document.createElement('span')
-        routeSource.className = 'footprints-label__route-source'
-        routeSource.textContent = `From ${routeGroup.baseName}`
-
-        const routeVisits = document.createElement('span')
-        routeVisits.className = 'footprints-label__visits'
-        routeVisits.textContent = routeGroup.visits
-          .map(formatVisitMonth)
-          .join(' · ')
-
-        routeDetail.append(routeSource, routeVisits)
-        routeDetails.append(routeDetail)
-      })
-      element.append(routeDetails)
-    }
-
-    const routeIds = routeGroups.map((routeGroup) => routeGroup.id)
-    const baseIds = routeGroups.map((routeGroup) => routeGroup.baseId)
-    const entity = {
-      baseId: kind === 'base' ? id : undefined,
-      baseIds: kind === 'destination' ? baseIds : [id],
-      destinationId: kind === 'destination' ? id : undefined,
-      id,
-      kind,
-      priority: kind === 'destination' ? 3 : 2,
-      routeIds,
-    }
-    const activate = () => setSelectedEntity(entity)
-    element.addEventListener('pointerdown', (event) => {
-      event.stopPropagation()
-    })
-    element.addEventListener('click', (event) => {
-      event.stopPropagation()
-      activate()
-    })
-    element.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return
-      event.preventDefault()
-      event.stopPropagation()
-      activate()
-    })
-
-    labelElements.set(key, element)
-    labelMetadata.set(key, {
-      id,
-      isVisible: false,
-      kind,
-      offset: footprintLabelOffsets[id] ?? { x: 10, y: -14 },
-    })
-    labelLayer.appendChild(element)
-
-    if (labelDebugEnabled) {
-      const debugElement = document.createElement('span')
-      debugElement.className = 'footprints-label-debug-anchor'
-      debugElement.dataset.visible = 'false'
-      debugElement.textContent = id
-      labelDebugElements.set(key, debugElement)
-      labelLayer.appendChild(debugElement)
-    }
-  }
-
-  footprintBaseLocations.forEach((location) => {
-    createLabelElement({
-      displayName: location.displayName,
-      displayNameZh: location.displayNameZh,
-      id: location.id,
-      kind: 'base',
-    })
-  })
-  destinations.forEach((destination) => {
-    const routeGroups = getSecondaryRoutesForDestination(
-      destination.id,
-    ).map((route) => ({
-      ...route,
-      baseName:
-        footprintBaseLocationsById.get(route.baseId)?.displayName ??
-        route.baseId,
-    }))
-    createLabelElement({
-      displayName: destination.displayName,
-      displayNameZh: destination.displayNameZh,
-      id: destination.id,
-      kind: 'destination',
-      routeGroups,
-    })
-  })
-
   mount.appendChild(renderer.domElement)
-  mount.appendChild(labelLayer)
 
   let width = 1
   let height = 1
@@ -471,12 +380,6 @@ export async function createEarthRenderer({
   const transformedNorthAxis = new THREE.Vector3()
   const raycaster = new THREE.Raycaster()
   const pointerNdc = new THREE.Vector2()
-  const labelWorldPosition = new THREE.Vector3()
-  const earthWorldCenter = new THREE.Vector3()
-  const labelSurfaceNormal = new THREE.Vector3()
-  const labelCameraDirection = new THREE.Vector3()
-  const cameraWorldPosition = new THREE.Vector3()
-  const labelProjectedPosition = new THREE.Vector3()
   const initialAlignmentQuaternion = new THREE.Quaternion()
   const initialOffsetQuaternion = new THREE.Quaternion()
   const introStartQuaternion = new THREE.Quaternion()
@@ -632,99 +535,41 @@ export async function createEarthRenderer({
       delete mount.dataset.selectedRoute
       delete mount.dataset.selectedRouteCount
     }
+    footprintsLabelLayer.setSelectedEntity(entity)
     onSelectionChange?.(entity)
   }
 
-  const isObjectWorldVisible = (object) => {
-    let current = object
-    while (current) {
-      if (!current.visible) return false
-      current = current.parent
-    }
-    return true
-  }
-
-  const hideLabel = (element, metadata, debugElement) => {
-    metadata.isVisible = false
-    element.dataset.visible = 'false'
-    element.setAttribute('aria-hidden', 'true')
-    element.setAttribute('tabindex', '-1')
-    if (debugElement) debugElement.dataset.visible = 'false'
-  }
+  footprintsLabelLayer = createFootprintsLabelLayer({
+    anchors: footprintsRouteLayer.labelAnchors,
+    locations: labelLocations.map((location) => ({
+      ...location,
+      routeGroups:
+        location.kind === 'destination'
+          ? getSecondaryRoutesForDestination(location.id).map(
+              (route) => ({
+                ...route,
+                baseName:
+                  footprintBaseLocationsById.get(route.baseId)
+                    ?.displayName ?? route.baseId,
+              }),
+            )
+          : [],
+    })),
+    mount,
+    onActivate: setSelectedEntity,
+  })
+  pendingLabelUnlocks.forEach((location) => {
+    footprintsLabelLayer.unlock(location)
+  })
 
   const updateLabelPositions = () => {
     scene.updateMatrixWorld(true)
     camera.updateMatrixWorld()
-    earthVisualGroup.getWorldPosition(earthWorldCenter)
-    camera.getWorldPosition(cameraWorldPosition)
-    labelCameraDirection
-      .copy(cameraWorldPosition)
-      .sub(earthWorldCenter)
-      .normalize()
-
-    labelElements.forEach((element, key) => {
-      const metadata = labelMetadata.get(key)
-      const anchor = footprintsRouteLayer.labelAnchors.get(key)
-      const debugElement = labelDebugElements.get(key)
-
-      if (!anchor || !isObjectWorldVisible(anchor)) {
-        hideLabel(element, metadata, debugElement)
-        return
-      }
-
-      anchor.getWorldPosition(labelWorldPosition)
-      labelSurfaceNormal
-        .copy(labelWorldPosition)
-        .sub(earthWorldCenter)
-        .normalize()
-      const facingAmount =
-        labelSurfaceNormal.dot(labelCameraDirection)
-      const isFrontFacing = metadata.isVisible
-        ? facingAmount > footprintLabelVisibility.hideThreshold
-        : facingAmount >= footprintLabelVisibility.showThreshold
-
-      labelProjectedPosition
-        .copy(labelWorldPosition)
-        .project(camera)
-      const isInsideViewport =
-        labelProjectedPosition.z > -1 &&
-        labelProjectedPosition.z < 1 &&
-        Math.abs(labelProjectedPosition.x) < 1.04 &&
-        Math.abs(labelProjectedPosition.y) < 1.04
-
-      if (!isFrontFacing || !isInsideViewport) {
-        hideLabel(element, metadata, debugElement)
-        return
-      }
-
-      metadata.isVisible = true
-      const selected =
-        selectedEntity?.kind === metadata.kind &&
-        selectedEntity?.id === metadata.id
-      const anchorX =
-        (labelProjectedPosition.x * 0.5 + 0.5) * width
-      const anchorY =
-        (-labelProjectedPosition.y * 0.5 + 0.5) * height
-      const x = anchorX + metadata.offset.x
-      const y = anchorY + metadata.offset.y
-
-      element.style.transform =
-        `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) ` +
-        'translate(-50%, 0)'
-      element.dataset.visible = 'true'
-      element.dataset.selected = selected ? 'true' : 'false'
-      element.dataset.expanded = selected ? 'true' : 'false'
-      element.setAttribute('aria-hidden', 'false')
-      element.setAttribute('tabindex', '0')
-
-      if (debugElement) {
-        debugElement.style.transform =
-          `translate3d(${anchorX.toFixed(1)}px, ` +
-          `${anchorY.toFixed(1)}px, 0)`
-        debugElement.textContent =
-          `${metadata.id} · ${anchorX.toFixed(1)}, ${anchorY.toFixed(1)}`
-        debugElement.dataset.visible = 'true'
-      }
+    footprintsLabelLayer.update({
+      camera,
+      earthObject: globe,
+      height,
+      width,
     })
   }
 
@@ -777,11 +622,7 @@ export async function createEarthRenderer({
   const clearSelection = () => setSelectedEntity(null)
 
   const requestFrame = () => {
-    if (
-      frameId === null &&
-      isVisible &&
-      isPageVisible
-    ) {
+    if (frameId === null && isVisible && isPageVisible) {
       lastFrameTime = performance.now()
       frameId = window.requestAnimationFrame(renderFrame)
     }
@@ -907,7 +748,6 @@ export async function createEarthRenderer({
 
     updateLabelPositions()
     renderer.render(scene, camera)
-
     frameId = window.requestAnimationFrame(renderFrame)
   }
 
@@ -1028,17 +868,21 @@ export async function createEarthRenderer({
 
     const horizontalDelta = x - dragLastX
     const verticalDelta = y - dragLastY
-    const horizontalAngle =
-      (horizontalDelta / Math.max(1, width)) *
-      exploreDragSensitivity *
-      exploreHorizontalSensitivityMultiplier *
-      sensitivity
-
-    const verticalAngle =
-      (verticalDelta / Math.max(1, height)) *
-      exploreDragSensitivity *
-      exploreVerticalSensitivityMultiplier *
-      sensitivity
+    const horizontalAngle = screenDeltaToDirectRotation(
+      horizontalDelta,
+      width,
+      exploreHorizontalSensitivityMultiplier,
+      sensitivity,
+    )
+    // Positive pitch brings northern latitudes toward the camera.
+    // Screen Y grows downward, so dragging down must reduce the view
+    // latitude and bring the southern hemisphere toward the center.
+    const verticalAngle = -screenDeltaToDirectRotation(
+      verticalDelta,
+      height,
+      exploreVerticalSensitivityMultiplier,
+      sensitivity,
+    )
 
     pendingExploreYaw += horizontalAngle
     pendingExplorePitch += verticalAngle
@@ -1128,13 +972,13 @@ export async function createEarthRenderer({
     sphereGeometry.dispose()
     globeMaterial.dispose()
     atmosphereMaterial.dispose()
+    footprintsLabelLayer?.dispose()
     footprintsRouteLayer.dispose()
     dayTexture.dispose()
     nightTexture.dispose()
     surfaceTexture.dispose()
     renderer.dispose()
     renderer.domElement.remove()
-    labelLayer.remove()
   }
 
   return {

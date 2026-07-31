@@ -254,7 +254,7 @@
   visibility: hidden;
   transform: translate3d(-100vw, -100vh, 0);
   transition:
-    opacity 150ms ease,
+    opacity var(--label-opacity-transition, 350ms) ease,
     color 150ms ease;
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.84);
   text-align: left;
@@ -262,6 +262,10 @@
   will-change: transform, opacity;
   pointer-events: auto;
   cursor: pointer;
+}
+
+.footprints-label[data-visible="false"] {
+  pointer-events: none;
 }
 
 .footprints-label[data-kind="base"] {
@@ -272,16 +276,19 @@
 
 .footprints-label[data-visible="true"] {
   visibility: visible;
-  opacity: 0.58;
+  opacity: calc(0.58 * var(--label-facing-opacity, 0));
 }
 
 .footprints-label[data-kind="base"][data-visible="true"] {
-  opacity: 0.76;
+  opacity: calc(0.76 * var(--label-facing-opacity, 0));
 }
 
 .footprints-label[data-selected="true"] {
   color: rgba(255, 255, 255, 0.96);
-  opacity: 1;
+}
+
+.footprints-label[data-selected="true"][data-visible="true"] {
+  opacity: var(--label-facing-opacity, 0);
 }
 
 .footprints-label:focus-visible {

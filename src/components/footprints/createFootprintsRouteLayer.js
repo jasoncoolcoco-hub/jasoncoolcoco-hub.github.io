@@ -285,6 +285,13 @@ function createRouteMeshes(route, resources) {
     routeLayerGeometry.radialSegments,
     false,
   )
+  const energyTipGeometry = new THREE.TubeGeometry(
+    curve,
+    route.tubularSegments,
+    route.coreRadius * energyStyle.tipRadiusMultiplier,
+    routeLayerGeometry.radialSegments,
+    false,
+  )
   const energyMaterial = new THREE.MeshBasicMaterial({
     blending: THREE.AdditiveBlending,
     color: energyStyle.color,
@@ -293,65 +300,85 @@ function createRouteMeshes(route, resources) {
     opacity: 0,
     transparent: true,
   })
+  const energyTipMaterial = new THREE.MeshBasicMaterial({
+    blending: THREE.AdditiveBlending,
+    color: energyStyle.tipColor,
+    depthTest: true,
+    depthWrite: false,
+    opacity: 0,
+    transparent: true,
+  })
+  const energyTip = new THREE.Mesh(
+    energyTipGeometry,
+    energyTipMaterial,
+  )
   const energy = new THREE.Mesh(energyGeometry, energyMaterial)
   let progress = 0
   let emphasis = 1
+  let settleProgress = 0
   const applyRouteProgress = () => {
     const easedProgress = easeInOutCubic(progress)
     setTubeProgress(coreGeometry, easedProgress, route.tubularSegments)
     setTubeProgress(glowGeometry, easedProgress, route.tubularSegments)
     coreMaterial.opacity = THREE.MathUtils.clamp(
-      route.coreOpacity * emphasis,
+      THREE.MathUtils.lerp(
+        route.coreOpacity,
+        route.settledCoreOpacity,
+        settleProgress,
+      ) * emphasis,
       0,
       1,
     )
     glowMaterial.opacity = THREE.MathUtils.clamp(
-      route.glowOpacity * emphasis,
+      THREE.MathUtils.lerp(
+        route.glowOpacity,
+        route.settledGlowOpacity,
+        settleProgress,
+      ) * emphasis,
       0,
-      0.22,
+      0.12,
     )
-  }
 
-  const setEnergyProgress = (elapsedSeconds, isEnabled) => {
-    if (!isEnabled) {
+    if (progress <= 0 || progress >= 1) {
       energyGeometry.setDrawRange(0, 0)
+      energyTipGeometry.setDrawRange(0, 0)
       energyMaterial.opacity = 0
+      energyTipMaterial.opacity = 0
       return
     }
 
-    const cycleProgress =
-      (
-        elapsedSeconds / energyStyle.cycleDuration +
-        energyStyle.phaseOffset
-      ) % 1
-    const windowStart = Math.max(
-      0,
-      cycleProgress - energyStyle.length,
-    )
-    const fadeIn = THREE.MathUtils.smoothstep(cycleProgress, 0, 0.12)
+    const fadeIn = THREE.MathUtils.smoothstep(progress, 0, 0.045)
     const fadeOut =
-      1 - THREE.MathUtils.smoothstep(cycleProgress, 0.86, 1)
-
+      1 - THREE.MathUtils.smoothstep(progress, 0.98, 1)
+    const headOpacity = fadeIn * fadeOut * emphasis
     setTubeWindow(
       energyGeometry,
-      windowStart,
-      cycleProgress,
+      Math.max(0, easedProgress - energyStyle.length),
+      easedProgress,
       route.tubularSegments,
     )
-    energyMaterial.opacity =
-      energyStyle.opacity * Math.min(fadeIn, fadeOut) * emphasis
+    setTubeWindow(
+      energyTipGeometry,
+      Math.max(0, easedProgress - energyStyle.tipLength),
+      easedProgress,
+      route.tubularSegments,
+    )
+    energyMaterial.opacity = energyStyle.opacity * headOpacity
+    energyTipMaterial.opacity = energyStyle.tipOpacity * headOpacity
   }
 
-  routeGroup.add(core, glow, energy)
+  routeGroup.add(core, glow, energy, energyTip)
   resources.geometries.push(
     coreGeometry,
     glowGeometry,
     energyGeometry,
+    energyTipGeometry,
   )
   resources.materials.push(
     coreMaterial,
     glowMaterial,
     energyMaterial,
+    energyTipMaterial,
   )
   return {
     from: route.from,
@@ -361,9 +388,12 @@ function createRouteMeshes(route, resources) {
       emphasis = value
       applyRouteProgress()
     },
-    setEnergyProgress,
     setProgress: (value) => {
       progress = THREE.MathUtils.clamp(value, 0, 1)
+      applyRouteProgress()
+    },
+    setSettleProgress: (value) => {
+      settleProgress = THREE.MathUtils.clamp(value, 0, 1)
       applyRouteProgress()
     },
     to: route.to,
@@ -483,6 +513,8 @@ function getAnimationPhase(elapsed, timeline) {
 }
 
 export function createFootprintsRouteLayer({
+  onLabelReset,
+  onLabelUnlock,
   onPhaseChange,
   onStateChange,
   reducedMotion,
@@ -503,10 +535,10 @@ export function createFootprintsRouteLayer({
   const timeline = createTimeline(secondaryRouteLayer)
   const animationState = {
     elapsedMilliseconds: 0,
-    energyElapsedSeconds: 0,
     entryId: null,
     status: 'idle',
   }
+  const unlockedLabelKeys = new Set()
   let currentPhase = 'idle'
 
   group.name = 'footprints-route-layer'
@@ -536,6 +568,18 @@ export function createFootprintsRouteLayer({
     onStateChange?.(status)
   }
 
+  const unlockLabel = (kind, id) => {
+    const key = `${kind}:${id}`
+    if (unlockedLabelKeys.has(key)) return
+    unlockedLabelKeys.add(key)
+    onLabelUnlock?.({ id, kind })
+  }
+
+  const resetLabels = () => {
+    unlockedLabelKeys.clear()
+    onLabelReset?.()
+  }
+
   const applySecondarySequence = (
     sequence,
     elapsedMilliseconds,
@@ -554,6 +598,10 @@ export function createFootprintsRouteLayer({
         route.nodeStart,
         route.nodeEnd,
       )
+      route.setSettleProgress(nodeProgress)
+      if (elapsedMilliseconds >= route.nodeStart) {
+        unlockLabel('destination', route.destinationId)
+      }
       destinationProgresses.set(
         route.destinationId,
         Math.max(
@@ -566,6 +614,15 @@ export function createFootprintsRouteLayer({
 
   const applyTimeline = (elapsedMilliseconds) => {
     const destinationProgresses = new Map()
+    if (elapsedMilliseconds >= timeline.originActivationStart) {
+      unlockLabel('base', 'huizhou')
+    }
+    if (elapsedMilliseconds >= timeline.stageActivationStart) {
+      unlockLabel('base', 'changchun')
+    }
+    if (elapsedMilliseconds >= timeline.currentActivationStart) {
+      unlockLabel('base', 'kuala-lumpur')
+    }
     nodeControllers.get('huizhou')?.setProgress(
       intervalProgress(
         elapsedMilliseconds,
@@ -580,6 +637,15 @@ export function createFootprintsRouteLayer({
         timeline.firstRouteEnd,
       ),
     )
+    routeControllers
+      .get('huizhou-changchun')
+      ?.setSettleProgress(
+        intervalProgress(
+          elapsedMilliseconds,
+          timeline.stageActivationStart,
+          timeline.stageActivationEnd,
+        ),
+      )
     nodeControllers.get('changchun')?.setProgress(
       intervalProgress(
         elapsedMilliseconds,
@@ -599,6 +665,15 @@ export function createFootprintsRouteLayer({
         timeline.secondRouteEnd,
       ),
     )
+    routeControllers
+      .get('changchun-kuala-lumpur')
+      ?.setSettleProgress(
+        intervalProgress(
+          elapsedMilliseconds,
+          timeline.currentActivationStart,
+          timeline.currentActivationEnd,
+        ),
+      )
     nodeControllers.get('kuala-lumpur')?.setProgress(
       intervalProgress(
         elapsedMilliseconds,
@@ -619,12 +694,6 @@ export function createFootprintsRouteLayer({
       },
     )
     setPhase(getAnimationPhase(elapsedMilliseconds, timeline))
-  }
-
-  const setEnergyProgress = (elapsedSeconds, isEnabled) => {
-    routeControllers.forEach((controller) => {
-      controller.setEnergyProgress(elapsedSeconds, isEnabled)
-    })
   }
 
   const setSelectedEntity = (entity) => {
@@ -662,11 +731,10 @@ export function createFootprintsRouteLayer({
 
   const prepare = () => {
     animationState.elapsedMilliseconds = 0
-    animationState.energyElapsedSeconds = 0
     animationState.entryId = null
+    resetLabels()
     secondaryRouteLayer.reset()
     applyTimeline(0)
-    setEnergyProgress(0, false)
     setPhase('idle')
     setStatus('idle')
   }
@@ -674,10 +742,8 @@ export function createFootprintsRouteLayer({
   const completeImmediately = (entryId) => {
     animationState.entryId = entryId
     animationState.elapsedMilliseconds = timeline.complete
-    animationState.energyElapsedSeconds = 0
     applyTimeline(timeline.complete)
     secondaryRouteLayer.complete()
-    setEnergyProgress(0, false)
     setStatus('complete')
   }
 
@@ -697,10 +763,9 @@ export function createFootprintsRouteLayer({
 
     animationState.entryId = entryId
     animationState.elapsedMilliseconds = 0
-    animationState.energyElapsedSeconds = 0
+    resetLabels()
     secondaryRouteLayer.reset()
     applyTimeline(0)
-    setEnergyProgress(0, false)
     setStatus('preparing')
     setStatus('playing')
   }
@@ -716,11 +781,6 @@ export function createFootprintsRouteLayer({
       if (animationState.elapsedMilliseconds >= timeline.complete) {
         setStatus('complete')
       }
-    }
-
-    if (animationState.status === 'complete' && !reducedMotion) {
-      animationState.energyElapsedSeconds += deltaSeconds
-      setEnergyProgress(animationState.energyElapsedSeconds, true)
     }
 
     return animationState.elapsedMilliseconds
