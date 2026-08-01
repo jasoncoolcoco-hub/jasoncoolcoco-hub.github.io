@@ -539,6 +539,13 @@ export async function createEarthRenderer({
     onSelectionChange?.(entity)
   }
 
+  const activateLabelEntity = (entity) => {
+    const isSelectedBase =
+      entity?.kind === 'base' &&
+      entityIdentity(entity) === entityIdentity(selectedEntity)
+    setSelectedEntity(isSelectedBase ? null : entity)
+  }
+
   footprintsLabelLayer = createFootprintsLabelLayer({
     anchors: footprintsRouteLayer.labelAnchors,
     locations: labelLocations.map((location) => ({
@@ -556,7 +563,7 @@ export async function createEarthRenderer({
           : [],
     })),
     mount,
-    onActivate: setSelectedEntity,
+    onActivate: activateLabelEntity,
   })
   pendingLabelUnlocks.forEach((location) => {
     footprintsLabelLayer.unlock(location)
@@ -875,9 +882,9 @@ export async function createEarthRenderer({
       sensitivity,
     )
     // Positive pitch brings northern latitudes toward the camera.
-    // Screen Y grows downward, so dragging down must reduce the view
-    // latitude and bring the southern hemisphere toward the center.
-    const verticalAngle = -screenDeltaToDirectRotation(
+    // Screen Y grows downward, so a downward drag maps directly to
+    // positive pitch and moves the northern hemisphere toward center.
+    const verticalAngle = screenDeltaToDirectRotation(
       verticalDelta,
       height,
       exploreVerticalSensitivityMultiplier,

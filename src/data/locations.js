@@ -7,6 +7,7 @@
  * @property {number} latitude
  * @property {number} longitude
  * @property {FootprintBaseRole} role
+ * @property {string} timeRange
  */
 
 /** @type {FootprintBaseLocation[]} */
@@ -19,6 +20,7 @@ export const footprintBaseLocations = [
     latitude: 23.1115,
     longitude: 114.4152,
     role: 'origin',
+    timeRange: '2000–2018',
   },
   {
     id: 'changchun',
@@ -28,6 +30,7 @@ export const footprintBaseLocations = [
     latitude: 43.8171,
     longitude: 125.3235,
     role: 'stage',
+    timeRange: '2018–2022',
   },
   {
     id: 'kuala-lumpur',
@@ -37,6 +40,7 @@ export const footprintBaseLocations = [
     latitude: 3.139,
     longitude: 101.6869,
     role: 'current',
+    timeRange: '2022–PRESENT',
   },
 ]
 

@@ -22,14 +22,15 @@ export const footprintLabelOffsets = {
 
 export const footprintLabelVisibility = {
   boundsPaddingPx: 2,
-  hideFacingThreshold: 0.3,
+  fadeOutFacingThreshold: 0.48,
+  fadeInFacingThreshold: 0.72,
   hideSafeRadiusRatio: 0.89,
-  hideTransitionMs: 90,
-  showFacingThreshold: 0.39,
+  hideTransitionMs: 480,
+  interactionOpacityThreshold: 0.72,
   showSafeRadiusRatio: 0.84,
   showStableFrames: 6,
-  showTransitionMs: 160,
-  unlockTransitionMs: 350,
+  showTransitionMs: 460,
+  unlockTransitionMs: 420,
   viewportMarginPx: 18,
 }
 

@@ -278,18 +278,19 @@
   visibility: hidden;
   transform: translate3d(-100vw, -100vh, 0);
   transition:
-    opacity var(--label-opacity-transition, 350ms) ease,
+    opacity var(--label-opacity-transition, 460ms)
+      cubic-bezier(0.16, 1, 0.3, 1),
     color 150ms ease;
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.84);
   text-align: left;
   white-space: nowrap;
   will-change: transform, opacity;
-  pointer-events: auto;
+  pointer-events: none;
   cursor: pointer;
 }
 
-.footprints-label[data-visible="false"] {
-  pointer-events: none;
+.footprints-label[data-interactive-visible="true"] {
+  pointer-events: auto;
 }
 
 .footprints-label[data-kind="base"] {
@@ -322,6 +323,7 @@
 
 .footprints-label__secondary,
 .footprints-label__visits,
+.footprints-label__period,
 .footprints-label__route-details {
   display: none;
   color: rgba(222, 235, 241, 0.7);
@@ -335,6 +337,30 @@
   color: rgba(206, 222, 230, 0.62);
   font-size: 7.5px;
   letter-spacing: 0.04em;
+}
+
+.footprints-label__period {
+  display: block;
+  max-height: 0;
+  overflow: hidden;
+  color: rgba(222, 235, 241, 0.64);
+  font-size: 8.5px;
+  font-weight: inherit;
+  letter-spacing: 0.055em;
+  line-height: 1.2;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition:
+    max-height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.footprints-label[data-kind="base"][data-expanded="true"]
+  .footprints-label__period {
+  max-height: 1.2em;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .footprints-label__route-details,

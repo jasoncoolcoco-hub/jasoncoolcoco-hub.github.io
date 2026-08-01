@@ -9,6 +9,15 @@ const defaultLabelOffset = { x: 10, y: -14 }
 const cameraRight = new THREE.Vector3(1, 0, 0)
 const cameraUp = new THREE.Vector3(0, 1, 0)
 
+function smoothstep(edge0, edge1, value) {
+  const progress = THREE.MathUtils.clamp(
+    (value - edge0) / Math.max(0.0001, edge1 - edge0),
+    0,
+    1,
+  )
+  return progress * progress * (3 - 2 * progress)
+}
+
 function isObjectWorldVisible(object) {
   let current = object
   while (current) {
@@ -83,11 +92,11 @@ export function createFootprintsLabelLayer({
   element.dataset.showSafeRadiusRatio = String(
     footprintLabelVisibility.showSafeRadiusRatio,
   )
-  element.dataset.hideFacingThreshold = String(
-    footprintLabelVisibility.hideFacingThreshold,
+  element.dataset.fadeOutFacingThreshold = String(
+    footprintLabelVisibility.fadeOutFacingThreshold,
   )
-  element.dataset.showFacingThreshold = String(
-    footprintLabelVisibility.showFacingThreshold,
+  element.dataset.fadeInFacingThreshold = String(
+    footprintLabelVisibility.fadeInFacingThreshold,
   )
   element.dataset.showStableFrames = String(
     footprintLabelVisibility.showStableFrames,
@@ -107,8 +116,11 @@ export function createFootprintsLabelLayer({
     const { debugElement, labelElement } = controller
     clearHideTimer(controller)
     controller.isVisible = false
+    controller.visibilityProgress = 0
     labelElement.dataset.visible = 'false'
+    labelElement.dataset.interactiveVisible = 'false'
     labelElement.style.setProperty('--label-facing-opacity', '0')
+    labelElement.style.setProperty('--label-fade-offset', '4px')
     labelElement.style.setProperty(
       '--label-opacity-transition',
       `${immediate ? 0 : footprintLabelVisibility.hideTransitionMs}ms`,
@@ -130,7 +142,36 @@ export function createFootprintsLabelLayer({
     }, footprintLabelVisibility.hideTransitionMs)
   }
 
-  const show = (controller) => {
+  const applyVisibilityProgress = (controller, progress) => {
+    const nextProgress = THREE.MathUtils.clamp(progress, 0, 1)
+    const isInteractive =
+      controller.isVisible &&
+      nextProgress >=
+        footprintLabelVisibility.interactionOpacityThreshold
+
+    controller.visibilityProgress = nextProgress
+    controller.labelElement.style.setProperty(
+      '--label-facing-opacity',
+      nextProgress.toFixed(3),
+    )
+    controller.labelElement.style.setProperty(
+      '--label-fade-offset',
+      `${((1 - nextProgress) * 4).toFixed(2)}px`,
+    )
+    controller.labelElement.dataset.interactiveVisible = isInteractive
+      ? 'true'
+      : 'false'
+    controller.labelElement.setAttribute(
+      'aria-hidden',
+      isInteractive ? 'false' : 'true',
+    )
+    controller.labelElement.setAttribute(
+      'tabindex',
+      isInteractive ? '0' : '-1',
+    )
+  }
+
+  const show = (controller, visibilityProgress) => {
     const { labelElement } = controller
     const isFirstAppearance = !controller.hasAppeared
     const transitionMs = isFirstAppearance
@@ -146,11 +187,9 @@ export function createFootprintsLabelLayer({
       '--label-opacity-transition',
       `${transitionMs}ms`,
     )
-    labelElement.style.setProperty('--label-facing-opacity', '1')
     labelElement.style.visibility = 'visible'
     labelElement.dataset.visible = 'true'
-    labelElement.setAttribute('aria-hidden', 'false')
-    labelElement.setAttribute('tabindex', '0')
+    applyVisibilityProgress(controller, visibilityProgress)
     controller.hasAppeared = true
   }
 
@@ -164,6 +203,7 @@ export function createFootprintsLabelLayer({
     labelElement.dataset.visible = 'false'
     labelElement.dataset.selected = 'false'
     labelElement.dataset.expanded = 'false'
+    labelElement.dataset.interactiveVisible = 'false'
     labelElement.dataset.globeInteractive = 'true'
     labelElement.style.setProperty(
       '--label-opacity-transition',
@@ -172,9 +212,15 @@ export function createFootprintsLabelLayer({
     labelElement.setAttribute('aria-hidden', 'true')
     labelElement.setAttribute('role', 'button')
     labelElement.setAttribute('tabindex', '-1')
+    const hasBaseTime = location.kind === 'base' && location.timeRange
+    if (hasBaseTime) {
+      labelElement.setAttribute('aria-expanded', 'false')
+    }
     labelElement.setAttribute(
       'aria-label',
-      `Select ${location.displayName}`,
+      hasBaseTime
+        ? `Show time for ${location.displayName}`
+        : `Select ${location.displayName}`,
     )
 
     const primary = document.createElement('span')
@@ -184,6 +230,13 @@ export function createFootprintsLabelLayer({
     secondary.className = 'footprints-label__secondary'
     secondary.textContent = location.displayNameZh
     labelElement.append(primary, secondary)
+
+    if (hasBaseTime) {
+      const period = document.createElement('span')
+      period.className = 'footprints-label__period'
+      period.textContent = location.timeRange
+      labelElement.append(period)
+    }
 
     const routeGroups = location.routeGroups ?? []
     if (routeGroups.length === 1) {
@@ -259,6 +312,7 @@ export function createFootprintsLabelLayer({
       labelElement,
       offset: footprintLabelOffsets[location.id] ?? defaultLabelOffset,
       stableVisibleFrames: 0,
+      visibilityProgress: 0,
       width: 1,
     })
   })
@@ -499,6 +553,16 @@ export function createFootprintsLabelLayer({
       controller.labelElement.dataset.expanded = selected
         ? 'true'
         : 'false'
+      if (controller.kind === 'base') {
+        controller.labelElement.setAttribute(
+          'aria-expanded',
+          selected ? 'true' : 'false',
+        )
+        controller.labelElement.setAttribute(
+          'aria-label',
+          `${selected ? 'Hide' : 'Show'} time for ${controller.labelElement.querySelector('.footprints-label__primary')?.textContent ?? controller.id}`,
+        )
+      }
       measureController(controller)
     })
   }
@@ -527,6 +591,11 @@ export function createFootprintsLabelLayer({
         .sub(worldPosition)
         .normalize()
       const facing = worldNormal.dot(toCamera)
+      const facingProgress = smoothstep(
+        footprintLabelVisibility.fadeOutFacingThreshold,
+        footprintLabelVisibility.fadeInFacingThreshold,
+        facing,
+      )
 
       projectedPosition.copy(worldPosition).project(camera)
       if (
@@ -569,10 +638,12 @@ export function createFootprintsLabelLayer({
 
       labelElement.style.transform =
         `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) ` +
-        'translate(-50%, 0)'
+        'translate(-50%, 0) translateY(var(--label-fade-offset, 4px))'
 
       if (debugEnabled) {
         labelElement.dataset.facing = facing.toFixed(3)
+        labelElement.dataset.visibilityProgress =
+          facingProgress.toFixed(3)
         labelElement.dataset.screenX = x.toFixed(1)
         labelElement.dataset.screenY = y.toFixed(1)
         labelElement.dataset.cachedWidth = String(controller.width)
@@ -592,12 +663,13 @@ export function createFootprintsLabelLayer({
         const isCompletingInitialReveal =
           performance.now() < controller.initialRevealUntil
         const remainsSafe =
-          facing >= footprintLabelVisibility.hideFacingThreshold &&
+          facingProgress > 0 &&
           (hideBoundsSafe || isCompletingInitialReveal)
         if (!remainsSafe) {
           hide(controller)
           return
         }
+        applyVisibilityProgress(controller, facingProgress)
       } else {
         // A route arrival is the label's first presentation, not a
         // re-entry from the globe edge. The current hide boundary is
@@ -608,7 +680,7 @@ export function createFootprintsLabelLayer({
         const reentryBoundsSafe =
           controller.hasAppeared && showBoundsSafe
         const canShow =
-          facing >= footprintLabelVisibility.showFacingThreshold &&
+          facingProgress > 0 &&
           (initialBoundsSafe || reentryBoundsSafe)
         controller.stableVisibleFrames = canShow
           ? controller.stableVisibleFrames + 1
@@ -619,7 +691,7 @@ export function createFootprintsLabelLayer({
         if (controller.stableVisibleFrames < requiredFrames) {
           return
         }
-        show(controller)
+        show(controller, facingProgress)
       }
 
       if (debugElement) {
