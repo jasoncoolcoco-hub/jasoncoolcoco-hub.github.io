@@ -6,6 +6,13 @@ export default function SideNavigation({
   navigation,
   reducedMotion,
   activeChapterId,
+  entranceDelay = 1.3,
+  entranceDuration = 0.45,
+  entranceEase = [0.22, 1, 0.36, 1],
+  entranceStagger = 0.15,
+  entranceY = 7,
+  markAsHomeDirectory = false,
+  numericOnly = false,
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const currentChapter =
@@ -30,7 +37,8 @@ export default function SideNavigation({
       {chapters.map((chapter, index) => {
         const isCurrent = chapter.id === currentChapter.id
         const isSoon = chapter.status === 'soon'
-        const rowDelay = 1.3 + index * 0.15
+        const rowDelay = entranceDelay + index * entranceStagger
+        const canNavigate = chapter.id && !isSoon
 
         return (
           <motion.li
@@ -39,28 +47,42 @@ export default function SideNavigation({
             aria-current={isCurrent ? 'page' : undefined}
             initial={
               animateEntrance
-                ? { opacity: 0, y: reducedMotion ? 0 : 7 }
+                ? { opacity: 0, y: reducedMotion ? 0 : entranceY }
                 : false
             }
             animate={{ opacity: 1, y: 0 }}
             transition={{
               delay: animateEntrance && !reducedMotion ? rowDelay : 0,
-              duration: reducedMotion ? 0.01 : 0.45,
-              ease: [0.22, 1, 0.36, 1],
+              duration: reducedMotion ? 0.01 : entranceDuration,
+              ease: entranceEase,
             }}
           >
-            <span className="chapter-list__number">{chapter.number}</span>
-            <span className="chapter-list__name">{chapter.name}</span>
-            {!isCurrent && isSoon && (
+            {numericOnly && canNavigate ? (
+              <a
+                className="chapter-list__number chapter-list__link"
+                href={`#${chapter.id}`}
+                aria-label={chapter.name}
+              >
+                {chapter.number}
+              </a>
+            ) : (
+              <span className="chapter-list__number">{chapter.number}</span>
+            )}
+            {!numericOnly && (
+              <span className="chapter-list__name">{chapter.name}</span>
+            )}
+            {!numericOnly && !isCurrent && isSoon && (
               <motion.span
                 className="chapter-list__status"
                 initial={animateEntrance ? { opacity: 0 } : false}
                 animate={{ opacity: 1 }}
                 transition={{
                   delay:
-                    animateEntrance && !reducedMotion ? rowDelay + 0.15 : 0,
+                    animateEntrance && !reducedMotion
+                      ? rowDelay + entranceStagger
+                      : 0,
                   duration: reducedMotion ? 0.01 : 0.3,
-                  ease: [0.22, 1, 0.36, 1],
+                  ease: entranceEase,
                 }}
               >
                 {navigation.soonLabel}
@@ -74,49 +96,59 @@ export default function SideNavigation({
 
   return (
     <>
-      <nav className="side-navigation" aria-label={navigation.label}>
+      <nav
+        className="side-navigation"
+        aria-label={navigation.label}
+        data-home-directory={markAsHomeDirectory ? 'true' : undefined}
+      >
         {renderChapterList(true)}
       </nav>
 
-      <motion.nav
-        className="mobile-navigation"
-        aria-label={navigation.label}
-        initial={{ opacity: 0, y: reducedMotion ? 0 : -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          delay: reducedMotion ? 0 : 1.3,
-          duration: reducedMotion ? 0.01 : 0.45,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-      >
-        <span className="mobile-navigation__current">
-          {currentChapter.number} {currentChapter.name}
-        </span>
-        <button
-          type="button"
-          className="mobile-navigation__toggle"
-          onClick={() => setIsMenuOpen((value) => !value)}
-          aria-expanded={isMenuOpen}
-          aria-controls={mobileMenuId}
-        >
-          {isMenuOpen ? navigation.menuClose : navigation.menuOpen}
-        </button>
-      </motion.nav>
-
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            id={mobileMenuId}
-            className="mobile-chapter-menu"
-            initial={{ opacity: 0, y: -12 }}
+      {!numericOnly && (
+        <>
+          <motion.nav
+            className="mobile-navigation"
+            aria-label={navigation.label}
+            data-home-directory={markAsHomeDirectory ? 'true' : undefined}
+            initial={{ opacity: 0, y: reducedMotion ? 0 : -entranceY }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: reducedMotion ? 0.01 : 0.24 }}
+            transition={{
+              delay: reducedMotion ? 0 : entranceDelay,
+              duration: reducedMotion ? 0.01 : entranceDuration,
+              ease: entranceEase,
+            }}
           >
-            {renderChapterList()}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <span className="mobile-navigation__current">
+              {currentChapter.number} {currentChapter.name}
+            </span>
+            <button
+              type="button"
+              className="mobile-navigation__toggle"
+              onClick={() => setIsMenuOpen((value) => !value)}
+              aria-expanded={isMenuOpen}
+              aria-controls={mobileMenuId}
+            >
+              {isMenuOpen ? navigation.menuClose : navigation.menuOpen}
+            </button>
+          </motion.nav>
+
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                id={mobileMenuId}
+                className="mobile-chapter-menu"
+                data-home-directory={markAsHomeDirectory ? 'true' : undefined}
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: reducedMotion ? 0.01 : 0.24 }}
+              >
+                {renderChapterList()}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
     </>
   )
 }
