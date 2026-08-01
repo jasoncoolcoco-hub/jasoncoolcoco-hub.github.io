@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
+import HomeTransitionShell from './components/HomeTransitionShell'
 import { siteContent } from './data/siteContent'
-import HomeSection from './sections/HomeSection'
 
 export default function App() {
   useEffect(() => {
@@ -12,7 +12,7 @@ export default function App() {
 
   return (
     <main>
-      <HomeSection />
+      <HomeTransitionShell />
     </main>
   )
 }
