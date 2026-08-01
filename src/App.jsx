@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import HomeTransitionShell from './components/HomeTransitionShell'
 import { siteContent } from './data/siteContent'
-import FootprintsSection from './sections/FootprintsSection'
 
 export default function App() {
   useEffect(() => {
@@ -14,7 +13,6 @@ export default function App() {
   return (
     <main>
       <HomeTransitionShell />
-      <FootprintsSection />
     </main>
   )
 }

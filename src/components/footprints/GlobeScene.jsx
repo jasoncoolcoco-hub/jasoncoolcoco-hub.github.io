@@ -10,6 +10,7 @@ export default function GlobeScene({
   exitOpacity,
   exitScale,
   exitY,
+  entryProgress,
   instructions,
   label,
   onSelectionChange,
@@ -29,15 +30,11 @@ export default function GlobeScene({
     >
       <motion.div
         className="footprints-globe-entrance"
-        style={
-          reducedMotion
-            ? { opacity: 1 }
-            : {
-                y: entranceY,
-                scale: entranceScale,
-                opacity: entranceOpacity,
-              }
-        }
+        style={{
+          y: entranceY,
+          scale: reducedMotion ? 1 : entranceScale,
+          opacity: reducedMotion ? 1 : entranceOpacity,
+        }}
       >
         <motion.div
           className="footprints-globe-exit"
@@ -53,6 +50,7 @@ export default function GlobeScene({
         >
           <EarthCanvas
             controlsEnabled={controlsEnabled}
+            entryProgress={entryProgress}
             instructions={instructions}
             label={label}
             onSelectionChange={onSelectionChange}

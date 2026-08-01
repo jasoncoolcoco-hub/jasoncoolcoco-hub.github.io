@@ -1,7 +1,16 @@
 .home-transition-shell {
   position: relative;
-  height: 150svh;
-  background: #020305;
+  height: 490svh;
+  background: #000;
+}
+
+.footprints-scroll-anchor {
+  position: absolute;
+  top: 170svh;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
 .home-transition-shell__sticky {
@@ -13,19 +22,15 @@
   isolation: isolate;
 }
 
-.home-transition-shell__veil {
+.footprints-section {
   position: absolute;
   inset: 0;
-  z-index: 20;
-  background: #020305;
-  pointer-events: none;
-}
-
-.footprints-section {
-  position: relative;
-  height: 320svh;
-  min-height: 1920px;
-  background: #020305;
+  z-index: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #fff;
 }
 
 .footprints-section__sticky {
@@ -36,14 +41,39 @@
   --footprints-layer-globe-transition: 40;
   --footprints-layer-transition: 50;
   --footprints-background-tint: rgba(14, 25, 32, 0.34);
-  position: sticky;
-  top: 0;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100svh;
   min-height: 640px;
   overflow: hidden;
   isolation: isolate;
-  background: #020305;
+  background: transparent;
+}
+
+.footprints-page-surface {
+  position: absolute;
+  inset: 0;
+  z-index: var(--footprints-layer-background);
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.footprints-page-title {
+  position: absolute;
+  top: clamp(18px, 1.5vw, 24px);
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  line-height: 1.2;
+  transform: translateX(-50%);
 }
 
 .footprints-background-layer {
@@ -51,20 +81,14 @@
   inset: 0;
   z-index: var(--footprints-layer-background);
   overflow: hidden;
-  background:
-    radial-gradient(
-      circle at 50% 44%,
-      var(--footprints-background-tint),
-      transparent 42%
-    ),
-    #020305;
+  background: #000;
   pointer-events: none;
 }
 
 .footprints-section__grain {
   position: absolute;
   inset: -20%;
-  opacity: 0.09;
+  opacity: 0;
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.055) 0 0.35px, transparent 0.7px),
     radial-gradient(circle, rgba(255, 255, 255, 0.032) 0 0.3px, transparent 0.65px);
@@ -412,8 +436,9 @@
     min-height: 560px;
   }
 
-  .footprints-section {
-    min-height: 1680px;
+  .footprints-page-title {
+    top: max(18px, env(safe-area-inset-top));
+    font-size: 8px;
   }
 
   .earth-canvas {

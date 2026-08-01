@@ -13,6 +13,7 @@ const desktopZoomQuery =
 
 export default function EarthCanvas({
   controlsEnabled,
+  entryProgress,
   scrollRotation,
   reducedMotion,
   instructions,
@@ -31,10 +32,13 @@ export default function EarthCanvas({
     inside: false,
     sequence: 0,
   })
+  const transitionEntryReadyRef = useRef(
+    !entryProgress || entryProgress.get() >= 0.64,
+  )
   const pointerRecordsRef = useRef(new Map())
   const suppressDoubleClickUntilRef = useRef(0)
   const suppressSelectionClickUntilRef = useRef(0)
-  const [isNearViewport, setIsNearViewport] = useState(false)
+  const [isNearViewport, setIsNearViewport] = useState(() => Boolean(entryProgress))
   const [renderState, setRenderState] = useState('idle')
   const [zoomMode, setZoomMode] = useState('default')
   const [desktopZoomAvailable, setDesktopZoomAvailable] = useState(() =>
@@ -65,6 +69,34 @@ export default function EarthCanvas({
   )
 
   useEffect(() => {
+    if (!entryProgress) return undefined
+
+    return entryProgress.on('change', (progress) => {
+      if (!entryStateRef.current.inside && progress >= 0.64) {
+        transitionEntryReadyRef.current = true
+        entryStateRef.current.inside = true
+        entryStateRef.current.sequence += 1
+        runtimeRef.current?.setVisible(true)
+        runtimeRef.current?.enterFootprints({
+          entryId: entryStateRef.current.sequence,
+          reason: 'home-transition',
+        })
+        return
+      }
+
+      if (progress <= 0.58) {
+        transitionEntryReadyRef.current = false
+        if (!entryStateRef.current.inside) return
+        runtimeRef.current?.setZoomPreset('default')
+        setZoomMode('default')
+        entryStateRef.current.inside = false
+        runtimeRef.current?.prepareFootprintsEntry()
+        runtimeRef.current?.setVisible(false)
+      }
+    })
+  }, [entryProgress])
+
+  useEffect(() => {
     const host = hostRef.current
     if (!host) return undefined
 
@@ -77,12 +109,16 @@ export default function EarthCanvas({
     const visibilityObserver = new IntersectionObserver(
       ([entry]) => {
         isVisibleRef.current = entry.isIntersecting
-        runtimeRef.current?.setVisible(entry.isIntersecting)
+        runtimeRef.current?.setVisible(
+          entry.isIntersecting || transitionEntryReadyRef.current,
+        )
       },
       { threshold: 0.01 },
     )
     const entryObserver = new IntersectionObserver(
       ([entry]) => {
+        if (!transitionEntryReadyRef.current) return
+
         if (
           !entryStateRef.current.inside &&
           entry.isIntersecting &&
@@ -245,7 +281,9 @@ export default function EarthCanvas({
         } else {
           runtime.prepareFootprintsEntry()
         }
-        runtime.setVisible(isVisibleRef.current)
+        runtime.setVisible(
+          isVisibleRef.current || transitionEntryReadyRef.current,
+        )
 
         const resize = () => {
           // Keep the renderer and HTML label projection in the mount's

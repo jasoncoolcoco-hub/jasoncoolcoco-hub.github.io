@@ -29,28 +29,27 @@ orientation markers and never navigate to empty pages.
   safety line. It uses natural left alignment at every width.
 - Entrance motion is limited to a short opacity and vertical settle. Home has no
   title assembly, scroll-driven text layout, local subject mask, parallax, or
-  bottom prompt. The existing black veil still owns the handoff to Footprints.
+  bottom prompt. The handoff to Footprints uses only stacked page and content
+  translations; there is no black veil or fade-to-black layer.
 
 ## Footprints V0.2 foundation
 
 - Footprints follows Home as a full-viewport, sticky cinematic chapter on a
-  blue-black base. An extremely low-contrast CSS grain layer prevents the black
-  field from feeling digitally flat without introducing a visible texture tile.
-- Home remains intact inside an outer transition shell. As the reader leaves
-  Home, a non-interactive black veil gradually darkens the approved hero before
-  the Footprints stage reaches the viewport.
-- The Footprints chapter uses a `320svh` scroll range. The globe arrives from
-  below and at reduced scale, settles near the center, then reverses upward and
-  into the distance near the end of the chapter.
-- Entrance rotation is restrained to approximately 150 degrees. The reverse
-  exit adds approximately 150 degrees in the opposite chapter direction.
-  During the settled state the globe rotates slowly. Interaction behavior is
+  pure-black page surface. Its existing globe lighting remains unchanged.
+- Home and Footprints share one `490svh` experience: `170svh` drives the page
+  handoff and the remaining `220svh` retains the established Footprints chapter
+  travel after the sticky viewport is accounted for.
+- The globe arrives from below at scale `1`, independently of its normal
+  rotation. There is no entrance opacity fade, scroll-driven entrance rotation,
+  or second renderer. The established reverse exit still moves the globe upward
+  and into the distance near the end of the chapter.
+- During the settled state the globe rotates at its established speed.
+  Interaction behavior is
   explicitly separated by size state: Default is a calm automatic presentation
   with no manual rotation, while enlarged quaternion controls permanently
   update the current orientation.
-- The left navigation receives an explicit chapter ID, so `02 FOOTPRINTS`
-  becomes active only within the Footprints stage. Home remains active in the
-  Home stage; Lab and Thanks retain their quiet `SOON` treatment.
+- One fixed four-number navigation rail spans the handoff. Its ink and active
+  marker interpolate from black `01` to white `02` without remounting or moving.
 - The primary V0.2 renderer directly adapts the official Three.js
   `webgpu_tsl_earth` example into a reusable React lifecycle. It uses
   `WebGPURenderer`, TSL node materials, local 4096×2048 day/night/surface
@@ -453,14 +452,31 @@ assembly, or scroll-driven Home animation.
 All motion uses soft easing without bounce. With `prefers-reduced-motion`, the
 same content is presented almost immediately and movement is removed.
 
+## Home to Footprints transition
+
+- The transition occupies `170svh`, short enough for one or two natural
+  trackpad gestures, and is fully reversible.
+- From progress `0.00–0.35`, the HOME white shell moves upward while the actual
+  pure-black Footprints surface rises from below. HOME chrome and the introduction
+  belong to that white shell and leave with it; the Hero photograph remains fixed.
+- From `0.35–0.42`, the unchanged Hero photograph holds alone over the black
+  surface. From `0.42–0.70`, only that photograph moves upward, without scale,
+  rotation, masking, or opacity fading.
+- From `0.68–1.00`, the already-prepared Earth stage rises from below at scale
+  `1`. Desktop starts at `86vh`; compact screens use `72vh` so the visible globe
+  edge follows the departing HOME content without an empty black interval.
+- The Earth canvas mounts once. Entry is armed at progress `0.64`; reversing
+  below `0.58` restores default size and prepares the existing route timeline
+  for the next entry. City-label viewport bounds are invalidated when the two
+  Motion wrappers move so the established labels remain correctly projected.
+
 ## Chapter navigation
 
 - Home navigation is a vertically centered `01–04` number rail at the left page
   edge. The current number is darker and heavier; future chapters remain quiet
   and non-interactive.
-- Footprints continues to use the shared component's original named desktop
-  rail and compact mobile menu. HOME-only presentation is enabled through
-  explicit props whose defaults preserve Footprints behavior.
+- The same rail stays fixed through Footprints, changes to white, and promotes
+  `02` without showing chapter names or mounting a second navigation element.
 
 ## Inline contact reveal
 

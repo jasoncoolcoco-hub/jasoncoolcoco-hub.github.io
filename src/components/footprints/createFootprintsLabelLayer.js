@@ -310,6 +310,20 @@ export function createFootprintsLabelLayer({
     capture: true,
     passive: true,
   })
+  const transformedAncestors = [
+    mount.closest('.footprints-globe-entrance'),
+    mount.closest('.footprints-globe-exit'),
+  ].filter(Boolean)
+  const transformObserver =
+    typeof MutationObserver === 'function'
+      ? new MutationObserver(markViewportBoundsDirty)
+      : null
+  transformedAncestors.forEach((ancestor) => {
+    transformObserver?.observe(ancestor, {
+      attributes: true,
+      attributeFilter: ['style'],
+    })
+  })
 
   const updateViewportBounds = (width, height) => {
     if (!viewportBoundsDirty) return
@@ -621,6 +635,7 @@ export function createFootprintsLabelLayer({
 
   const dispose = () => {
     labelResizeObserver?.disconnect()
+    transformObserver?.disconnect()
     window.removeEventListener('resize', markViewportBoundsDirty)
     window.removeEventListener('scroll', markViewportBoundsDirty, true)
     controllers.forEach((controller) => {
