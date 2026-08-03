@@ -1,10 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { heroCameraConfig } from '../config/studioConfig'
-import { createCentralPaddedStage } from './CentralPaddedStage'
-import { createCurtainZones } from './CurtainZones'
 import { createDebugCameraTools } from './DebugCameraControls'
-import { createGlassFacade } from './GlassFacade'
 import { createStudioMaterials } from './createStudioMaterials'
 import { createStudioLighting } from './StudioLighting'
 import { createStudioShell } from './StudioShell'
@@ -51,37 +48,22 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   const architecture = new THREE.Group()
   architecture.name = 'FredStudioArchitecture'
   architecture.add(createStudioShell(materials))
-  architecture.add(createCurtainZones(materials))
-  architecture.add(createCentralPaddedStage(materials))
-  architecture.add(createGlassFacade(materials))
   scene.add(architecture)
   scene.add(createStudioLighting())
 
   const debugTools = createDebugCameraTools(scene, camera, controls)
-  const hideArchitectureObjects = (names) => {
-    names.forEach((name) => {
-      const object = architecture.getObjectByName(name)
-      if (object) object.visible = false
-    })
-  }
   if (reviewView && reviewView !== 'wireframe') {
     debugTools.setView(reviewView)
     if (reviewView === 'top') {
-      architecture.getObjectByName('SlopedCeiling').visible = false
-      architecture.getObjectByName('CeilingCanopy').visible = false
-    }
-    if (reviewView === 'section') {
-      hideArchitectureObjects(['LeftDisplayWall', 'CurtainZones', 'CentralPaddedStage', 'StructuralColumns'])
+      architecture.getObjectByName('Face3RoofPlane').visible = false
     }
     if (reviewView === 'shell') {
-      hideArchitectureObjects(['LeftDisplayWall', 'CurtainZones', 'CentralPaddedStage', 'StructuralColumns'])
       debugTools.setGrid(true)
       debugTools.setAxes(true)
     }
   }
   if (reviewView === 'wireframe') {
     debugTools.setView('hero')
-    hideArchitectureObjects(['LeftDisplayWall', 'CurtainZones', 'CentralPaddedStage', 'StructuralColumns'])
     debugTools.setGrid(true)
     debugTools.setWireframe(true)
   }

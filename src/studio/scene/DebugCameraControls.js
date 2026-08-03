@@ -35,12 +35,10 @@ export function createDebugCameraTools(scene, camera, controls) {
   scene.add(axes)
 
   const labels = [
-    createLabelSprite('LEFT DISPLAY WALL', [8.4, 14.2, -1.6]),
-    createLabelSprite('CENTRAL PADDED STAGE', [0.7, 2.6, -7.1]),
-    createLabelSprite('TRIANGULAR GLASS BOUNDARY', [-19, 14, -4]),
-    createLabelSprite('RED CURTAIN', [1.9, 10.8, 3.4]),
-    createLabelSprite('REAR CURTAIN', [-5.4, 6.6, 10.6]),
-    createLabelSprite('CEILING CANOPY', [-1, 17.5, -4.2]),
+    createLabelSprite('FACE 0 / FLOOR', [0, 1.4, 0]),
+    createLabelSprite('FACE 1 / GLASS FACADE', [-19, 15.2, -5]),
+    createLabelSprite('FACE 2 / REAR TRIANGULAR WALL', [0, 9, 23]),
+    createLabelSprite('FACE 3 / ROOF', [0, 20, -7]),
   ]
   labels.forEach((label) => scene.add(label))
 
@@ -57,7 +55,7 @@ export function createDebugCameraTools(scene, camera, controls) {
 
   const setWireframe = (enabled) => {
     scene.traverse((object) => {
-      if (!object.isMesh || !object.material || object.material.transparent) return
+      if (!object.isMesh || !object.material) return
       object.material.wireframe = enabled
     })
   }

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { studioLayout } from '../config/studioConfig'
 import { createSurface, roofHeightAt } from './studioGeometry'
+import { createGlassFacade } from './GlassFacade'
 
 function box(width, height, depth, material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material)
@@ -12,8 +13,9 @@ function box(width, height, depth, material) {
 function addFloorZone(group, spec, material, height = 0.16) {
   if (!spec.visibility) return
   const zone = box(spec.width, height, spec.depth, material)
+  zone.name = 'Face0Floor'
   zone.position.set(...spec.position)
-  zone.userData.structureName = spec.material
+  zone.userData.structureName = 'Face 0 / Floor'
   group.add(zone)
 }
 
@@ -52,7 +54,7 @@ function createRoofGrid(spec, material) {
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   const ceiling = new THREE.Mesh(geometry, material)
-  ceiling.name = 'WedgeCeilingInnerSurface'
+  ceiling.name = 'Face3RoofInnerSurface'
   ceiling.castShadow = true
   ceiling.receiveShadow = true
   return ceiling
@@ -85,10 +87,10 @@ function createRoofSeams(spec) {
   return new THREE.LineSegments(geometry, seamMaterial)
 }
 
-function createTriangularRoofShell(spec, materials) {
+function createRoofFromWallEdges(spec, materials) {
   const group = new THREE.Group()
-  group.name = 'SlopedCeiling'
-  group.userData.structureName = 'Triangular Wedge Roof'
+  group.name = 'Face3RoofPlane'
+  group.userData.structureName = 'Face 3 / Roof defined by Wall 1 + Wall 2'
   if (!spec.visibility) return group
 
   const xMin = -spec.width / 2
@@ -102,7 +104,7 @@ function createTriangularRoofShell(spec, materials) {
   const rightRear = roofHeightAt(xMax, zRear, spec)
 
   const innerSurface = createRoofGrid(spec, materials.ceiling)
-  innerSurface.userData.structureName = 'Continuous Sloped Shell Interior'
+  innerSurface.userData.structureName = 'Roof plane spanning shared wall top edges'
   group.add(innerSurface)
   group.add(createRoofSeams(spec))
   group.add(createSurface([
@@ -110,24 +112,24 @@ function createTriangularRoofShell(spec, materials) {
     [xMax, rightFront + thickness, zFront],
     [xMax, rightRear + thickness, zRear],
     [xMin, leftRear + thickness, zRear],
-  ], materials.ceilingEdge, { name: 'WedgeRoofOuterSurface' }))
+  ], materials.ceilingEdge, { name: 'Face3RoofOuterSurface' }))
 
   group.add(createSurface([
     [xMin, leftFront, zFront], [xMax, rightFront, zFront],
     [xMax, rightFront + thickness, zFront], [xMin, leftFront + thickness, zFront],
-  ], materials.ceilingEdge, { name: 'WedgeRoofFrontFascia' }))
+  ], materials.ceilingEdge, { name: 'RoofFrontOpenEdge' }))
   group.add(createSurface([
     [xMin, leftRear, zRear], [xMax, rightRear, zRear],
     [xMax, rightRear + thickness, zRear], [xMin, leftRear + thickness, zRear],
-  ], materials.ceilingEdge, { name: 'WedgeApexFascia' }))
+  ], materials.ceilingEdge, { name: 'RoofWall2SharedEdge' }))
   group.add(createSurface([
     [xMin, leftFront, zFront], [xMin, leftRear, zRear],
     [xMin, leftRear + thickness, zRear], [xMin, leftFront + thickness, zFront],
-  ], materials.ceilingEdge, { name: 'WedgeRoofGlassFascia' }))
+  ], materials.ceilingEdge, { name: 'RoofWall1SharedEdge' }))
   group.add(createSurface([
     [xMax, rightFront, zFront], [xMax, rightRear, zRear],
     [xMax, rightRear + thickness, zRear], [xMax, rightFront + thickness, zFront],
-  ], materials.ceilingEdge, { name: 'WedgeRoofSolidFascia' }))
+  ], materials.ceilingEdge, { name: 'RoofTaperedOpenEdge' }))
 
   ;[0.2, 0.5, 0.8].forEach((xRatio) => {
     const x = xMin + xRatio * spec.width
@@ -142,48 +144,48 @@ function createTriangularRoofShell(spec, materials) {
   return group
 }
 
-function createStructuralColumns(materials) {
+function createRearTriangularWall(materials) {
   const group = new THREE.Group()
-  group.name = 'StructuralColumns'
-  const columnPositions = [
-    [-17.7, -14.5],
-    [-17.7, 5.5],
-  ]
+  group.name = 'Face2RearTriangularWall'
+  group.userData.structureName = 'Face 2 / Rear Triangular Wall'
 
-  columnPositions.forEach(([x, z], index) => {
-    const height = roofHeightAt(x, z) - 0.18
-    const column = box(0.62, height, 0.62, materials.column)
-    column.position.set(x, height / 2, z)
-    column.userData.structureName = `Column ${index + 1}`
-    group.add(column)
-  })
+  const roof = studioLayout.slopedCeiling
+  const xWall1 = -roof.width / 2
+  const xTaper = roof.width / 2
+  const zRear = roof.depth / 2
+  const wall1Top = roofHeightAt(xWall1, zRear, roof)
+  const taperedTop = roofHeightAt(xTaper, zRear, roof)
+
+  const wall = createSurface([
+    [xWall1, 0, zRear],
+    [xTaper, 0, zRear],
+    [xTaper, taperedTop, zRear],
+    [xWall1, wall1Top, zRear],
+  ], materials.deepFloor, { name: 'Face2RearTriangularSurface', reverse: true })
+  wall.userData.structureName = 'Wall 2 rising from 0.9m to the Wall 1 junction'
+  group.add(wall)
+
+  const outlineMaterial = new THREE.LineBasicMaterial({ color: '#c9aa7d', transparent: true, opacity: 0.68 })
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(wall.geometry), outlineMaterial)
+  outline.name = 'Face2RearTriangularOutline'
+  group.add(outline)
+
+  const sharedCorner = box(0.34, wall1Top, 0.34, materials.ceilingEdge)
+  sharedCorner.name = 'Wall1Wall2SharedCorner'
+  sharedCorner.position.set(xWall1, wall1Top / 2, zRear)
+  group.add(sharedCorner)
+
   return group
 }
 
 export function createStudioShell(materials) {
   const root = new THREE.Group()
   root.name = 'StudioShell'
+  root.userData.structureName = 'Four-face triangular wedge shell'
 
-  const envelope = new THREE.Group()
-  envelope.name = 'TriangularWedgeEnvelope'
-  envelope.userData.structureName = 'Single Triangular-Prism Shell'
-  addFloorZone(envelope, studioLayout.floor, materials.concrete, 0.32)
-  addFloorZone(envelope, studioLayout.timberFloor, materials.timber, 0.1)
-  envelope.add(createTriangularRoofShell(studioLayout.slopedCeiling, materials))
-  root.add(envelope)
-
-  const displayWall = box(
-    studioLayout.displayWall.width,
-    studioLayout.displayWall.height,
-    studioLayout.displayWall.depth,
-    materials.displayWall,
-  )
-  displayWall.name = 'LeftDisplayWall'
-  displayWall.position.set(...studioLayout.displayWall.position)
-  displayWall.rotation.set(...studioLayout.displayWall.rotation)
-  displayWall.userData.structureName = 'Left Display Wall'
-  root.add(displayWall)
-
-  root.add(createStructuralColumns(materials))
+  addFloorZone(root, studioLayout.floor, materials.concrete, 0.32)
+  root.add(createGlassFacade(materials))
+  root.add(createRearTriangularWall(materials))
+  root.add(createRoofFromWallEdges(studioLayout.slopedCeiling, materials))
   return root
 }

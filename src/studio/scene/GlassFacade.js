@@ -37,8 +37,8 @@ function createSlopedRail(spec, material, zStart, zEnd, heightRatio = 1) {
 export function createGlassFacade(materials) {
   const spec = studioLayout.glassFacade
   const group = new THREE.Group()
-  group.name = 'GlassFacade'
-  group.userData.structureName = 'Wedge Glass Boundary'
+  group.name = 'Face1GlassFacade'
+  group.userData.structureName = 'Face 1 / Glass Facade'
 
   const startZ = spec.position[2] - spec.depth / 2
   const endZ = startZ + spec.depth

@@ -21,7 +21,7 @@ export const studioLayout = {
     depth: 46.4,
     elevation: 0.025,
     material: 'timber',
-    visibility: true,
+    visibility: false,
   },
   displayWall: {
     position: [8.4, 6.8, -1.6],
@@ -31,7 +31,7 @@ export const studioLayout = {
     depth: 0.54,
     elevation: 0.3,
     material: 'displayWall',
-    visibility: true,
+    visibility: false,
   },
   redCurtain: {
     position: [1.9, 5.35, 3.4],
@@ -41,7 +41,7 @@ export const studioLayout = {
     depth: 0.28,
     elevation: 0.5,
     material: 'redCurtain',
-    visibility: true,
+    visibility: false,
   },
   rearCurtain: {
     position: [-5.4, 3.2, 10.6],
@@ -51,7 +51,7 @@ export const studioLayout = {
     depth: 0.18,
     elevation: 0.4,
     material: 'rearCurtain',
-    visibility: true,
+    visibility: false,
   },
   centralStage: {
     position: [0.7, 0.2, -7.1],
@@ -61,7 +61,7 @@ export const studioLayout = {
     height: 0.84,
     elevation: 0.2,
     material: 'stage',
-    visibility: true,
+    visibility: false,
   },
   glassFacade: {
     position: [-19.82, 0, 0],
@@ -81,7 +81,7 @@ export const studioLayout = {
     width: 40,
     depth: 48,
     thickness: 0.7,
-    slope: { leftFront: 26.5, rightFront: 26.5, leftRear: 0.9, rightRear: 0.9 },
+    slope: { leftFront: 26.5, rightFront: 25, leftRear: 12.5, rightRear: 0.9 },
     elevation: 0,
     material: 'ceiling',
     visibility: true,
@@ -95,23 +95,23 @@ export const studioLayout = {
     anchorGap: 0.75,
     elevation: 0,
     material: 'canopy',
-    visibility: true,
+    visibility: false,
   },
 }
 
 export const heroCameraConfig = {
-  position: [15.5, 23.5, -31.5],
-  target: [-2.5, 3.7, 1.2],
-  fov: 68,
+  position: [16, 22.5, -31.5],
+  target: [-3.8, 4.4, 3.5],
+  fov: 67,
   near: 0.4,
   far: 160,
-  roll: -0.022,
+  roll: -0.018,
 }
 
 export const debugViews = {
   hero: heroCameraConfig,
   top: {
-    position: [0, 70, 0.01],
+    position: [0, 76, 0.01],
     target: [0, 0, 0],
     fov: 50,
   },
@@ -126,14 +126,14 @@ export const debugViews = {
     fov: 50,
   },
   section: {
-    position: [49, 13.5, 0],
-    target: [0, 8.5, 0],
-    fov: 46,
+    position: [45, 16, -32],
+    target: [-5, 7, 8],
+    fov: 55,
   },
   shell: {
-    position: [43, 24, -35],
-    target: [-1, 8.5, -1],
-    fov: 54,
+    position: [45, 27, -37],
+    target: [-3, 7.5, 2],
+    fov: 55,
   },
 }
 
