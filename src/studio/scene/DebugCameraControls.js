@@ -25,7 +25,8 @@ function createLabelSprite(text, position) {
 }
 
 export function createDebugCameraTools(scene, camera, controls) {
-  const grid = new THREE.GridHelper(52, 52, '#b9a47b', '#665f55')
+  const gridSize = Math.max(studioDimensions.width, studioDimensions.depth) + 8
+  const grid = new THREE.GridHelper(gridSize, 64, '#b9a47b', '#665f55')
   grid.position.y = 0.035
   grid.visible = false
   scene.add(grid)
@@ -36,8 +37,8 @@ export function createDebugCameraTools(scene, camera, controls) {
 
   const labels = [
     createLabelSprite('FACE 0 / FLOOR A-B-C-D', [0, 1.4, 0]),
-    createLabelSprite('FACE 1 / WALL 1 / A-B', [-19, 14, 0]),
-    createLabelSprite('FACE 2 / WALL 2 / B-C', [0, 13, 23]),
+    createLabelSprite('FACE 1 / WALL 1 / A-B', [-27, 14, 0]),
+    createLabelSprite('FACE 2 / WALL 2 / B-C', [0, 13, 17]),
     createLabelSprite('FACE 3 / FULL ROOF', [0, 25, -7]),
   ]
   labels.forEach((label) => scene.add(label))

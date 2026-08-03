@@ -1,17 +1,17 @@
 export const studioDimensions = {
   unit: 'estimated metres',
-  width: 40,
-  depth: 48,
+  width: 56,
+  depth: 36,
   maximumHeight: 44,
   minimumCeilingHeight: 8,
 }
 
 export const floorPlan = {
   corners: {
-    A: [-20, 0, -24],
-    B: [-20, 0, 24],
-    C: [20, 0, 24],
-    D: [20, 0, -24],
+    A: [-28, 0, -18],
+    B: [-28, 0, 18],
+    C: [28, 0, 18],
+    D: [28, 0, -18],
   },
   wall1Edge: ['A', 'B'],
   wall2Edge: ['B', 'C'],
@@ -21,8 +21,8 @@ export const floorPlan = {
 export const studioLayout = {
   floor: {
     position: [0, -0.18, 0],
-    width: 40,
-    depth: 48,
+    width: 56,
+    depth: 36,
     elevation: 0,
     material: 'concrete',
     visibility: true,
@@ -76,11 +76,11 @@ export const studioLayout = {
     visibility: false,
   },
   glassFacade: {
-    position: [-19.82, 0, 0],
+    position: [-27.82, 0, 0],
     rotation: [0, 0, 0],
     width: 0.3,
     height: 24,
-    depth: 47.4,
+    depth: 35.4,
     elevation: 0.35,
     roofInset: 0.12,
     bayCount: 10,
@@ -90,8 +90,8 @@ export const studioLayout = {
   slopedCeiling: {
     position: [0, 0, 0],
     rotation: [0, 0, 0],
-    width: 40,
-    depth: 48,
+    width: 56,
+    depth: 36,
     thickness: 0.7,
     cornerHeights: { A: 31.5, B: 8, C: 20.5, D: 44 },
     elevation: 0,
@@ -178,7 +178,7 @@ export const studioLightingConfig = {
 }
 
 export const inferredGeometry = [
-  'Rectangular 40m × 48m floor plan and corner coordinates',
+  'Rectangular 56m × 36m floor plan and corner coordinates',
   'Wall 1 occupying edge A–B and Wall 2 occupying edge B–C',
   'Open boundaries along edges C–D and D–A',
   'Roof corner heights and full rectangular projection',
