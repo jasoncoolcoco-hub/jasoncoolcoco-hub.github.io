@@ -3,11 +3,11 @@ import EarthCanvas from './EarthCanvas'
 import { footprintsSceneStates } from './footprintsSceneState'
 
 export default function GlobeScene({
+  projectsTransitionProgress,
   controlsEnabled,
   entranceOpacity,
   entranceScale,
   entranceY,
-  exitOpacity,
   exitScale,
   exitY,
   entryProgress,
@@ -38,17 +38,10 @@ export default function GlobeScene({
       >
         <motion.div
           className="footprints-globe-exit"
-          style={
-            reducedMotion
-              ? { opacity: 1 }
-              : {
-                  y: exitY,
-                  scale: exitScale,
-                  opacity: exitOpacity,
-                }
-          }
+          style={{ y: exitY, scale: exitScale }}
         >
           <EarthCanvas
+            projectsTransitionProgress={projectsTransitionProgress}
             controlsEnabled={controlsEnabled}
             entryProgress={entryProgress}
             instructions={instructions}

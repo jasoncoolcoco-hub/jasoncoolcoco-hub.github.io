@@ -6,8 +6,22 @@ import TransitionChapterNavigation from './TransitionChapterNavigation'
 
 const transitionScrollDistance = 170
 const footprintsScrollDistance = 220
-const totalScrollDistance = transitionScrollDistance + footprintsScrollDistance
+const projectsTransitionScrollDistance = 180
+const projectsChapterScrollDistance = 120
+const totalScrollDistance =
+  transitionScrollDistance +
+  footprintsScrollDistance +
+  projectsTransitionScrollDistance +
+  projectsChapterScrollDistance
 const transitionEnd = transitionScrollDistance / totalScrollDistance
+const footprintsEnd =
+  (transitionScrollDistance + footprintsScrollDistance) /
+  totalScrollDistance
+const projectsTransitionEnd =
+  (transitionScrollDistance +
+    footprintsScrollDistance +
+    projectsTransitionScrollDistance) /
+  totalScrollDistance
 const compactTransitionQuery = '(max-width: 700px)'
 
 export default function HomeTransitionShell() {
@@ -35,7 +49,12 @@ export default function HomeTransitionShell() {
   )
   const chapterProgress = useTransform(
     scrollYProgress,
-    [transitionEnd, 1],
+    [transitionEnd, footprintsEnd],
+    [0, 1],
+  )
+  const projectsTransitionProgress = useTransform(
+    scrollYProgress,
+    [footprintsEnd, projectsTransitionEnd],
     [0, 1],
   )
   const homeWhiteShellY = useTransform(
@@ -67,9 +86,15 @@ export default function HomeTransitionShell() {
         className="footprints-scroll-anchor"
         aria-hidden="true"
       />
+      <span
+        id="projects-anchor"
+        className="projects-scroll-anchor"
+        aria-hidden="true"
+      />
 
       <div className="home-transition-shell__sticky">
         <FootprintsSection
+          projectsTransitionProgress={projectsTransitionProgress}
           backgroundY={footprintsBackgroundY}
           chapterProgress={chapterProgress}
           globeEntranceY={globeEntranceY}
@@ -85,6 +110,7 @@ export default function HomeTransitionShell() {
 
         {homeReady && (
           <TransitionChapterNavigation
+            projectsProgress={projectsTransitionProgress}
             progress={transitionProgress}
             reducedMotion={reducedMotion}
           />

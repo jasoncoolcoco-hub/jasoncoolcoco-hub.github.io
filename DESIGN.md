@@ -7,11 +7,43 @@ The site is organized as four editorial chapters:
 1. **01 HOME** — editorial introduction and inline contact access.
 2. **02 FOOTPRINTS** — active V0.2 foundation for a place-based globe
    experience.
-3. **03 LAB** — reserved for selected projects, systems, and experiments.
+3. **03 PROJECTS** — an interactive archive desk for selected projects,
+   systems, and experiments.
 4. **04 THANKS** — reserved for acknowledgements and a closing moment.
 
-Home and Footprints are implemented. Lab and Thanks remain visible as quiet
-orientation markers and never navigate to empty pages.
+Home and Footprints are implemented. Projects has an interaction skeleton;
+Thanks remains a quiet orientation marker and does not navigate to an empty
+page.
+
+## Projects archive
+
+- Projects continues the Footprints near-black field and enters as one already
+  assembled, full-width vertical folder stack. Its five physical layers rise
+  from below with restrained stagger while the Earth and Footprints heading
+  leave upward; once settled, their entry transforms lock at zero. The stack
+  never resolves into an arc, fan, glass-card row, or collection of independently
+  floating objects.
+- Each project is a slim, rigid dossier sleeve built from a rear base, joined
+  low-profile tab, translucent interior, front pocket face, and precise glass
+  edge. The long, shallow tab shoulders and small outer radii deliberately avoid
+  the proportions of a manila or office folder. Restrained blue, green, violet,
+  amber, and wine tints retain frosted translucency without becoming independent
+  glass cards.
+- All five sleeves retain a complete physical body. The first four expose only
+  the portions not occluded by the sleeves in front; `CODEX DESKTOP PET`, the
+  bottom sleeve, remains the complete foreground dossier for this phase.
+- Hover depth is counted from foreground to background: `CODEX DESKTOP PET` is
+  depth zero and `PERSONAL WEBSITE` is depth four. Hover keeps the target sleeve
+  at its stack coordinate and opens only its front pocket. Every sleeve with a
+  lower depth index—the complete foreground occluding stack—moves downward by
+  the same `96px` Motion transform and shares one restrained spring. Their
+  internal overlap never changes, so they move as one physical stack rather than
+  a cascade. The fixed transparent triggers stay at the original tab positions;
+  Hover clears only after leaving the whole archive stack. The foreground red
+  sleeve opens without moving any layer.
+- On coarse pointers, the first tap previews the sleeve and reveals its
+  descriptor. Further click behavior is intentionally reserved for the later
+  extract, rotate, and dossier-opening phase; no temporary detail view is built.
 
 ## Home editorial hero
 
@@ -526,8 +558,10 @@ domain so Vite includes it in a future `dist/` deployment artifact.
 - **Footprints:** preserve the approved route and fixed-label hierarchy while
   future work adds only explicitly reviewed place-detail or photo-space
   transitions without turning the chapter into a dashboard.
-- **Lab:** introduce a reusable project data model before creating project
-  views.
+- **Projects:** preserve the black archive surface, physical full-width vertical
+  dossier-sleeve stack, complete foreground case, pocket-face hover preview, and
+  mobile tap preview while the later extraction and project-detail interaction
+  is introduced through the reusable content model.
 - **Thanks:** create a quiet closing chapter that follows the same typographic
   and motion system.
 - Keep future chapters driven by `siteContent.js` and add dependencies only when

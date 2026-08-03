@@ -51,7 +51,6 @@ const compactBaseCameraDistance = 5.35
 const desktopBaseCameraDistance = 5.83
 const zoomDamping = 6.1
 const defaultRotationSpeed = 0.0277
-const exploreRotationSpeed = 0.0147
 const rotationSpeedBlendDuration = 0.58
 const rotationSpeedBlendRate =
   Math.log(10) / rotationSpeedBlendDuration
@@ -273,22 +272,22 @@ export async function createEarthRenderer({
   let idleRotationResumeBlend = 1
   let rotationSpeedCurrent = defaultRotationSpeed
   let rotationSpeedTarget = defaultRotationSpeed
-  let introLocked = true
+  let introOrientationActive = false
 
-  const setIntroLocked = (nextLocked) => {
-    introLocked = nextLocked
-    mount.dataset.introLocked = nextLocked ? 'true' : 'false'
+  const setIntroOrientationActive = (nextActive) => {
+    if (introOrientationActive === nextActive) return
+    introOrientationActive = nextActive
+    mount.dataset.introLocked = nextActive ? 'true' : 'false'
+    mount.dataset.introOrientationActive = nextActive ? 'true' : 'false'
+
+    if (!nextActive) return
+
     pendingExploreYaw = 0
     pendingExplorePitch = 0
     isDragging = false
+    mount.dataset.earthDragging = 'false'
     idleRotationResumeBlend = 1
     rotationSpeedCurrent = rotationSpeedTarget
-
-    if (nextLocked) {
-      zoomCurrent = isExploreMode ? maximumZoom : defaultZoom
-      zoomTarget = zoomCurrent
-      camera.position.z = baseCameraDistance / zoomCurrent
-    }
   }
 
   const earthVisualGroup = new THREE.Group()
@@ -314,15 +313,17 @@ export async function createEarthRenderer({
     onStateChange: (state) => {
       mount.dataset.routeAnimationState = state
       if (state === 'preparing' || state === 'playing') {
-        setIntroLocked(true)
+        setIntroOrientationActive(true)
       } else if (state === 'complete') {
-        setIntroLocked(false)
+        setIntroOrientationActive(false)
       }
     },
     reducedMotion,
   })
   mount.dataset.routeAnimationState = 'idle'
-  setIntroLocked(true)
+  mount.dataset.earthDragging = 'false'
+  mount.dataset.earthZoomed = 'false'
+  setIntroOrientationActive(true)
   const labelLocations = [
     ...footprintBaseLocations.map((location) => ({
       ...location,
@@ -647,13 +648,13 @@ export async function createEarthRenderer({
     const hasPendingExploreRotation =
       Math.abs(pendingExploreYaw) > exploreDragSettleThreshold ||
       Math.abs(pendingExplorePitch) > exploreDragSettleThreshold
-    const wasIntroLocked = introLocked
+    const wasIntroOrientationActive = introOrientationActive
     const introElapsedMilliseconds =
       footprintsRouteLayer.update(delta)
 
-    if (wasIntroLocked && !reducedMotion) {
+    if (wasIntroOrientationActive && !reducedMotion) {
       updateIntroOrientation(introElapsedMilliseconds / 1000)
-    } else if (!introLocked && (isDragging || hasPendingExploreRotation)) {
+    } else if (isDragging || hasPendingExploreRotation) {
       const dragAlpha = reducedMotion
         ? 1
         : 1 - Math.exp(-exploreDragDampingRate * delta)
@@ -810,10 +811,6 @@ export async function createEarthRenderer({
 
     if (isExploreMode) {
       zoomTarget = maximumZoom
-      if (introLocked) {
-        zoomCurrent = zoomTarget
-        camera.position.z = baseCameraDistance / zoomCurrent
-      }
     }
     return maximumZoom
   }
@@ -841,7 +838,15 @@ export async function createEarthRenderer({
   const prepareFootprintsEntry = () => {
     hasEnteredFootprints = false
     clearSelection()
-    setIntroLocked(true)
+    setIntroOrientationActive(true)
+    isExploreMode = false
+    isDragging = false
+    zoomCurrent = defaultZoom
+    zoomTarget = defaultZoom
+    camera.position.z = baseCameraDistance / defaultZoom
+    scrollGroup.position.set(0, 0, 0)
+    mount.dataset.earthDragging = 'false'
+    mount.dataset.earthZoomed = 'false'
     rotationSpeedCurrent = defaultRotationSpeed
     rotationSpeedTarget = defaultRotationSpeed
     applyInitialOrientation()
@@ -852,7 +857,7 @@ export async function createEarthRenderer({
     entryId,
     reason = 'external-section',
   } = {}) => {
-    setIntroLocked(true)
+    setIntroOrientationActive(true)
     rotationSpeedCurrent = defaultRotationSpeed
     rotationSpeedTarget = defaultRotationSpeed
     applyInitialOrientation()
@@ -864,14 +869,16 @@ export async function createEarthRenderer({
   }
 
   const beginDrag = (x, y) => {
-    if (introLocked || !isExploreMode) return
+    if (!isExploreMode) return
+    setIntroOrientationActive(false)
     isDragging = true
+    mount.dataset.earthDragging = 'true'
     dragLastX = x
     dragLastY = y
   }
 
   const dragTo = (x, y, sensitivity = 1) => {
-    if (introLocked || !isDragging || !isExploreMode) return
+    if (!isDragging || !isExploreMode) return
 
     const horizontalDelta = x - dragLastX
     const verticalDelta = y - dragLastY
@@ -901,15 +908,16 @@ export async function createEarthRenderer({
   const endDrag = () => {
     if (!isDragging) return
     isDragging = false
+    mount.dataset.earthDragging = 'false'
     idleRotationResumeBlend = reducedMotion ? 1 : 0
   }
 
   const setZoomPreset = (preset) => {
     if (preset === 'maximum') {
-      if (introLocked) return isExploreMode ? 'maximum' : 'default'
       isExploreMode = true
-      rotationSpeedTarget = exploreRotationSpeed
+      rotationSpeedTarget = defaultRotationSpeed
       zoomTarget = maximumZoom
+      mount.dataset.earthZoomed = 'true'
       return 'maximum'
     }
 
@@ -917,15 +925,12 @@ export async function createEarthRenderer({
     isExploreMode = false
     rotationSpeedTarget = defaultRotationSpeed
     zoomTarget = defaultZoom
-    if (introLocked) {
-      zoomCurrent = zoomTarget
-      camera.position.z = baseCameraDistance / zoomCurrent
-    }
+    mount.dataset.earthDragging = 'false'
+    mount.dataset.earthZoomed = 'false'
     return 'default'
   }
 
   const toggleZoomPreset = () => {
-    if (introLocked) return isExploreMode ? 'maximum' : 'default'
     const midpoint = (defaultZoom + maximumZoom) / 2
     return setZoomPreset(
       zoomTarget >= midpoint ? 'default' : 'maximum',
@@ -933,7 +938,8 @@ export async function createEarthRenderer({
   }
 
   const rotateByKeyboard = (axis, angle) => {
-    if (introLocked || !isExploreMode) return
+    if (!isExploreMode) return
+    setIntroOrientationActive(false)
     const rotationAxis =
       axis === 'vertical' ? cameraVerticalAxis : localNorthAxis
     keyboardQuaternion.setFromAxisAngle(rotationAxis, angle)
@@ -996,7 +1002,9 @@ export async function createEarthRenderer({
     dragTo,
     endDrag,
     enterFootprints,
-    isIntroLocked: () => introLocked,
+    getSelectableEntityAt,
+    isIntroLocked: () => introOrientationActive,
+    isIntroOrientationActive: () => introOrientationActive,
     prepareFootprintsEntry,
     rotateByKeyboard,
     selectAt,
@@ -1024,7 +1032,7 @@ export async function createEarthRenderer({
     },
     rotationSpeeds: {
       default: defaultRotationSpeed,
-      enlarged: exploreRotationSpeed,
+      enlarged: defaultRotationSpeed,
     },
     exploreControls: {
       dampingRate: exploreDragDampingRate,

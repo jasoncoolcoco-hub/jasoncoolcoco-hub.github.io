@@ -11,7 +11,13 @@ export const siteContent = {
       id: 'footprints',
       status: 'available',
     },
-    { number: '03', name: 'LAB', id: 'lab', status: 'soon' },
+    {
+      number: '03',
+      name: 'PROJECTS',
+      id: 'projects',
+      anchorId: 'projects-anchor',
+      status: 'available',
+    },
     { number: '04', name: 'THANKS', id: 'thanks', status: 'soon' },
   ],
   home: {
@@ -30,6 +36,44 @@ export const siteContent = {
     globeToggleLabel: 'Toggle globe size',
     globeInstructions:
       'On desktop, double-click empty globe space or press Enter or Space when focused to enter explore mode. In enlarged explore mode, drag precisely or use arrow keys to rotate with restrained vertical tilt. Wheel and two-finger gestures scroll the page.',
+  },
+  projects: {
+    title: 'PROJECTS',
+    introduction:
+      'A working index of projects, systems, and experiments. Archive contents are represented by placeholders for now.',
+    archiveLabel: 'Layered project dossier sleeve archive',
+    projects: [
+      {
+        id: 'personal-website',
+        title: 'PERSONAL WEBSITE',
+        descriptor:
+          'A personal archive of places, experiments and digital work.',
+      },
+      {
+        id: 'literature-loop',
+        title: 'LITERATURE LOOP',
+        descriptor:
+          'A structured research workflow for reading and connecting literature.',
+      },
+      {
+        id: 'tender-workflow',
+        title: 'TENDER WORKFLOW',
+        descriptor:
+          'A project system for tender documents, tracking and commercial review.',
+      },
+      {
+        id: 'job-search-tracker',
+        title: 'JOB SEARCH TRACKER',
+        descriptor:
+          'A focused workflow for applications, resumes and opportunity tracking.',
+      },
+      {
+        id: 'codex-desktop-pet',
+        title: 'CODEX DESKTOP PET',
+        descriptor:
+          'A desktop companion that responds to the status of ongoing work.',
+      },
+    ],
   },
   navigation: {
     label: 'Website chapters',

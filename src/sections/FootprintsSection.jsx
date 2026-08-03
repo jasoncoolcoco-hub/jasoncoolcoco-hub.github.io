@@ -9,8 +9,10 @@ import {
   globeBrowsingStates,
 } from '../components/footprints/footprintsSceneState'
 import { siteContent } from '../data/siteContent'
+import ProjectsSection from './ProjectsSection'
 
 export default function FootprintsSection({
+  projectsTransitionProgress,
   backgroundY,
   chapterProgress,
   globeEntranceY,
@@ -28,12 +30,20 @@ export default function FootprintsSection({
   const { footprints } = siteContent
 
   const exitY = useTransform(
-    chapterProgress,
-    [0, 0.7, 1],
-    ['0vh', '0vh', '-24vh'],
+    projectsTransitionProgress,
+    [0, 0.38],
+    ['0vh', reducedMotion ? '-92vh' : '-112vh'],
   )
-  const exitScale = useTransform(chapterProgress, [0, 0.7, 1], [1, 1, 0.55])
-  const exitOpacity = useTransform(chapterProgress, [0, 0.78, 1], [1, 1, 0.08])
+  const exitScale = useTransform(
+    projectsTransitionProgress,
+    [0, 0.38],
+    [1, reducedMotion ? 0.97 : 0.94],
+  )
+  const footprintsExitY = useTransform(
+    projectsTransitionProgress,
+    [0.18, 0.66],
+    ['0vh', '-100vh'],
+  )
   const scrollRotation = useTransform(
     chapterProgress,
     [0, 0.7, 1],
@@ -63,18 +73,28 @@ export default function FootprintsSection({
           className="footprints-page-surface"
           style={{ y: backgroundY }}
         >
-          <FootprintsBackground sceneState={sceneState} />
-          <h2 id="footprints-title" className="footprints-page-title">
-            {footprints.title}
-          </h2>
+          <motion.div
+            className="footprints-page-surface__handoff"
+            style={{ y: footprintsExitY }}
+          >
+            <FootprintsBackground sceneState={sceneState} />
+            <h2 id="footprints-title" className="footprints-page-title">
+              {footprints.title}
+            </h2>
+          </motion.div>
         </motion.div>
 
+        <ProjectsSection
+          progress={projectsTransitionProgress}
+          reducedMotion={reducedMotion}
+        />
+
         <GlobeScene
+          projectsTransitionProgress={projectsTransitionProgress}
           controlsEnabled={controlsEnabled}
           entranceOpacity={1}
           entranceScale={1}
           entranceY={globeEntranceY}
-          exitOpacity={exitOpacity}
           exitScale={exitScale}
           exitY={exitY}
           entryProgress={transitionProgress}

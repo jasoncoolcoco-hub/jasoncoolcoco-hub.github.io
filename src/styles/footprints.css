@@ -1,12 +1,21 @@
 .home-transition-shell {
   position: relative;
-  height: 490svh;
+  height: 790svh;
   background: #000;
 }
 
 .footprints-scroll-anchor {
   position: absolute;
   top: 170svh;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.projects-scroll-anchor {
+  position: absolute;
+  top: 570svh;
   left: 0;
   width: 1px;
   height: 1px;
@@ -59,6 +68,14 @@
   background: #000;
   color: #fff;
   pointer-events: none;
+  will-change: transform;
+}
+
+.footprints-page-surface__handoff {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
   will-change: transform;
 }
 
@@ -197,6 +214,10 @@
 }
 
 .earth-canvas[data-controls-enabled="false"] {
+  pointer-events: none;
+}
+
+.earth-canvas[data-section-transitioning="true"] {
   pointer-events: none;
 }
 

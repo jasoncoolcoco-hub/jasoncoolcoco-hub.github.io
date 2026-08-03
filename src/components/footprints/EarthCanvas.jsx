@@ -3,15 +3,18 @@ import { footprintsEntryThresholds } from '../../data/footprintsView'
 import FallbackEarthPoster from './FallbackEarthPoster'
 import { footprintsSceneStates } from './footprintsSceneState'
 
-const mouseDragThreshold = 4
+const mouseDragThreshold = 5
 const touchDragThreshold = 9
 const mouseSensitivity = 0.92
 const touchSensitivity = 0.74
 const keyboardRotationStep = Math.PI / 18
 const desktopZoomQuery =
   '(min-width: 701px) and (hover: hover) and (pointer: fine)'
+const sectionTransitionStart = 0.002
+const offscreenZoomResetProgress = 0.4
 
 export default function EarthCanvas({
+  projectsTransitionProgress,
   controlsEnabled,
   entryProgress,
   scrollRotation,
@@ -38,6 +41,16 @@ export default function EarthCanvas({
   const pointerRecordsRef = useRef(new Map())
   const suppressDoubleClickUntilRef = useRef(0)
   const suppressSelectionClickUntilRef = useRef(0)
+  const sectionTransitioningRef = useRef(
+    (projectsTransitionProgress?.get() ?? 0) > sectionTransitionStart,
+  )
+  const sectionTransitionProgressRef = useRef(
+    projectsTransitionProgress?.get() ?? 0,
+  )
+  const transitionZoomResetRef = useRef(false)
+  const transitionRendererPausedRef = useRef(
+    (projectsTransitionProgress?.get() ?? 0) >= offscreenZoomResetProgress,
+  )
   const [isNearViewport, setIsNearViewport] = useState(() => Boolean(entryProgress))
   const [renderState, setRenderState] = useState('idle')
   const [zoomMode, setZoomMode] = useState('default')
@@ -67,6 +80,88 @@ export default function EarthCanvas({
       }),
     [reducedMotion, scrollRotation],
   )
+
+  useEffect(() => {
+    if (!projectsTransitionProgress) return undefined
+
+    const endActivePointers = () => {
+      const host = hostRef.current
+      pointerRecordsRef.current.forEach((pointer, pointerId) => {
+        if (pointer.rotationStarted) runtimeRef.current?.endDrag()
+        if (host?.hasPointerCapture(pointerId)) {
+          host.releasePointerCapture(pointerId)
+        }
+      })
+      pointerRecordsRef.current.clear()
+    }
+
+    const resetZoom = () => {
+      runtimeRef.current?.setZoomPreset('default')
+      setZoomMode('default')
+      transitionZoomResetRef.current = true
+    }
+
+    const handleTransitionProgress = (progress) => {
+      const previousProgress = sectionTransitionProgressRef.current
+      const wasTransitioning = sectionTransitioningRef.current
+      const isTransitioning = progress > sectionTransitionStart
+      const isReversing = progress < previousProgress - 0.001
+
+      sectionTransitionProgressRef.current = progress
+      sectionTransitioningRef.current = isTransitioning
+      if (hostRef.current) {
+        hostRef.current.dataset.sectionTransitioning = isTransitioning
+          ? 'true'
+          : 'false'
+      }
+
+      if (isTransitioning && !wasTransitioning) {
+        endActivePointers()
+      }
+
+      if (
+        isTransitioning &&
+        !transitionZoomResetRef.current &&
+        (progress >= offscreenZoomResetProgress || isReversing)
+      ) {
+        resetZoom()
+      }
+
+      if (
+        progress >= offscreenZoomResetProgress &&
+        !transitionRendererPausedRef.current
+      ) {
+        runtimeRef.current?.setVisible(false)
+        transitionRendererPausedRef.current = true
+      } else if (
+        progress < offscreenZoomResetProgress &&
+        transitionRendererPausedRef.current
+      ) {
+        runtimeRef.current?.setVisible(
+          isVisibleRef.current || transitionEntryReadyRef.current,
+        )
+        transitionRendererPausedRef.current = false
+      }
+
+      if (!isTransitioning && wasTransitioning) {
+        if (!transitionZoomResetRef.current) resetZoom()
+        transitionZoomResetRef.current = false
+        if (!entryStateRef.current.inside) {
+          transitionEntryReadyRef.current = true
+          entryStateRef.current.inside = true
+          entryStateRef.current.sequence += 1
+          runtimeRef.current?.setVisible(true)
+          runtimeRef.current?.enterFootprints({
+            entryId: entryStateRef.current.sequence,
+            reason: 'projects-transition-return',
+          })
+        }
+      }
+    }
+
+    handleTransitionProgress(projectsTransitionProgress.get())
+    return projectsTransitionProgress.on('change', handleTransitionProgress)
+  }, [projectsTransitionProgress])
 
   useEffect(() => {
     if (!entryProgress) return undefined
@@ -110,13 +205,15 @@ export default function EarthCanvas({
       ([entry]) => {
         isVisibleRef.current = entry.isIntersecting
         runtimeRef.current?.setVisible(
-          entry.isIntersecting || transitionEntryReadyRef.current,
+          (entry.isIntersecting || transitionEntryReadyRef.current) &&
+            !transitionRendererPausedRef.current,
         )
       },
       { threshold: 0.01 },
     )
     const entryObserver = new IntersectionObserver(
       ([entry]) => {
+        if (sectionTransitioningRef.current) return
         if (!transitionEntryReadyRef.current) return
 
         if (
@@ -282,7 +379,8 @@ export default function EarthCanvas({
           runtime.prepareFootprintsEntry()
         }
         runtime.setVisible(
-          isVisibleRef.current || transitionEntryReadyRef.current,
+          (isVisibleRef.current || transitionEntryReadyRef.current) &&
+            !transitionRendererPausedRef.current,
         )
 
         const resize = () => {
@@ -334,14 +432,11 @@ export default function EarthCanvas({
     }
   }
 
-  const introIsLocked = () =>
-    runtimeRef.current?.isIntroLocked?.() ?? false
-
   const handlePointerDown = (event) => {
     if (
       !controlsEnabled ||
       renderState !== 'ready' ||
-      introIsLocked()
+      sectionTransitioningRef.current
     ) {
       return
     }
@@ -351,6 +446,7 @@ export default function EarthCanvas({
       cancelled: false,
       captured: false,
       pointerType: event.pointerType,
+      movedBeyondClickThreshold: false,
       rotationStarted: false,
       startTime: event.timeStamp,
       startX: position.x,
@@ -384,7 +480,7 @@ export default function EarthCanvas({
   }
 
   const handlePointerMove = (event) => {
-    if (introIsLocked()) return
+    if (sectionTransitioningRef.current) return
     const position = localPointerPosition(event)
     const pointer = pointerRecordsRef.current.get(event.pointerId)
     if (!pointer || pointer.cancelled) return
@@ -392,30 +488,24 @@ export default function EarthCanvas({
     pointer.x = position.x
     pointer.y = position.y
 
+    const deltaX = position.x - pointer.startX
+    const deltaY = position.y - pointer.startY
+    const distance = Math.hypot(deltaX, deltaY)
+    const isTouch = pointer.pointerType === 'touch'
+    const threshold = isTouch ? touchDragThreshold : mouseDragThreshold
+
+    if (distance >= threshold) {
+      pointer.movedBeyondClickThreshold = true
+      suppressDoubleClickUntilRef.current = performance.now() + 450
+    }
+
     if (zoomMode !== 'maximum') {
-      if (
-        Math.hypot(
-          position.x - pointer.startX,
-          position.y - pointer.startY,
-        ) >= mouseDragThreshold
-      ) {
-        suppressDoubleClickUntilRef.current =
-          performance.now() + 350
-      }
       return
     }
 
     if (!runtimeRef.current) return
 
     if (!pointer.rotationStarted) {
-      const deltaX = position.x - pointer.startX
-      const deltaY = position.y - pointer.startY
-      const distance = Math.hypot(deltaX, deltaY)
-      const isTouch = pointer.pointerType === 'touch'
-      const threshold = isTouch
-        ? touchDragThreshold
-        : mouseDragThreshold
-
       if (distance < threshold) return
 
       if (isTouch && Math.abs(deltaY) > Math.abs(deltaX) * 1.35) {
@@ -450,8 +540,11 @@ export default function EarthCanvas({
 
     if (pointer.rotationStarted) {
       runtimeRef.current?.endDrag()
-      suppressSelectionClickUntilRef.current =
-        performance.now() + 250
+    }
+
+    if (pointer.movedBeyondClickThreshold) {
+      suppressDoubleClickUntilRef.current = performance.now() + 450
+      suppressSelectionClickUntilRef.current = performance.now() + 250
     }
 
     if (
@@ -468,7 +561,7 @@ export default function EarthCanvas({
       !controlsEnabled ||
       renderState !== 'ready' ||
       !runtimeRef.current ||
-      introIsLocked()
+      sectionTransitioningRef.current
     ) {
       return
     }
@@ -485,6 +578,16 @@ export default function EarthCanvas({
     if (interactiveTarget) return
     if (performance.now() < suppressDoubleClickUntilRef.current) return
 
+    const position = localPointerPosition(event)
+    if (
+      runtimeRef.current?.getSelectableEntityAt(
+        position.x,
+        position.y,
+      )
+    ) {
+      return
+    }
+
     toggleGlobeSize()
   }
 
@@ -493,6 +596,7 @@ export default function EarthCanvas({
       !controlsEnabled ||
       renderState !== 'ready' ||
       !runtimeRef.current ||
+      sectionTransitioningRef.current ||
       performance.now() < suppressSelectionClickUntilRef.current
     ) {
       return
@@ -520,7 +624,8 @@ export default function EarthCanvas({
       event.target !== event.currentTarget ||
       !controlsEnabled ||
       !runtimeRef.current ||
-      renderState !== 'ready'
+      renderState !== 'ready' ||
+      sectionTransitioningRef.current
     ) {
       return
     }
@@ -530,8 +635,6 @@ export default function EarthCanvas({
       runtimeRef.current.clearSelection()
       return
     }
-
-    if (introIsLocked()) return
 
     if (event.key === 'Enter' || event.key === ' ') {
       if (!desktopZoomAvailable) return
@@ -586,6 +689,9 @@ export default function EarthCanvas({
       }
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
       data-scene-state={sceneState}
+      data-section-transitioning={
+        sectionTransitioningRef.current ? 'true' : 'false'
+      }
       data-zoom-mode={zoomMode}
       tabIndex={renderState === 'ready' && controlsEnabled ? 0 : -1}
       onClick={handleClick}

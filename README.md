@@ -1,8 +1,8 @@
 # Jason Li — Personal Website
 
-V0.1 is a React + Vite personal website built around the Home chapter. The
-remaining Footprints, Lab, and Thanks chapters are represented in the content
-model and navigation but are intentionally not implemented yet.
+The site is a React + Vite personal website organized around Home, Footprints,
+Projects, and Thanks. Home and Footprints are implemented, and Projects has a
+layered archival-sleeve interaction skeleton ready for real project content.
 
 ## Local development
 
