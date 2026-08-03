@@ -1,8 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-const clickableIds = ['desk', 'stool', 'macbook', 'tray', 'map', 'polaroids', 'pegboard']
-
 function roundedBox(width, height, depth, radius, material) {
   const shape = new THREE.Shape()
   const x = -width / 2
@@ -109,6 +107,34 @@ function createHomeScreenTexture() {
   return texture
 }
 
+function createWoodTexture() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 320
+  const context = canvas.getContext('2d')
+  context.fillStyle = '#8e6748'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+
+  for (let index = 0; index < 90; index += 1) {
+    const y = (index / 90) * canvas.height + Math.sin(index * 1.7) * 3
+    const opacity = 0.025 + (index % 7) * 0.006
+    context.strokeStyle = `rgba(55, 30, 17, ${opacity})`
+    context.lineWidth = index % 11 === 0 ? 2 : 1
+    context.beginPath()
+    context.moveTo(0, y)
+    context.bezierCurveTo(280, y + Math.sin(index) * 7, 680, y - Math.cos(index) * 6, canvas.width, y + 2)
+    context.stroke()
+  }
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(2.4, 1)
+  texture.anisotropy = 8
+  return texture
+}
+
 function createMapTexture() {
   const canvas = document.createElement('canvas')
   canvas.width = 1400
@@ -145,11 +171,6 @@ function createMapTexture() {
     context.fill()
     context.stroke()
   })
-  context.fillStyle = '#565b56'
-  context.font = '600 22px Arial'
-  context.letterSpacing = '6px'
-  context.fillText('THE WORLD', 52, 710)
-
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 8
@@ -187,6 +208,7 @@ function createPhotoTexture(colors, variant = 0) {
 
 function createRoomObjects(materials) {
   const root = new THREE.Group()
+  const workspace = new THREE.Group()
   const interactives = []
 
   const desk = new THREE.Group()
@@ -198,8 +220,8 @@ function createRoomObjects(materials) {
     leg.position.set(x, 1.25, z)
     desk.add(leg)
   }))
-  desk.position.set(-0.75, 0, -1.22)
-  root.add(tag(desk, 'desk')); interactives.push(desk)
+  desk.position.set(-0.8, 0, -0.95)
+  workspace.add(tag(desk, 'desk')); interactives.push(desk)
 
   const stool = new THREE.Group()
   const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.72, 0.22, 40), materials.seat)
@@ -208,7 +230,7 @@ function createRoomObjects(materials) {
   post.position.y = 0.83; post.castShadow = true; stool.add(post)
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.69, 0.78, 0.09, 36), materials.darkMetal)
   base.position.y = 0.07; base.castShadow = true; stool.add(base)
-  stool.position.set(1.75, 0, 1.35)
+  stool.position.set(2.55, 0, 2.05)
   root.add(tag(stool, 'stool')); interactives.push(stool)
 
   const macbook = new THREE.Group()
@@ -220,8 +242,8 @@ function createRoomObjects(materials) {
   screen.position.set(0, 3.63, -0.711); screen.rotation.x = -0.08; macbook.add(screen)
   const cameraDot = new THREE.Mesh(new THREE.CircleGeometry(0.018, 12), materials.black)
   cameraDot.position.set(0, 4.42, -0.704); cameraDot.rotation.x = -0.08; macbook.add(cameraDot)
-  macbook.position.set(0.15, 0, -1.15)
-  root.add(tag(macbook, 'macbook')); interactives.push(macbook)
+  macbook.position.set(0.4, 0, -0.85)
+  workspace.add(tag(macbook, 'macbook')); interactives.push(macbook)
 
   const trays = new THREE.Group()
   for (let level = 0; level < 3; level += 1) {
@@ -241,55 +263,58 @@ function createRoomObjects(materials) {
       trays.add(sheet)
     }
   }
-  trays.position.set(-3.05, 0, -1.18)
-  root.add(tag(trays, 'tray')); interactives.push(trays)
+  trays.position.set(-3.05, 0, -0.82)
+  workspace.add(tag(trays, 'tray')); interactives.push(trays)
+
+  workspace.rotation.y = THREE.MathUtils.degToRad(-12)
+  root.add(workspace)
 
   const map = new THREE.Group()
-  const frame = box(5.45, 2.78, 0.12, materials.mapFrame)
+  const frame = box(7.1, 3.62, 0.16, materials.mapFrame)
   map.add(frame)
-  const print = new THREE.Mesh(new THREE.PlaneGeometry(5.12, 2.48), new THREE.MeshStandardMaterial({ map: createMapTexture(), roughness: 0.88 }))
-  print.position.z = 0.066; print.castShadow = true; map.add(print)
-  map.position.set(1.35, 5.05, -4.87)
+  const print = new THREE.Mesh(new THREE.PlaneGeometry(6.72, 3.24), new THREE.MeshStandardMaterial({ map: createMapTexture(), roughness: 0.9 }))
+  print.position.z = 0.086; print.castShadow = true; map.add(print)
+  map.position.set(1.45, 6.42, -6.79)
   root.add(tag(map, 'map')); interactives.push(map)
 
   const polaroids = new THREE.Group()
   const photoData = [
-    { x: -4.85, y: 5.1, r: 0.08, colors: ['#9ba9ab', '#d9b07c'] },
-    { x: -4.0, y: 4.45, r: -0.06, colors: ['#617c80', '#d7c7a1'] },
-    { x: -5.15, y: 3.85, r: 0.035, colors: ['#c39473', '#5f6d69'] },
+    { x: -5.7, y: 5.8, r: 0.08, colors: ['#9ba9ab', '#d9b07c'] },
+    { x: -4.82, y: 5.12, r: -0.06, colors: ['#617c80', '#d7c7a1'] },
+    { x: -6.02, y: 4.52, r: 0.035, colors: ['#c39473', '#5f6d69'] },
   ]
   photoData.forEach((photo, index) => {
     const card = box(0.78, 0.96, 0.035, materials.photoPaper)
-    card.position.set(photo.x, photo.y, -4.77); card.rotation.z = photo.r; polaroids.add(card)
+    card.position.set(photo.x, photo.y, -6.855); card.rotation.z = photo.r; polaroids.add(card)
     const image = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 0.66), new THREE.MeshStandardMaterial({ map: createPhotoTexture(photo.colors, index), roughness: 0.96 }))
-    image.position.set(photo.x, photo.y + 0.09, -4.748); image.rotation.z = photo.r; image.castShadow = true; polaroids.add(image)
+    image.position.set(photo.x, photo.y + 0.09, -6.835); image.rotation.z = photo.r; image.castShadow = true; polaroids.add(image)
     const tape = box(0.24, 0.13, 0.015, materials.tape)
-    tape.position.set(photo.x, photo.y + 0.51, -4.71); tape.rotation.z = photo.r * 0.35; polaroids.add(tape)
+    tape.position.set(photo.x, photo.y + 0.51, -6.805); tape.rotation.z = photo.r * 0.35; polaroids.add(tape)
   })
   root.add(tag(polaroids, 'polaroids')); interactives.push(polaroids)
 
   const pegboard = new THREE.Group()
-  const board = box(0.12, 3.45, 3.8, materials.pegboard)
+  const board = box(0.14, 7.1, 7.6, materials.pegboard)
   pegboard.add(board)
-  const holeGeometry = new THREE.CylinderGeometry(0.035, 0.035, 0.018, 12)
-  for (let y = -1.45; y <= 1.45; y += 0.32) {
-    for (let z = -1.62; z <= 1.62; z += 0.32) {
+  const holeGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.024, 14)
+  for (let y = -3.28; y <= 3.28; y += 0.38) {
+    for (let z = -3.52; z <= 3.52; z += 0.38) {
       const hole = new THREE.Mesh(holeGeometry, materials.hole)
       hole.rotation.z = Math.PI / 2
-      hole.position.set(-0.071, y, z)
+      hole.position.set(-0.081, y, z)
       pegboard.add(hole)
     }
   }
-  pegboard.position.set(7.36, 3.32, -0.32)
+  pegboard.position.set(12.59, 3.85, -2.78)
   root.add(tag(pegboard, 'pegboard')); interactives.push(pegboard)
 
   return { root, interactives }
 }
 
-export function createRoomScene({ mount, onSelect, onOpenHome }) {
+export function createRoomScene({ mount }) {
   const scene = new THREE.Scene()
-  scene.background = new THREE.Color('#d8d4ca')
-  scene.fog = new THREE.Fog('#d8d4ca', 14, 27)
+  scene.background = new THREE.Color('#dedbd4')
+  scene.fog = new THREE.Fog('#dedbd4', 29, 47)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75))
@@ -302,85 +327,73 @@ export function createRoomScene({ mount, onSelect, onOpenHome }) {
   mount.appendChild(renderer.domElement)
 
   const camera = new THREE.PerspectiveCamera(36, mount.clientWidth / mount.clientHeight, 0.1, 60)
-  camera.position.set(8.8, 6.15, 11.8)
+  camera.position.set(14.7, 8.35, 19.35)
 
   const controls = new OrbitControls(camera, renderer.domElement)
-  controls.target.set(0.2, 2.5, -1.25)
+  controls.target.set(1.4, 3.1, -1.8)
   controls.enableDamping = true
   controls.dampingFactor = 0.055
   controls.enablePan = false
-  controls.minDistance = 11.5
-  controls.maxDistance = 17.5
-  controls.minPolarAngle = Math.PI * 0.29
-  controls.maxPolarAngle = Math.PI * 0.48
-  controls.minAzimuthAngle = -Math.PI * 0.31
-  controls.maxAzimuthAngle = Math.PI * 0.31
-  controls.zoomSpeed = 0.45
-  controls.rotateSpeed = 0.42
+  controls.minDistance = 20.5
+  controls.maxDistance = 28.5
+  controls.minPolarAngle = Math.PI * 0.31
+  controls.maxPolarAngle = Math.PI * 0.47
+  controls.minAzimuthAngle = -Math.PI * 0.26
+  controls.maxAzimuthAngle = Math.PI * 0.21
+  controls.zoomSpeed = 0.34
+  controls.rotateSpeed = 0.36
   controls.update()
 
   const materials = {
-    wall: new THREE.MeshStandardMaterial({ color: '#cbc5b8', roughness: 0.98 }),
-    floor: new THREE.MeshStandardMaterial({ color: '#8c765f', roughness: 0.8 }),
-    wood: new THREE.MeshStandardMaterial({ color: '#85664d', roughness: 0.67 }),
-    darkMetal: new THREE.MeshStandardMaterial({ color: '#262725', roughness: 0.46, metalness: 0.52 }),
-    seat: new THREE.MeshStandardMaterial({ color: '#7f776a', roughness: 0.94 }),
-    aluminum: new THREE.MeshStandardMaterial({ color: '#a7a7a3', roughness: 0.28, metalness: 0.72 }),
+    wall: new THREE.MeshStandardMaterial({ color: '#ddd9cf', roughness: 0.97 }),
+    floor: new THREE.MeshStandardMaterial({ color: '#aa9479', roughness: 0.83 }),
+    wood: new THREE.MeshStandardMaterial({ color: '#916b4c', map: createWoodTexture(), roughness: 0.66 }),
+    darkMetal: new THREE.MeshStandardMaterial({ color: '#252625', roughness: 0.5, metalness: 0.46 }),
+    seat: new THREE.MeshStandardMaterial({ color: '#776452', roughness: 0.93 }),
+    aluminum: new THREE.MeshStandardMaterial({ color: '#3f4242', roughness: 0.3, metalness: 0.74 }),
     black: new THREE.MeshBasicMaterial({ color: '#111' }),
-    tray: new THREE.MeshStandardMaterial({ color: '#393b38', roughness: 0.52, metalness: 0.28 }),
+    tray: new THREE.MeshStandardMaterial({ color: '#171918', roughness: 0.62, metalness: 0.34 }),
     paper: new THREE.MeshStandardMaterial({ color: '#e9e3d7', roughness: 0.9 }),
-    mapFrame: new THREE.MeshStandardMaterial({ color: '#4d4136', roughness: 0.72 }),
+    mapFrame: new THREE.MeshStandardMaterial({ color: '#443229', roughness: 0.7 }),
     photoPaper: new THREE.MeshStandardMaterial({ color: '#eee8dc', roughness: 0.96 }),
     tape: new THREE.MeshStandardMaterial({ color: '#d7c4a0', transparent: true, opacity: 0.75, roughness: 0.88 }),
-    pegboard: new THREE.MeshStandardMaterial({ color: '#b4a58d', roughness: 0.86 }),
-    hole: new THREE.MeshBasicMaterial({ color: '#3d3932' }),
+    pegboard: new THREE.MeshStandardMaterial({ color: '#c4aa82', roughness: 0.87 }),
+    hole: new THREE.MeshBasicMaterial({ color: '#5c4c3a' }),
   }
 
-  const floor = box(16, 0.22, 14, materials.floor)
-  floor.position.set(0, -0.12, 1.5)
+  const floor = box(25.6, 0.22, 21, materials.floor)
+  floor.position.set(0, -0.12, 3.5)
   scene.add(floor)
-  const backWall = box(16, 8.5, 0.25, materials.wall)
-  backWall.position.set(0, 4.25, -5)
+  const backWall = box(25.6, 10.2, 0.25, materials.wall)
+  backWall.position.set(0, 5.1, -7)
   scene.add(backWall)
-  const sideWall = box(0.25, 8.5, 14, materials.wall)
-  sideWall.position.set(7.5, 4.25, 1.5)
+  const sideWall = box(0.25, 10.2, 21, materials.wall)
+  sideWall.position.set(12.8, 5.1, 3.5)
   scene.add(sideWall)
 
   const room = createRoomObjects(materials)
   scene.add(room.root)
 
-  const ambient = new THREE.HemisphereLight('#f1eadc', '#7b6654', 2.15)
+  const ambient = new THREE.HemisphereLight('#f5efe4', '#76624e', 2.25)
   scene.add(ambient)
-  const sun = new THREE.DirectionalLight('#fff5df', 4.4)
-  sun.position.set(-5.5, 9.5, 8)
+  const sun = new THREE.DirectionalLight('#fff5df', 4.15)
+  sun.position.set(-7.5, 14, 11)
   sun.castShadow = true
   sun.shadow.mapSize.set(2048, 2048)
-  sun.shadow.camera.left = -9; sun.shadow.camera.right = 9
-  sun.shadow.camera.top = 9; sun.shadow.camera.bottom = -4
+  sun.shadow.camera.left = -15; sun.shadow.camera.right = 15
+  sun.shadow.camera.top = 13; sun.shadow.camera.bottom = -6
   sun.shadow.bias = -0.0002
   scene.add(sun)
-  const fill = new THREE.PointLight('#d5e3e6', 1.35, 18)
-  fill.position.set(6, 5.5, 5)
+  const fill = new THREE.PointLight('#d8e3e3', 1.2, 30)
+  fill.position.set(9, 7.2, 8)
   scene.add(fill)
 
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
-  let selectedId = null
   let pointerDown = null
 
   const applySelection = (id) => {
-    selectedId = id
-    room.root.traverse((child) => {
-      if (!child.isMesh || !child.material?.isMeshStandardMaterial) return
-      if (!child.userData.baseEmissive) {
-        child.userData.baseEmissive = child.material.emissive.clone()
-        child.userData.baseEmissiveIntensity = child.material.emissiveIntensity
-      }
-      const active = child.userData.interactionId === id
-      child.material.emissive.set(active ? '#332719' : child.userData.baseEmissive)
-      child.material.emissiveIntensity = active ? 0.11 : child.userData.baseEmissiveIntensity
-    })
-    onSelect(id)
+    renderer.domElement.dataset.selectedObject = id
   }
 
   const hitTest = (event) => {
@@ -403,8 +416,7 @@ export function createRoomScene({ mount, onSelect, onOpenHome }) {
     const hit = hitTest(event)
     if (!hit) return
     const id = hit.object.userData.interactionId
-    if (id === 'macbook' && selectedId === 'macbook') onOpenHome()
-    else applySelection(id)
+    applySelection(id)
   }
 
   renderer.domElement.addEventListener('pointermove', onPointerMove)
@@ -430,9 +442,6 @@ export function createRoomScene({ mount, onSelect, onOpenHome }) {
   render()
 
   return {
-    select(id) {
-      if (clickableIds.includes(id)) applySelection(id)
-    },
     dispose() {
       cancelAnimationFrame(animationFrame)
       resizeObserver.disconnect()

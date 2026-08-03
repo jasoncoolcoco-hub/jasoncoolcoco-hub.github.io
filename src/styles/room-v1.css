@@ -1,13 +1,11 @@
 .room-v1 {
-  --room-ink: #292723;
   position: relative;
   width: 100vw;
   height: 100svh;
   min-width: 920px;
   min-height: 620px;
   overflow: hidden;
-  background: #d8d4ca;
-  color: var(--room-ink);
+  background: #dedbd4;
   isolation: isolate;
 }
 
@@ -16,8 +14,8 @@
 }
 
 @keyframes room-v1-breathe {
-  from { background: #d8d4ca; }
-  to { background: #cfcbc1; }
+  from { background: #dedbd4; }
+  to { background: #d5d1c9; }
 }
 
 .room-v1__canvas,
@@ -32,209 +30,8 @@
   inset: 0;
 }
 
-.room-v1__canvas::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(35, 31, 26, 0.08), transparent 20%, transparent 76%, rgba(35, 31, 26, 0.12));
-  content: '';
-  pointer-events: none;
-}
-
-.room-v1__header {
-  position: absolute;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 28px;
-  pointer-events: none;
-}
-
-.room-v1__header p,
-.room-v1__back,
-.room-v1__intro p,
-.room-v1__index button,
-.room-v1__selection {
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  line-height: 1.2;
-}
-
-.room-v1__header p,
-.room-v1__intro p {
-  margin: 0;
-}
-
-.room-v1__back {
-  color: inherit;
-  pointer-events: auto;
-  text-decoration: none;
-}
-
-.room-v1__back::before {
-  display: inline-block;
-  margin-right: 10px;
-  content: '←';
-  transition: transform 180ms ease;
-}
-
-.room-v1__back:hover::before {
-  transform: translateX(-3px);
-}
-
-.room-v1__intro {
-  position: absolute;
-  z-index: 2;
-  top: 82px;
-  left: 28px;
-  width: 270px;
-  pointer-events: none;
-}
-
-.room-v1__intro h1 {
-  max-width: 250px;
-  margin: 0 0 15px;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(25px, 2.05vw, 34px);
-  font-weight: 400;
-  letter-spacing: -0.025em;
-  line-height: 1.03;
-  text-wrap: balance;
-}
-
-.room-v1__intro p {
-  width: 245px;
-  color: rgba(41, 39, 35, 0.57);
-  font-size: 8px;
-  line-height: 1.55;
-}
-
-.room-v1__index {
-  position: absolute;
-  z-index: 2;
-  right: 28px;
-  bottom: 28px;
-  display: grid;
-  justify-items: end;
-  gap: 7px;
-}
-
-.room-v1__index button {
-  padding: 3px 0;
-  border: 0;
-  background: transparent;
-  color: rgba(41, 39, 35, 0.42);
-  cursor: pointer;
-  text-align: right;
-  transition: color 180ms ease;
-}
-
-.room-v1__index button::before {
-  display: inline-block;
-  width: 12px;
-  height: 1px;
-  margin: 0 8px 3px 0;
-  background: currentColor;
-  content: '';
-  transform: scaleX(0.35);
-  transform-origin: right;
-  transition: transform 180ms ease;
-}
-
-.room-v1__index button:hover,
-.room-v1__index button.is-selected {
-  color: var(--room-ink);
-}
-
-.room-v1__index button.is-selected::before {
-  transform: scaleX(1);
-}
-
-.room-v1__selection {
-  position: absolute;
-  z-index: 2;
-  bottom: 28px;
-  left: 28px;
-  padding: 9px 12px;
-  margin: 0;
-  border: 1px solid rgba(41, 39, 35, 0.17);
-  background: rgba(233, 229, 219, 0.72);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(3px);
-  transition: opacity 180ms ease, transform 180ms ease;
-}
-
-.room-v1__selection.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.room-v1__desktop-notice {
-  display: none;
-}
-
-.room-v1 button:focus-visible,
-.room-v1 a:focus-visible {
-  outline-color: var(--room-ink);
-  outline-offset: 4px;
-}
-
-@media (max-width: 919px), (max-height: 560px) {
-  .room-v1 {
-    display: grid;
-    min-width: 0;
-    min-height: 100svh;
-    place-items: center;
-    padding: 28px;
-  }
-
-  .room-v1__canvas,
-  .room-v1__intro,
-  .room-v1__index,
-  .room-v1__selection {
-    display: none;
-  }
-
-  .room-v1__header p {
-    display: none;
-  }
-
-  .room-v1__desktop-notice {
-    display: grid;
-    max-width: 300px;
-    gap: 22px;
-    color: var(--room-ink);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    line-height: 1.6;
-    text-align: center;
-  }
-
-  .room-v1__desktop-notice p {
-    margin: 0;
-  }
-
-  .room-v1__desktop-notice a {
-    color: inherit;
-    font-size: 9px;
-    text-underline-offset: 4px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .room-v1--loading {
     animation: none;
-  }
-
-  .room-v1__back::before,
-  .room-v1__index button::before,
-  .room-v1__selection {
-    transition: none;
   }
 }
