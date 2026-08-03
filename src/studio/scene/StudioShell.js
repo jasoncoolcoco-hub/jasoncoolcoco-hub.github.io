@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { floorPlan, studioLayout } from '../config/studioConfig'
+import { floorPlan, studioLayout, studioShellBaseline } from '../config/studioConfig'
 import { createSurface, roofHeightAt } from './studioGeometry'
 import { createGlassFacade } from './GlassFacade'
 
@@ -152,6 +152,7 @@ function createRearWall(materials) {
   const group = new THREE.Group()
   group.name = 'Face2RearWall'
   group.userData.structureName = 'Face 2 / Rear wall on edge B–C'
+  if (!studioShellBaseline.wall2.visibility) return group
 
   const roof = studioLayout.slopedCeiling
   const [pointB, pointC] = floorPlan.wall2Edge.map((corner) => floorPlan.corners[corner])
@@ -163,7 +164,7 @@ function createRearWall(materials) {
     pointC,
     [pointC[0], heightC, pointC[2]],
     [pointB[0], heightB, pointB[2]],
-  ], materials.deepFloor, { name: 'Face2RearWallSurface', reverse: true })
+  ], materials[studioShellBaseline.wall2.material], { name: 'Face2RearWallSurface', reverse: true })
   wall.userData.structureName = 'Wall 2 follows B–C and meets the sloped roof at 8m / 20.5m'
   group.add(wall)
 

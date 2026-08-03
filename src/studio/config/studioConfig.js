@@ -1,32 +1,13 @@
-export const studioDimensions = {
-  unit: 'estimated metres',
-  width: 56,
-  depth: 36,
-  maximumHeight: 44,
-  minimumCeilingHeight: 8,
-}
+import { approvedRectangularStudioShellV1 } from './studioShellBaseline.js'
 
-export const floorPlan = {
-  corners: {
-    A: [-28, 0, -18],
-    B: [-28, 0, 18],
-    C: [28, 0, 18],
-    D: [28, 0, -18],
-  },
-  wall1Edge: ['A', 'B'],
-  wall2Edge: ['B', 'C'],
-  openEdges: [['C', 'D'], ['D', 'A']],
-}
+export const studioShellBaseline = approvedRectangularStudioShellV1
+
+export const studioDimensions = approvedRectangularStudioShellV1.dimensions
+
+export const floorPlan = approvedRectangularStudioShellV1.floorPlan
 
 export const studioLayout = {
-  floor: {
-    position: [0, -0.18, 0],
-    width: 56,
-    depth: 36,
-    elevation: 0,
-    material: 'concrete',
-    visibility: true,
-  },
+  floor: approvedRectangularStudioShellV1.floor,
   timberFloor: {
     position: [-10.6, 0.025, 0.8],
     width: 18.2,
@@ -75,29 +56,8 @@ export const studioLayout = {
     material: 'stage',
     visibility: false,
   },
-  glassFacade: {
-    position: [-27.82, 0, 0],
-    rotation: [0, 0, 0],
-    width: 0.3,
-    height: 24,
-    depth: 35.4,
-    elevation: 0.35,
-    roofInset: 0.12,
-    bayCount: 10,
-    material: 'glass',
-    visibility: true,
-  },
-  slopedCeiling: {
-    position: [0, 0, 0],
-    rotation: [0, 0, 0],
-    width: 56,
-    depth: 36,
-    thickness: 0.7,
-    cornerHeights: { A: 31.5, B: 8, C: 20.5, D: 44 },
-    elevation: 0,
-    material: 'ceiling',
-    visibility: true,
-  },
+  glassFacade: approvedRectangularStudioShellV1.wall1,
+  slopedCeiling: approvedRectangularStudioShellV1.roof,
   ceilingCanopy: {
     position: [-1, 0, -4.2],
     rotation: [0, -0.03, 0],
