@@ -3,11 +3,11 @@ export const studioDimensions = {
   width: 36,
   depth: 44,
   maximumHeight: 42,
-  minimumCeilingHeight: 0.08,
+  minimumCeilingHeight: 0,
 }
 
 export const shellGeometry = {
-  apexPosition: [-12, 0.08, 20],
+  apexPosition: [-12, 0, 20],
   floorExtent: {
     wall1Base: [-14, 0, -24],
     wall2Base: [22, 0, -24],
@@ -26,8 +26,8 @@ export const shellGeometry = {
   },
   roofHeight: 42,
   roofSlope: {
-    wall1Degrees: 26.45,
-    wall2Degrees: 37.01,
+    wall1Degrees: 26.54,
+    wall2Degrees: 37.07,
   },
 }
 
