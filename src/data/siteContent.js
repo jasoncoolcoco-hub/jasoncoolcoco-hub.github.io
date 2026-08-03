@@ -75,6 +75,23 @@ export const siteContent = {
       },
     ],
   },
+  roomV1: {
+    metaTitle: 'Room V1 — Jason Li',
+    metaDescription: 'An experimental 3D room for Jason Li\'s personal website.',
+    eyebrow: 'EXPERIMENT / ROOM V1',
+    title: 'A quiet room for work, memory, and ideas.',
+    instructions: 'DRAG TO LOOK · SCROLL TO MOVE CLOSER · SELECT AN OBJECT',
+    desktopOnly: 'ROOM V1 IS CURRENTLY A DESKTOP EXPERIMENT.',
+    objects: {
+      desk: 'WORK DESK',
+      stool: 'STOOL',
+      macbook: 'MACBOOK · HOME',
+      tray: 'PROJECT TRAYS',
+      map: 'WORLD MAP',
+      polaroids: 'WALL MEMORIES',
+      pegboard: 'EMPTY PEGBOARD',
+    },
+  },
   navigation: {
     label: 'Website chapters',
     menuOpen: 'CHAPTERS',
