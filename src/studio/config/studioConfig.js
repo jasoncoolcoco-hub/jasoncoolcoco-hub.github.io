@@ -13,12 +13,15 @@ export const roofCorners = approvedRectangularStudioShellV1.roofCorners
 export const studioLayout = {
   floor: approvedRectangularStudioShellV1.floor,
   timberFloor: {
-    position: [-10.6, 0.025, 0.8],
-    width: 18.2,
-    depth: 46.4,
-    elevation: 0.025,
+    position: [-18.2, 0.015, 0],
+    width: 18.4,
+    depth: 35.2,
+    thickness: 0.055,
+    boardWidth: 0.72,
+    boardGap: 0.028,
+    elevation: 0.015,
     material: 'timber',
-    visibility: false,
+    visibility: true,
   },
   displayWall: {
     position: [8.4, 6.8, -1.6],
@@ -58,7 +61,7 @@ export const studioLayout = {
     height: 0.84,
     elevation: 0,
     material: 'stage',
-    visibility: true,
+    visibility: false,
   },
   glassFacade: approvedRectangularStudioShellV1.wall1,
   slopedCeiling: approvedRectangularStudioShellV1.roof,
@@ -104,34 +107,78 @@ export const debugViews = {
     target: [-3, 14, 2],
     fov: 55,
   },
+  glass: {
+    position: [2, 15, -26],
+    target: [-27, 9, 1],
+    fov: 42,
+  },
+  floor: {
+    position: [18, 8, -28],
+    target: [-8, 0, -2],
+    fov: 47,
+  },
+  junction: {
+    position: [35, 25, -4],
+    target: [-16, 12, 17],
+    fov: 44,
+  },
 }
 
 export const studioMaterials = {
-  concrete: { color: '#8d8273', roughness: 0.94 },
+  concrete: { color: '#9a907e', roughness: 0.96 },
   paleFloor: { color: '#b9aa95', roughness: 0.95 },
-  deepFloor: { color: '#766e64', roughness: 0.96 },
-  timber: { color: '#765039', roughness: 0.76 },
+  deepFloor: { color: '#bbb4a9', roughness: 0.96 },
+  timber: { color: '#795f4b', roughness: 0.86 },
   displayWall: { color: '#ddd8cd', roughness: 0.92 },
-  ceiling: { color: '#a88866', roughness: 0.88 },
-  ceilingEdge: { color: '#5c4939', roughness: 0.9 },
+  ceiling: { color: '#8d7764', roughness: 0.9 },
+  ceilingEdge: { color: '#655749', roughness: 0.84 },
   canopy: { color: '#d7d0c1', roughness: 0.96 },
   redCurtain: { color: '#6d190f', roughness: 0.98 },
   rearCurtain: { color: '#d8d6cf', roughness: 0.97 },
   stage: { color: '#d8cdbd', roughness: 0.93 },
   stageSeam: { color: '#8d8276' },
-  glass: { color: '#397682', roughness: 0.24, opacity: 0.42 },
-  glassFrame: { color: '#778783', roughness: 0.4, metalness: 0.56 },
+  glass: { color: '#a8b9b8', roughness: 0.065, opacity: 0.92 },
+  glassFrame: { color: '#555e5d', roughness: 0.34, metalness: 0.72 },
   column: { color: '#7b3b25', roughness: 0.72 },
-  darkExterior: { color: '#082a32', roughness: 1 },
+  darkExterior: { color: '#10232b', roughness: 0.92 },
   stair: { color: '#8b8175', roughness: 0.86 },
 }
 
 export const studioLightingConfig = {
-  hemisphere: { sky: '#f0ddc4', ground: '#342b27', intensity: 1.42 },
-  warmKey: { color: '#ffe3b6', intensity: 2.45, position: [15, 22, -9] },
-  wallFill: { color: '#fff0d5', intensity: 11, position: [14, 10, -2], distance: 42 },
-  coolFacade: { color: '#7bc4d6', intensity: 17, position: [-18, 10, 6], distance: 50 },
-  ceilingFill: { color: '#e9b77d', intensity: 11, position: [0, 12, -15], distance: 46 },
+  ambient: { color: '#d9d4ca', intensity: 0.14 },
+  hemisphere: { sky: '#d9e2df', ground: '#473e36', intensity: 0.42 },
+  warmKey: {
+    color: '#ffe0b4',
+    intensity: 1.9,
+    position: [22, 38, -24],
+    target: [-2, 1, 7],
+  },
+  warmBounce: {
+    color: '#ffd8a5',
+    intensity: 5.8,
+    position: [10, 20, -13],
+    target: [0, 2, 5],
+    width: 30,
+    height: 18,
+  },
+  coolFacade: {
+    color: '#9ac5cf',
+    intensity: 5,
+    position: [-30, 13, 0],
+    target: [-5, 7, 0],
+    width: 28,
+    height: 22,
+  },
+  nightPractical: { color: '#ffc27f', intensity: 90, position: [8, 5, -8], distance: 34 },
+}
+
+export const studioRenderingConfig = {
+  maxDpr: 1.65,
+  exposure: 1.06,
+  shadowMapSize: 2048,
+  shadowBias: -0.00018,
+  shadowNormalBias: 0.035,
+  textureSizes: { floor: 512, wall: 512, roof: 512, timber: 1024 },
 }
 
 export const inferredGeometry = [

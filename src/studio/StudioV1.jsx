@@ -23,6 +23,11 @@ export default function StudioV1() {
   const [wireframe, setWireframe] = useState(reviewView === 'wireframe')
   const [axesVisible, setAxesVisible] = useState(false)
   const [labelsVisible, setLabelsVisible] = useState(false)
+  const [materialsVisible, setMaterialsVisible] = useState(true)
+  const [lightingVisible, setLightingVisible] = useState(true)
+  const [shadowsVisible, setShadowsVisible] = useState(true)
+  const [glassVisible, setGlassVisible] = useState(true)
+  const [renderMode, setRenderMode] = useState(reviewView === 'clay' ? 'clay' : 'realistic')
 
   useEffect(() => {
     if (!mountRef.current) return undefined
@@ -121,6 +126,45 @@ export default function StudioV1() {
                 return !visible
               })
             }}>LABELS</button>
+          </div>
+          <div className="studio-v1__debug-actions">
+            <button type="button" aria-pressed={materialsVisible} onClick={() => {
+              setMaterialsVisible((visible) => {
+                sceneRef.current?.setMaterials(!visible)
+                return !visible
+              })
+            }}>MATERIALS</button>
+            <button type="button" aria-pressed={lightingVisible} onClick={() => {
+              setLightingVisible((visible) => {
+                sceneRef.current?.setLighting(!visible)
+                return !visible
+              })
+            }}>LIGHTING</button>
+            <button type="button" aria-pressed={shadowsVisible} onClick={() => {
+              setShadowsVisible((visible) => {
+                sceneRef.current?.setShadows(!visible)
+                return !visible
+              })
+            }}>SHADOWS</button>
+            <button type="button" aria-pressed={glassVisible} onClick={() => {
+              setGlassVisible((visible) => {
+                sceneRef.current?.setGlass(!visible)
+                return !visible
+              })
+            }}>GLASS</button>
+          </div>
+          <div className="studio-v1__debug-actions studio-v1__debug-actions--modes">
+            {['realistic', 'clay'].map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={renderMode === mode}
+                onClick={() => {
+                  setRenderMode(mode)
+                  sceneRef.current?.setRenderMode(mode)
+                }}
+              >{mode}</button>
+            ))}
           </div>
           <label className="studio-v1__fov-control">
             FOV
