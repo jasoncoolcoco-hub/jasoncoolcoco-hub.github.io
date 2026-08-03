@@ -64,7 +64,6 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   }
   if (reviewView === 'wireframe') {
     debugTools.setView('hero')
-    debugTools.setGrid(true)
     debugTools.setWireframe(true)
   }
 

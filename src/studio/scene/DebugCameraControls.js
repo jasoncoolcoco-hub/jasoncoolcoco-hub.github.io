@@ -35,10 +35,10 @@ export function createDebugCameraTools(scene, camera, controls) {
   scene.add(axes)
 
   const labels = [
-    createLabelSprite('FACE 0 / FLOOR', [0, 1.4, 0]),
-    createLabelSprite('FACE 1 / GLASS FACADE', [-19, 18, -5]),
-    createLabelSprite('FACE 2 / REAR TRIANGULAR WALL', [0, 15, 23]),
-    createLabelSprite('FACE 3 / ROOF', [0, 25, -7]),
+    createLabelSprite('FACE 0 / FLOOR', [0, 1.4, -5]),
+    createLabelSprite('FACE 1 / GLASS FACADE', [-13, 12, -12]),
+    createLabelSprite('FACE 2 / REAR TRIANGULAR WALL', [17, 24, -12]),
+    createLabelSprite('FACE 3 / ROOF', [4, 32, -10]),
   ]
   labels.forEach((label) => scene.add(label))
 

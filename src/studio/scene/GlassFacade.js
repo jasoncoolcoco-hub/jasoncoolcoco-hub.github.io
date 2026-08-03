@@ -1,96 +1,56 @@
 import * as THREE from 'three'
-import { studioLayout } from '../config/studioConfig'
-import { createSurface, roofHeightAt } from './studioGeometry'
+import { shellGeometry } from '../config/studioConfig'
+import { createTriangle } from './studioGeometry'
 
-function box(width, height, depth, material) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  return mesh
+function beamBetween(start, end, thickness, material, name = '') {
+  const startPoint = new THREE.Vector3(...start)
+  const endPoint = new THREE.Vector3(...end)
+  const direction = endPoint.clone().sub(startPoint)
+  const length = direction.length()
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(thickness, thickness, length), material)
+  beam.name = name
+  beam.position.copy(startPoint).add(endPoint).multiplyScalar(0.5)
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction.normalize())
+  beam.castShadow = true
+  beam.receiveShadow = true
+  return beam
 }
 
-function facadeTopAt(spec, z) {
-  return roofHeightAt(spec.position[0], z) - spec.roofInset
-}
-
-function createFacadePanel(spec, material, x, zStart, zEnd, bottomOffset = 0, name = '') {
-  const bottom = spec.elevation + bottomOffset
-  return createSurface([
-    [x, bottom, zStart],
-    [x, bottom, zEnd],
-    [x, facadeTopAt(spec, zEnd), zEnd],
-    [x, facadeTopAt(spec, zStart), zStart],
-  ], material, { name, castShadow: false })
-}
-
-function createSlopedRail(spec, material, zStart, zEnd, heightRatio = 1) {
-  const yStart = spec.elevation + (facadeTopAt(spec, zStart) - spec.elevation) * heightRatio
-  const yEnd = spec.elevation + (facadeTopAt(spec, zEnd) - spec.elevation) * heightRatio
-  const deltaY = yEnd - yStart
-  const deltaZ = zEnd - zStart
-  const rail = box(0.28, 0.17, Math.hypot(deltaZ, deltaY), material)
-  rail.position.set(spec.position[0] - 0.035, (yStart + yEnd) / 2, (zStart + zEnd) / 2)
-  rail.rotation.x = -Math.atan2(deltaY, deltaZ)
-  return rail
+function lerpPoint(start, end, amount) {
+  return new THREE.Vector3(...start).lerp(new THREE.Vector3(...end), amount).toArray()
 }
 
 export function createGlassFacade(materials) {
-  const spec = studioLayout.glassFacade
   const group = new THREE.Group()
   group.name = 'Face1GlassFacade'
-  group.userData.structureName = 'Face 1 / Glass Facade'
+  group.userData.structureName = 'Face 1 / Smaller glass triangle converging at apex'
 
-  const startZ = spec.position[2] - spec.depth / 2
-  const endZ = startZ + spec.depth
-  const exterior = createFacadePanel(
-    spec,
-    materials.darkExterior,
-    spec.position[0] - 0.74,
-    startZ,
-    endZ,
-    -0.1,
-    'SlopedExteriorVoid',
+  const floorBase = shellGeometry.wall1Extent.basePosition
+  const roofBase = [floorBase[0], shellGeometry.wall1Extent.baseHeight, floorBase[2]]
+  const apex = shellGeometry.apexPosition
+
+  const glass = createTriangle(
+    [floorBase, roofBase, apex],
+    materials.glass,
+    { name: 'Face1ApexGlassSurface', castShadow: false },
   )
-  group.add(exterior)
+  glass.renderOrder = 2
+  group.add(glass)
 
-  const bayStops = [0, 0.075, 0.16, 0.25, 0.35, 0.46, 0.58, 0.7, 0.81, 0.91, 1]
+  group.add(beamBetween(floorBase, roofBase, 0.3, materials.glassFrame, 'Wall1EntranceEdge'))
+  group.add(beamBetween(roofBase, apex, 0.3, materials.glassFrame, 'Wall1RoofEdge'))
+  group.add(beamBetween(apex, floorBase, 0.3, materials.glassFrame, 'Wall1FloorEdge'))
 
-  for (let bay = 0; bay < bayStops.length - 1; bay += 1) {
-    const bayStart = THREE.MathUtils.lerp(startZ, endZ, bayStops[bay])
-    const bayEnd = THREE.MathUtils.lerp(startZ, endZ, bayStops[bay + 1])
-    const pane = createFacadePanel(
-      spec,
-      materials.glass,
-      spec.position[0],
-      bayStart + 0.1,
-      bayEnd - 0.1,
-      0.12,
-      `TriangularWedgeGlassBay${bay + 1}`,
-    )
-    pane.renderOrder = 2
-    group.add(pane)
-
-    ;[0.35, 0.68, 1].forEach((heightRatio) => {
-      group.add(createSlopedRail(spec, materials.glassFrame, bayStart, bayEnd, heightRatio))
-    })
-  }
-
-  bayStops.forEach((stop, index) => {
-    const z = THREE.MathUtils.lerp(startZ, endZ, stop)
-    const top = facadeTopAt(spec, z)
-    const height = top - spec.elevation
-    const mullion = box(0.3, height, 0.19, materials.glassFrame)
-    mullion.position.set(spec.position[0] - 0.04, spec.elevation + height / 2, z)
-    mullion.userData.structureName = `Sloped Glass Mullion ${index + 1}`
-    group.add(mullion)
-
-    const bracket = box(0.4, 0.34, 0.42, materials.displayWall)
-    bracket.position.set(spec.position[0] - 0.2, top + 0.12, z)
-    group.add(bracket)
+  ;[0.18, 0.36, 0.54, 0.72, 0.88].forEach((ratio, index) => {
+    const basePoint = lerpPoint(floorBase, roofBase, ratio)
+    group.add(beamBetween(basePoint, apex, 0.19, materials.glassFrame, `Wall1ApexMullion${index + 1}`))
   })
 
-  const bottomRail = box(0.3, 0.18, spec.depth, materials.glassFrame)
-  bottomRail.position.set(spec.position[0] - 0.04, spec.elevation, spec.position[2])
-  group.add(bottomRail)
+  ;[0.32, 0.62].forEach((ratio, index) => {
+    const floorSide = lerpPoint(floorBase, apex, ratio)
+    const roofSide = lerpPoint(roofBase, apex, ratio)
+    group.add(beamBetween(floorSide, roofSide, 0.17, materials.glassFrame, `Wall1CrossRail${index + 1}`))
+  })
+
   return group
 }

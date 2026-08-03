@@ -22,3 +22,16 @@ export function createSurface(points, material, { name = '', reverse = false, ca
   surface.receiveShadow = true
   return surface
 }
+
+export function createTriangle(points, material, { name = '', reverse = false, castShadow = true } = {}) {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(points.flatMap((point) => point), 3))
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2))
+  geometry.setIndex(reverse ? [0, 2, 1] : [0, 1, 2])
+  geometry.computeVertexNormals()
+  const triangle = new THREE.Mesh(geometry, material)
+  triangle.name = name
+  triangle.castShadow = castShadow
+  triangle.receiveShadow = true
+  return triangle
+}
