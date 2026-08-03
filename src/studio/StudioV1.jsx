@@ -28,6 +28,8 @@ export default function StudioV1() {
   const [shadowsVisible, setShadowsVisible] = useState(true)
   const [glassVisible, setGlassVisible] = useState(true)
   const [renderMode, setRenderMode] = useState(reviewView === 'clay' ? 'clay' : 'realistic')
+  const [coordinateInput, setCoordinateInput] = useState(['0', '0', '0'])
+  const [coordinateStatus, setCoordinateStatus] = useState('CLICK FLOOR TO READ')
 
   useEffect(() => {
     if (!mountRef.current) return undefined
@@ -36,6 +38,10 @@ export default function StudioV1() {
       debug,
       reviewView,
       onCameraChange: setCameraState,
+      onCoordinatePick: (coordinate) => {
+        setCoordinateInput(coordinate.map((value) => value.toFixed(2)))
+        setCoordinateStatus('FLOOR POINT READ')
+      },
     })
     sceneRef.current = scene
     return () => {
@@ -96,6 +102,51 @@ export default function StudioV1() {
             <div><dt>TARGET</dt><dd>{formatVector(cameraState?.target)}</dd></div>
             <div><dt>FOV</dt><dd>{cameraState?.fov}</dd></div>
           </dl>
+          <section className="studio-v1__coordinate-tool" aria-label="World coordinate tool">
+            <div className="studio-v1__coordinate-heading">
+              <strong>WORLD COORDINATE / METRES</strong>
+              <span>{coordinateStatus}</span>
+            </div>
+            <div className="studio-v1__coordinate-inputs">
+              {['X', 'Y', 'Z'].map((axis, index) => (
+                <label key={axis}>
+                  {axis}
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={coordinateInput[index]}
+                    onChange={(event) => setCoordinateInput((current) => current.map(
+                      (value, valueIndex) => valueIndex === index ? event.target.value : value,
+                    ))}
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="studio-v1__coordinate-actions">
+              <button type="button" onClick={() => {
+                const coordinate = coordinateInput.map(Number)
+                if (!sceneRef.current?.setCoordinateMarker(coordinate)) {
+                  setCoordinateStatus('INVALID COORDINATE')
+                  return
+                }
+                setCoordinateStatus('MARKER PLACED')
+              }}>PLACE</button>
+              <button type="button" onClick={async () => {
+                const coordinateText = `[${coordinateInput.map((value) => Number(value).toFixed(2)).join(', ')}]`
+                try {
+                  await navigator.clipboard.writeText(coordinateText)
+                  setCoordinateStatus('COPIED')
+                } catch {
+                  setCoordinateStatus('COPY UNAVAILABLE')
+                }
+              }}>COPY</button>
+              <button type="button" onClick={() => {
+                sceneRef.current?.clearCoordinateMarker()
+                setCoordinateStatus('MARKER CLEARED')
+              }}>CLEAR</button>
+            </div>
+            <p>D = 0, 0, 0 · X → A · Y ↑ · Z → C</p>
+          </section>
           <div className="studio-v1__debug-actions">
             {['hero', 'top', 'left', 'right', 'section'].map((view) => (
               <button key={view} type="button" onClick={() => sceneRef.current?.setView(view)}>{view}</button>

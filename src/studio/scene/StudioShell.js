@@ -33,17 +33,14 @@ function roundedBeamBetween(start, end, width, height, material, name = '') {
 }
 
 function addFloorEdgeJoints(group, spec, topY, materials) {
-  const xMin = -spec.width / 2
-  const xMax = spec.width / 2
-  const zMin = -spec.depth / 2
-  const zMax = spec.depth / 2
   const jointHeight = 0.014
   const jointWidth = 0.045
+  const { A, B, C, D } = floorPlan.corners
   const edges = [
-    [[xMin, topY, zMin], [xMax, topY, zMin], 'FloorEdgeDA'],
-    [[xMax, topY, zMin], [xMax, topY, zMax], 'FloorEdgeCD'],
-    [[xMax, topY, zMax], [xMin, topY, zMax], 'FloorEdgeBC'],
-    [[xMin, topY, zMax], [xMin, topY, zMin], 'FloorEdgeAB'],
+    [[D[0], topY, D[2]], [A[0], topY, A[2]], 'FloorEdgeDA'],
+    [[A[0], topY, A[2]], [B[0], topY, B[2]], 'FloorEdgeAB'],
+    [[B[0], topY, B[2]], [C[0], topY, C[2]], 'FloorEdgeBC'],
+    [[C[0], topY, C[2]], [D[0], topY, D[2]], 'FloorEdgeCD'],
   ]
   edges.forEach(([start, end, name]) => {
     group.add(roundedBeamBetween(start, end, jointWidth, jointHeight, materials.floorJoint, name))
@@ -124,18 +121,18 @@ function createTimberFloorZone(spec, materials) {
 }
 
 function createRoofGrid(spec, material) {
-  const xSegments = 14
-  const zSegments = 20
+  const xSegments = 28
+  const zSegments = 40
   const vertices = []
   const indices = []
   const uvs = []
 
   for (let zIndex = 0; zIndex <= zSegments; zIndex += 1) {
     const zRatio = zIndex / zSegments
-    const z = -spec.depth / 2 + zRatio * spec.depth
+    const z = THREE.MathUtils.lerp(spec.corners.D[2], spec.corners.C[2], zRatio)
     for (let xIndex = 0; xIndex <= xSegments; xIndex += 1) {
       const xRatio = xIndex / xSegments
-      const x = -spec.width / 2 + xRatio * spec.width
+      const x = THREE.MathUtils.lerp(spec.corners.D[0], spec.corners.A[0], xRatio)
       vertices.push(x, roofHeightAt(x, z, spec), z)
       uvs.push(xRatio, zRatio)
     }
@@ -166,23 +163,27 @@ function createRoofGrid(spec, material) {
 
 function createRoofSeams(spec, material) {
   const seamPoints = []
+  const xMin = spec.corners.D[0]
+  const xMax = spec.corners.A[0]
+  const zFront = spec.corners.D[2]
+  const zRear = spec.corners.C[2]
 
-  ;[0.25, 0.5, 0.75].forEach((xRatio) => {
-    const x = -spec.width / 2 + xRatio * spec.width
-    const segments = 20
+  ;[0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875].forEach((xRatio) => {
+    const x = THREE.MathUtils.lerp(xMin, xMax, xRatio)
+    const segments = 40
     for (let segment = 0; segment < segments; segment += 1) {
-      const z0 = -spec.depth / 2 + (segment / segments) * spec.depth
-      const z1 = -spec.depth / 2 + ((segment + 1) / segments) * spec.depth
+      const z0 = THREE.MathUtils.lerp(zFront, zRear, segment / segments)
+      const z1 = THREE.MathUtils.lerp(zFront, zRear, (segment + 1) / segments)
       seamPoints.push(x, roofHeightAt(x, z0, spec) - 0.018, z0, x, roofHeightAt(x, z1, spec) - 0.018, z1)
     }
   })
 
-  ;[0.34, 0.67].forEach((zRatio) => {
-    const z = -spec.depth / 2 + zRatio * spec.depth
-    const segments = 22
+  ;[0.17, 0.34, 0.5, 0.67, 0.84].forEach((zRatio) => {
+    const z = THREE.MathUtils.lerp(zFront, zRear, zRatio)
+    const segments = 44
     for (let segment = 0; segment < segments; segment += 1) {
-      const x0 = -spec.width / 2 + (segment / segments) * spec.width
-      const x1 = -spec.width / 2 + ((segment + 1) / segments) * spec.width
+      const x0 = THREE.MathUtils.lerp(xMin, xMax, segment / segments)
+      const x1 = THREE.MathUtils.lerp(xMin, xMax, (segment + 1) / segments)
       seamPoints.push(x0, roofHeightAt(x0, z, spec) - 0.018, z, x1, roofHeightAt(x1, z, spec) - 0.018, z)
     }
   })
@@ -200,56 +201,56 @@ function createRoofFromBoundaryEdges(spec, materials) {
   group.userData.structureName = 'Face 3 / Detailed roof on approved A–B–C–D plane'
   if (!spec.visibility) return group
 
-  const xMin = -spec.width / 2
-  const xMax = spec.width / 2
-  const zFront = -spec.depth / 2
-  const zRear = spec.depth / 2
+  const xMin = spec.corners.D[0]
+  const xMax = spec.corners.A[0]
+  const zFront = spec.corners.D[2]
+  const zRear = spec.corners.C[2]
   const thickness = spec.thickness
-  const heightA = roofHeightAt(xMin, zFront, spec)
-  const heightB = roofHeightAt(xMin, zRear, spec)
-  const heightC = roofHeightAt(xMax, zRear, spec)
-  const heightD = roofHeightAt(xMax, zFront, spec)
+  const heightA = roofHeightAt(xMax, zFront, spec)
+  const heightB = roofHeightAt(xMax, zRear, spec)
+  const heightC = roofHeightAt(xMin, zRear, spec)
+  const heightD = roofHeightAt(xMin, zFront, spec)
 
   const innerSurface = createRoofGrid(spec, materials.ceiling)
   innerSurface.userData.structureName = 'Textured roof interior on frozen plane'
   group.add(innerSurface)
   group.add(createRoofSeams(spec, materials.roofJoint))
   group.add(createSurface([
-    [xMin, heightA + thickness, zFront],
-    [xMax, heightD + thickness, zFront],
-    [xMax, heightC + thickness, zRear],
-    [xMin, heightB + thickness, zRear],
+    [xMin, heightD + thickness, zFront],
+    [xMax, heightA + thickness, zFront],
+    [xMax, heightB + thickness, zRear],
+    [xMin, heightC + thickness, zRear],
   ], materials.ceilingEdge, { name: 'Face3RoofOuterSurface' }))
 
   group.add(createSurface([
-    [xMin, heightA, zFront], [xMin, heightB, zRear],
-    [xMin, heightB + thickness, zRear], [xMin, heightA + thickness, zFront],
+    [xMax, heightA, zFront], [xMax, heightB, zRear],
+    [xMax, heightB + thickness, zRear], [xMax, heightA + thickness, zFront],
   ], materials.ceilingEdge, { name: 'RoofWall1SharedEdge' }))
   group.add(createSurface([
-    [xMin, heightB, zRear], [xMax, heightC, zRear],
-    [xMax, heightC + thickness, zRear], [xMin, heightB + thickness, zRear],
+    [xMax, heightB, zRear], [xMin, heightC, zRear],
+    [xMin, heightC + thickness, zRear], [xMax, heightB + thickness, zRear],
   ], materials.ceilingEdge, { name: 'RoofWall2SharedEdge' }))
   group.add(createSurface([
-    [xMax, heightD, zFront], [xMax, heightC, zRear],
-    [xMax, heightC + thickness, zRear], [xMax, heightD + thickness, zFront],
+    [xMin, heightD, zFront], [xMin, heightC, zRear],
+    [xMin, heightC + thickness, zRear], [xMin, heightD + thickness, zFront],
   ], materials.ceilingEdge, { name: 'RoofEdge3OpenBoundary' }))
   group.add(createSurface([
-    [xMin, heightA, zFront], [xMax, heightD, zFront],
-    [xMax, heightD + thickness, zFront], [xMin, heightA + thickness, zFront],
+    [xMin, heightD, zFront], [xMax, heightA, zFront],
+    [xMax, heightA + thickness, zFront], [xMin, heightD + thickness, zFront],
   ], materials.ceilingEdge, { name: 'RoofEdge4OpenBoundary' }))
 
   const edgeY = thickness * 0.48
   const edgeBeams = [
-    [[xMin, heightA + edgeY, zFront], [xMin, heightB + edgeY, zRear], 'RoofEdgeABTrim'],
-    [[xMin, heightB + edgeY, zRear], [xMax, heightC + edgeY, zRear], 'RoofEdgeBCTrim'],
-    [[xMax, heightC + edgeY, zRear], [xMax, heightD + edgeY, zFront], 'RoofEdgeCDTrim'],
-    [[xMax, heightD + edgeY, zFront], [xMin, heightA + edgeY, zFront], 'RoofEdgeDATrim'],
+    [[xMax, heightA + edgeY, zFront], [xMax, heightB + edgeY, zRear], 'RoofEdgeABTrim'],
+    [[xMax, heightB + edgeY, zRear], [xMin, heightC + edgeY, zRear], 'RoofEdgeBCTrim'],
+    [[xMin, heightC + edgeY, zRear], [xMin, heightD + edgeY, zFront], 'RoofEdgeCDTrim'],
+    [[xMin, heightD + edgeY, zFront], [xMax, heightA + edgeY, zFront], 'RoofEdgeDATrim'],
   ]
   edgeBeams.forEach(([start, end, name]) => {
     group.add(roundedBeamBetween(start, end, 0.24, 0.18, materials.ceilingEdge, name))
   })
 
-  ;[0.2, 0.46, 0.72].forEach((xRatio, index) => {
+  ;[0.12, 0.28, 0.44, 0.6, 0.76, 0.92].forEach((xRatio, index) => {
     const x = xMin + xRatio * spec.width
     const startY = roofHeightAt(x, zFront, spec) - 0.08
     const endY = roofHeightAt(x, zRear, spec) - 0.08
@@ -305,9 +306,9 @@ function createRearWall(materials) {
     [pointC[0], heightC, zOutside], [pointB[0], heightB, zOutside],
   ], materials.wallTrim, { name: 'Wall2SlopedTopClosure' }))
 
-  const baseboard = roundedBox(pointC[0] - pointB[0], 0.18, 0.1, materials.wallTrim, 0.025, 2)
+  const baseboard = roundedBox(Math.abs(pointC[0] - pointB[0]), 0.18, 0.1, materials.wallTrim, 0.025, 2)
   baseboard.name = 'Wall2RestrainedBaseboard'
-  baseboard.position.set(0, 0.09, zInside - 0.055)
+  baseboard.position.set((pointB[0] + pointC[0]) / 2, 0.09, zInside - 0.055)
   group.add(baseboard)
 
   group.add(roundedBeamBetween(

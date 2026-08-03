@@ -2,10 +2,14 @@ import * as THREE from 'three'
 import { studioLayout } from '../config/studioConfig'
 
 export function roofHeightAt(x, z, roof = studioLayout.slopedCeiling) {
-  const xRatio = THREE.MathUtils.clamp((x + roof.width / 2) / roof.width, 0, 1)
-  const zRatio = THREE.MathUtils.clamp((z + roof.depth / 2) / roof.depth, 0, 1)
-  const frontHeight = THREE.MathUtils.lerp(roof.cornerHeights.A, roof.cornerHeights.D, xRatio)
-  const rearHeight = THREE.MathUtils.lerp(roof.cornerHeights.B, roof.cornerHeights.C, xRatio)
+  const xMin = roof.corners.D[0]
+  const xMax = roof.corners.A[0]
+  const zMin = roof.corners.D[2]
+  const zMax = roof.corners.C[2]
+  const xRatio = THREE.MathUtils.clamp((x - xMin) / (xMax - xMin), 0, 1)
+  const zRatio = THREE.MathUtils.clamp((z - zMin) / (zMax - zMin), 0, 1)
+  const frontHeight = THREE.MathUtils.lerp(roof.cornerHeights.D, roof.cornerHeights.A, xRatio)
+  const rearHeight = THREE.MathUtils.lerp(roof.cornerHeights.C, roof.cornerHeights.B, xRatio)
   return THREE.MathUtils.lerp(frontHeight, rearHeight, zRatio)
 }
 

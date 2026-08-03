@@ -7,10 +7,16 @@ import { createStudioMaterials } from './createStudioMaterials'
 import { createStudioLighting } from './StudioLighting'
 import { createStudioShell } from './StudioShell'
 
-export function createFredStudioScene({ mount, debug = false, reviewView = null, onCameraChange }) {
+export function createFredStudioScene({
+  mount,
+  debug = false,
+  reviewView = null,
+  onCameraChange,
+  onCoordinatePick,
+}) {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color('#171714')
-  scene.fog = new THREE.Fog('#171714', 86, 148)
+  scene.fog = new THREE.Fog('#171714', 165, 270)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, studioRenderingConfig.maxDpr))
@@ -38,8 +44,8 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   controls.dampingFactor = 0.065
   controls.enabled = debug
   controls.enablePan = debug
-  controls.minDistance = 24
-  controls.maxDistance = 84
+  controls.minDistance = 38
+  controls.maxDistance = 180
   controls.minPolarAngle = Math.PI * 0.08
   controls.maxPolarAngle = Math.PI * 0.47
   controls.minAzimuthAngle = -Math.PI
@@ -65,6 +71,8 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
     renderer,
     materials,
     lightingGroup,
+    coordinatePicking: debug,
+    onCoordinatePick,
   })
   if (reviewView) {
     if (['top', 'left', 'right', 'section', 'shell', 'glass', 'floor', 'junction'].includes(reviewView)) {

@@ -1,19 +1,50 @@
-import { approvedRectangularStudioShellV1 } from './studioShellBaseline.js'
+import {
+  expandedRectangularStudioShellV1,
+  previousShellBaseline,
+  studioCoordinateSystem,
+} from './studioShellBaseline.js'
 
-export const studioShellBaseline = approvedRectangularStudioShellV1
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value
+  Object.values(value).forEach(deepFreeze)
+  return Object.freeze(value)
+}
 
-export const studioDimensions = approvedRectangularStudioShellV1.dimensions
+export { previousShellBaseline, studioCoordinateSystem }
 
-export const roomFootprint = approvedRectangularStudioShellV1.roomFootprint
+export const studioShellBaseline = expandedRectangularStudioShellV1
+
+export const studioDimensions = studioShellBaseline.dimensions
+
+export const roomFootprint = studioShellBaseline.roomFootprint
 
 export const floorPlan = roomFootprint
 
-export const roofCorners = approvedRectangularStudioShellV1.roofCorners
+export const roofCorners = studioShellBaseline.roofCorners
+
+export const studioCoordinates = deepFreeze({
+  shellCenter: [56, 0, 36],
+  timberFloorCenter: [92.4, 0.015, 36],
+  displayWallAnchor: [39.2, 6.8, 32.8],
+  redCurtainAnchor: [52.2, 5.35, 42.8],
+  rearCurtainAnchor: [66.8, 3.2, 57.2],
+  centralStageAnchor: [54.6, 0, 21.8],
+  ceilingCanopyAnchor: [58, 0, 27.6],
+  lighting: {
+    warmKey: [12, 50, -12],
+    warmKeyTarget: [60, 1, 50],
+    warmBounce: [36, 26, 10],
+    warmBounceTarget: [56, 2, 46],
+    coolFacade: [116, 19, 36],
+    coolFacadeTarget: [66, 8, 36],
+    nightPractical: [40, 6, 20],
+  },
+})
 
 export const studioLayout = {
-  floor: approvedRectangularStudioShellV1.floor,
+  floor: studioShellBaseline.floor,
   timberFloor: {
-    position: [-18.2, 0.015, 0],
+    position: studioCoordinates.timberFloorCenter,
     width: 18.4,
     depth: 35.2,
     thickness: 0.055,
@@ -24,7 +55,7 @@ export const studioLayout = {
     visibility: true,
   },
   displayWall: {
-    position: [8.4, 6.8, -1.6],
+    position: studioCoordinates.displayWallAnchor,
     rotation: [0, 0.06, 0],
     width: 17.4,
     height: 13,
@@ -34,7 +65,7 @@ export const studioLayout = {
     visibility: false,
   },
   redCurtain: {
-    position: [1.9, 5.35, 3.4],
+    position: studioCoordinates.redCurtainAnchor,
     rotation: [0, -0.035, 0],
     width: 9.4,
     height: 9.7,
@@ -44,7 +75,7 @@ export const studioLayout = {
     visibility: false,
   },
   rearCurtain: {
-    position: [-5.4, 3.2, 10.6],
+    position: studioCoordinates.rearCurtainAnchor,
     rotation: [0, 0, 0],
     width: 9.6,
     height: 5.6,
@@ -54,7 +85,7 @@ export const studioLayout = {
     visibility: false,
   },
   centralStage: {
-    position: [0.7, 0, -7.1],
+    position: studioCoordinates.centralStageAnchor,
     rotation: [0, 0.025, 0],
     width: 24.8,
     depth: 17.8,
@@ -63,10 +94,10 @@ export const studioLayout = {
     material: 'stage',
     visibility: false,
   },
-  glassFacade: approvedRectangularStudioShellV1.wall1,
-  slopedCeiling: approvedRectangularStudioShellV1.roof,
+  glassFacade: studioShellBaseline.wall1,
+  slopedCeiling: studioShellBaseline.roof,
   ceilingCanopy: {
-    position: [-1, 0, -4.2],
+    position: studioCoordinates.ceilingCanopyAnchor,
     rotation: [0, -0.03, 0],
     width: 21,
     depth: 15.5,
@@ -78,48 +109,48 @@ export const studioLayout = {
   },
 }
 
-export const heroCameraConfig = approvedRectangularStudioShellV1.heroCameraConfig
+export const heroCameraConfig = studioShellBaseline.heroCameraConfig
 
 export const debugViews = {
   hero: heroCameraConfig,
   top: {
-    position: [0, 100, 0.01],
-    target: [0, 0, 0],
+    position: [56, 155, 38],
+    target: [56, 0, 36],
     fov: 50,
   },
   left: {
-    position: [55, 24, -20],
-    target: [-2, 11, 0],
+    position: [-62, 38, 18],
+    target: [54, 18, 38],
     fov: 52,
   },
   right: {
-    position: [-55, 24, -12],
-    target: [-1, 11, 0],
+    position: [174, 38, 18],
+    target: [58, 18, 38],
     fov: 50,
   },
   section: {
-    position: [55, 26, -42],
-    target: [-5, 12, 8],
+    position: [12, 68, -82],
+    target: [58, 20, 45],
     fov: 55,
   },
   shell: {
-    position: [55, 40, -48],
-    target: [-3, 14, 2],
+    position: [8, 82, -88],
+    target: [58, 22, 42],
     fov: 55,
   },
   glass: {
-    position: [2, 15, -26],
-    target: [-27, 9, 1],
+    position: [72, 24, -8],
+    target: [112, 18, 35],
     fov: 42,
   },
   floor: {
-    position: [18, 8, -28],
-    target: [-8, 0, -2],
+    position: [30, 14, -24],
+    target: [66, 0, 30],
     fov: 47,
   },
   junction: {
-    position: [35, 25, -4],
-    target: [-16, 12, 17],
+    position: [70, 38, 37],
+    target: [106, 18, 70],
     fov: 44,
   },
 }
@@ -150,26 +181,31 @@ export const studioLightingConfig = {
   warmKey: {
     color: '#ffe0b4',
     intensity: 1.9,
-    position: [22, 38, -24],
-    target: [-2, 1, 7],
+    position: studioCoordinates.lighting.warmKey,
+    target: studioCoordinates.lighting.warmKeyTarget,
   },
   warmBounce: {
     color: '#ffd8a5',
     intensity: 5.8,
-    position: [10, 20, -13],
-    target: [0, 2, 5],
-    width: 30,
-    height: 18,
+    position: studioCoordinates.lighting.warmBounce,
+    target: studioCoordinates.lighting.warmBounceTarget,
+    width: 44,
+    height: 24,
   },
   coolFacade: {
     color: '#9ac5cf',
     intensity: 5,
-    position: [-30, 13, 0],
-    target: [-5, 7, 0],
-    width: 28,
-    height: 22,
+    position: studioCoordinates.lighting.coolFacade,
+    target: studioCoordinates.lighting.coolFacadeTarget,
+    width: 54,
+    height: 32,
   },
-  nightPractical: { color: '#ffc27f', intensity: 90, position: [8, 5, -8], distance: 34 },
+  nightPractical: {
+    color: '#ffc27f',
+    intensity: 90,
+    position: studioCoordinates.lighting.nightPractical,
+    distance: 34,
+  },
 }
 
 export const studioRenderingConfig = {
@@ -182,7 +218,7 @@ export const studioRenderingConfig = {
 }
 
 export const inferredGeometry = [
-  'Rectangular 56m × 36m floor plan and corner coordinates',
+  'Rectangular 112m × 72m floor plan with D at world origin',
   'Wall 1 occupying edge A–B and Wall 2 occupying edge B–C',
   'Open boundaries along edges C–D and D–A',
   'Roof corner heights and full rectangular projection',

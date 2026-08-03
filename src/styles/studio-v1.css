@@ -122,7 +122,9 @@
 .studio-v1__debug-panel {
   top: 18px;
   left: 18px;
-  width: 310px;
+  width: 330px;
+  max-height: calc(100svh - 36px);
+  overflow-y: auto;
   padding: 16px;
 }
 
@@ -173,4 +175,60 @@
 
 .studio-v1__fov-control {
   margin-top: 12px;
+}
+
+.studio-v1__coordinate-tool {
+  padding: 11px 0 3px;
+  border-top: 1px solid rgba(236, 231, 220, 0.14);
+  border-bottom: 1px solid rgba(236, 231, 220, 0.14);
+}
+
+.studio-v1__coordinate-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: rgba(236, 231, 220, 0.94);
+}
+
+.studio-v1__coordinate-heading span {
+  color: rgba(236, 231, 220, 0.48);
+  font-size: 8px;
+  text-align: right;
+}
+
+.studio-v1__coordinate-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.studio-v1__coordinate-inputs label {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  align-items: center;
+  gap: 4px;
+}
+
+.studio-v1__coordinate-inputs input {
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid rgba(236, 231, 220, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-v1__coordinate-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.studio-v1__coordinate-tool p {
+  margin: 8px 0 7px;
+  color: rgba(236, 231, 220, 0.48);
+  line-height: 1.5;
 }

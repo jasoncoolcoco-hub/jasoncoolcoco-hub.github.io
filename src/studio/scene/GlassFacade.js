@@ -26,8 +26,9 @@ function createFacadePanel(spec, material, x, zStart, zEnd, bottomOffset = 0, na
 }
 
 function createGlassPanelVolume(spec, material, zStart, zEnd, name) {
-  const xInside = spec.position[0] + 0.035
-  const xOutside = spec.position[0] - 0.035
+  const halfThickness = spec.glassThickness / 2
+  const xInside = spec.position[0] + spec.interiorDirectionX * halfThickness
+  const xOutside = spec.position[0] - spec.interiorDirectionX * halfThickness
   const bottom = spec.elevation + 0.1
   const topStart = facadeTopAt(spec, zStart) - 0.08
   const topEnd = facadeTopAt(spec, zEnd) - 0.08
@@ -84,10 +85,11 @@ function roundedBeamBetween(start, end, width, height, material, name) {
 function createExteriorDepth(spec, materials, startZ, endZ) {
   const group = new THREE.Group()
   group.name = 'FacadeExteriorDepth'
+  const exteriorDirectionX = -spec.interiorDirectionX
   const backdrop = createFacadePanel(
     spec,
     materials.darkExterior,
-    spec.position[0] - 1.25,
+    spec.position[0] + exteriorDirectionX * 1.25,
     startZ - 0.6,
     endZ + 0.6,
     -0.15,
@@ -96,7 +98,7 @@ function createExteriorDepth(spec, materials, startZ, endZ) {
   group.add(backdrop)
   const exteriorFloor = roundedBox(5.8, 0.12, endZ - startZ + 1.2, materials.darkExterior, 0.025, 2)
   exteriorFloor.name = 'ExteriorDepthFloor'
-  exteriorFloor.position.set(spec.position[0] - 3, -0.07, (startZ + endZ) / 2)
+  exteriorFloor.position.set(spec.position[0] + exteriorDirectionX * 3, -0.07, (startZ + endZ) / 2)
   group.add(exteriorFloor)
   return group
 }
@@ -112,7 +114,9 @@ export function createGlassFacade(materials) {
   const pointB = floorPlan.corners.B
   const startZ = pointA[2] + 0.3
   const endZ = pointB[2] - 0.3
-  const bayStops = [0, 0.075, 0.16, 0.25, 0.35, 0.46, 0.58, 0.7, 0.81, 0.91, 1]
+  const bayStops = Array.from({ length: spec.bayCount + 1 }, (_, index) => index / spec.bayCount)
+  const exteriorDirectionX = -spec.interiorDirectionX
+  const frameX = spec.position[0] + exteriorDirectionX * 0.045
   group.add(createExteriorDepth(spec, materials, startZ, endZ))
 
   const glassPanels = new THREE.Group()
@@ -128,7 +132,7 @@ export function createGlassFacade(materials) {
   }
   group.add(glassPanels)
 
-  const mullionGeometry = new RoundedBoxGeometry(0.32, 1, 0.24, 2, 0.035)
+  const mullionGeometry = new RoundedBoxGeometry(spec.frameWidth, 1, 0.24, 2, 0.035)
   const mullions = new THREE.InstancedMesh(mullionGeometry, materials.glassFrame, bayStops.length)
   mullions.name = 'InstancedFacadeMullions'
   mullions.castShadow = true
@@ -139,7 +143,7 @@ export function createGlassFacade(materials) {
     const top = facadeTopAt(spec, z)
     const height = top - spec.elevation
     mullionMatrix.compose(
-      new THREE.Vector3(spec.position[0] - 0.045, spec.elevation + height / 2, z),
+      new THREE.Vector3(frameX, spec.elevation + height / 2, z),
       new THREE.Quaternion(),
       new THREE.Vector3(1, height, 1),
     )
@@ -162,8 +166,8 @@ export function createGlassFacade(materials) {
       const yStart = spec.elevation + (facadeTopAt(spec, bayStart) - spec.elevation) * heightRatio
       const yEnd = spec.elevation + (facadeTopAt(spec, bayEnd) - spec.elevation) * heightRatio
       transoms.setMatrixAt(transomIndex, beamMatrix(
-        [spec.position[0] - 0.04, yStart, bayStart],
-        [spec.position[0] - 0.04, yEnd, bayEnd],
+        [frameX, yStart, bayStart],
+        [frameX, yEnd, bayEnd],
       ))
       transomIndex += 1
     })
@@ -172,8 +176,8 @@ export function createGlassFacade(materials) {
   group.add(transoms)
 
   const topFrame = roundedBeamBetween(
-    [spec.position[0] - 0.045, facadeTopAt(spec, startZ), startZ],
-    [spec.position[0] - 0.045, facadeTopAt(spec, endZ), endZ],
+    [frameX, facadeTopAt(spec, startZ), startZ],
+    [frameX, facadeTopAt(spec, endZ), endZ],
     0.34,
     0.24,
     materials.glassFrame,
@@ -181,9 +185,9 @@ export function createGlassFacade(materials) {
   )
   group.add(topFrame)
 
-  const bottomRail = roundedBox(0.34, 0.22, endZ - startZ, materials.glassFrame, 0.035, 3)
+  const bottomRail = roundedBox(spec.frameWidth + 0.02, 0.22, endZ - startZ, materials.glassFrame, 0.035, 3)
   bottomRail.name = 'FacadeBottomFrameAB'
-  bottomRail.position.set(spec.position[0] - 0.045, spec.elevation + 0.02, (startZ + endZ) / 2)
+  bottomRail.position.set(frameX, spec.elevation + 0.02, (startZ + endZ) / 2)
   group.add(bottomRail)
 
   const bracketGeometry = new RoundedBoxGeometry(0.46, 0.28, 0.36, 2, 0.035)
@@ -194,7 +198,11 @@ export function createGlassFacade(materials) {
   bayStops.forEach((stop, index) => {
     const z = THREE.MathUtils.lerp(startZ, endZ, stop)
     const top = facadeTopAt(spec, z)
-    const matrix = new THREE.Matrix4().makeTranslation(spec.position[0] - 0.19, top + 0.09, z)
+    const matrix = new THREE.Matrix4().makeTranslation(
+      spec.position[0] + exteriorDirectionX * 0.19,
+      top + 0.09,
+      z,
+    )
     brackets.setMatrixAt(index, matrix)
   })
   brackets.instanceMatrix.needsUpdate = true

@@ -29,12 +29,12 @@ export function createStudioLighting() {
   key.target.position.set(...studioLightingConfig.warmKey.target)
   key.castShadow = true
   key.shadow.mapSize.set(studioRenderingConfig.shadowMapSize, studioRenderingConfig.shadowMapSize)
-  key.shadow.camera.left = -40
-  key.shadow.camera.right = 40
-  key.shadow.camera.top = 38
-  key.shadow.camera.bottom = -32
+  key.shadow.camera.left = -86
+  key.shadow.camera.right = 86
+  key.shadow.camera.top = 82
+  key.shadow.camera.bottom = -68
   key.shadow.camera.near = 2
-  key.shadow.camera.far = 96
+  key.shadow.camera.far = 190
   key.shadow.bias = studioRenderingConfig.shadowBias
   key.shadow.normalBias = studioRenderingConfig.shadowNormalBias
   key.shadow.radius = 5
