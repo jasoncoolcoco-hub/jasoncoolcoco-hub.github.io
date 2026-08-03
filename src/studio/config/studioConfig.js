@@ -1,34 +1,21 @@
 export const studioDimensions = {
   unit: 'estimated metres',
-  width: 36,
-  depth: 44,
-  maximumHeight: 42,
-  minimumCeilingHeight: 0,
+  width: 40,
+  depth: 48,
+  maximumHeight: 44,
+  minimumCeilingHeight: 8,
 }
 
-export const shellGeometry = {
-  apexPosition: [-12, 0, 20],
-  floorExtent: {
-    wall1Base: [-14, 0, -24],
-    wall2Base: [22, 0, -24],
-    width: 36,
-    depth: 44,
+export const floorPlan = {
+  corners: {
+    A: [-20, 0, -24],
+    B: [-20, 0, 24],
+    C: [20, 0, 24],
+    D: [20, 0, -24],
   },
-  wall1Extent: {
-    basePosition: [-14, 0, -24],
-    baseHeight: 22,
-    runToApex: 44.05,
-  },
-  wall2Extent: {
-    basePosition: [22, 0, -24],
-    baseHeight: 42,
-    runToApex: 55.61,
-  },
-  roofHeight: 42,
-  roofSlope: {
-    wall1Degrees: 26.54,
-    wall2Degrees: 37.07,
-  },
+  wall1Edge: ['A', 'B'],
+  wall2Edge: ['B', 'C'],
+  openEdges: [['C', 'D'], ['D', 'A']],
 }
 
 export const studioLayout = {
@@ -38,7 +25,7 @@ export const studioLayout = {
     depth: 48,
     elevation: 0,
     material: 'concrete',
-    visibility: false,
+    visibility: true,
   },
   timberFloor: {
     position: [-10.6, 0.025, 0.8],
@@ -106,10 +93,10 @@ export const studioLayout = {
     width: 40,
     depth: 48,
     thickness: 0.7,
-    slope: { leftFront: 31.5, rightFront: 30.5, leftRear: 8, rightRear: 20.5 },
+    cornerHeights: { A: 31.5, B: 8, C: 20.5, D: 44 },
     elevation: 0,
     material: 'ceiling',
-    visibility: false,
+    visibility: true,
   },
   ceilingCanopy: {
     position: [-1, 0, -4.2],
@@ -125,40 +112,40 @@ export const studioLayout = {
 }
 
 export const heroCameraConfig = {
-  position: [24, 34, -44],
-  target: [10, 10, 4],
-  fov: 67,
+  position: [24, 38, -48],
+  target: [-3.5, 8.5, 4],
+  fov: 66,
   near: 0.4,
   far: 180,
-  roll: -0.012,
+  roll: -0.018,
 }
 
 export const debugViews = {
   hero: heroCameraConfig,
   top: {
-    position: [0, 92, 0.01],
+    position: [0, 100, 0.01],
     target: [0, 0, 0],
     fov: 50,
   },
   left: {
-    position: [52, 26, -20],
-    target: [-3, 11, 1],
+    position: [55, 24, -20],
+    target: [-2, 11, 0],
     fov: 52,
   },
   right: {
-    position: [-52, 26, -12],
-    target: [-4, 11, 2],
+    position: [-55, 24, -12],
+    target: [-1, 11, 0],
     fov: 50,
   },
   section: {
-    position: [0, 32, -68],
-    target: [-7, 11, 4],
-    fov: 52,
+    position: [55, 26, -42],
+    target: [-5, 12, 8],
+    fov: 55,
   },
   shell: {
-    position: [40, 38, -64],
-    target: [-5, 13, 3],
-    fov: 58,
+    position: [55, 40, -48],
+    target: [-3, 14, 2],
+    fov: 55,
   },
 }
 
@@ -191,9 +178,9 @@ export const studioLightingConfig = {
 }
 
 export const inferredGeometry = [
-  'Single apex location beyond the photographed interior',
-  'Wall 1 and Wall 2 base extents inferred from perspective',
-  'Roof height and asymmetric slope between the two wall bases',
-  'Exact triangular glass mullion spacing',
-  'Open entrance boundary opposite the apex',
+  'Rectangular 40m × 48m floor plan and corner coordinates',
+  'Wall 1 occupying edge A–B and Wall 2 occupying edge B–C',
+  'Open boundaries along edges C–D and D–A',
+  'Roof corner heights and full rectangular projection',
+  'Exact glass bay spacing and exterior void depth',
 ]
