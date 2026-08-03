@@ -90,6 +90,8 @@ export function createCentralPaddedStage(materials) {
   group.position.set(...spec.position)
   group.rotation.set(...spec.rotation)
   group.userData.structureName = 'Central Padded Stage'
+  group.userData.stageRole = 'Only restored interior element after shell approval'
+  group.visible = spec.visibility
   group.scale.set(spec.width / 21.6, 1, spec.depth / 16.4)
   group.add(createStageBase(materials.stage, spec.height))
   group.add(createQuiltedTop(materials.stage, materials.stageSeam, spec.height))

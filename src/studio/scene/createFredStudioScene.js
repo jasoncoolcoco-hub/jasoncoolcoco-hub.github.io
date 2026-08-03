@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { heroCameraConfig } from '../config/studioConfig'
+import { heroCameraConfig, studioLayout } from '../config/studioConfig'
+import { createCentralPaddedStage } from './CentralPaddedStage'
 import { createDebugCameraTools } from './DebugCameraControls'
 import { createStudioMaterials } from './createStudioMaterials'
 import { createStudioLighting } from './StudioLighting'
@@ -48,6 +49,9 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   const architecture = new THREE.Group()
   architecture.name = 'FredStudioArchitecture'
   architecture.add(createStudioShell(materials))
+  if (studioLayout.centralStage.visibility) {
+    architecture.add(createCentralPaddedStage(materials))
+  }
   scene.add(architecture)
   scene.add(createStudioLighting())
 
