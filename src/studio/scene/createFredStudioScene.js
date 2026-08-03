@@ -38,8 +38,8 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   controls.dampingFactor = 0.065
   controls.enabled = debug
   controls.enablePan = debug
-  controls.minDistance = 22
-  controls.maxDistance = 76
+  controls.minDistance = 24
+  controls.maxDistance = 84
   controls.minPolarAngle = Math.PI * 0.08
   controls.maxPolarAngle = Math.PI * 0.47
   controls.minAzimuthAngle = -Math.PI
@@ -63,6 +63,12 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
     if (reviewView === 'top') {
       architecture.getObjectByName('SlopedCeiling').visible = false
       architecture.getObjectByName('CeilingCanopy').visible = false
+    }
+    if (reviewView === 'section') {
+      architecture.getObjectByName('SolidSideWall').visible = false
+      architecture.getObjectByName('LeftDisplayWall').visible = false
+      architecture.getObjectByName('LeftLevelChanges').visible = false
+      architecture.getObjectByName('CurtainZones').visible = false
     }
   }
   if (reviewView === 'wireframe') {

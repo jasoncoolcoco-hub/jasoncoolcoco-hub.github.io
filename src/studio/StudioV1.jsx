@@ -92,7 +92,7 @@ export default function StudioV1() {
             <div><dt>FOV</dt><dd>{cameraState?.fov}</dd></div>
           </dl>
           <div className="studio-v1__debug-actions">
-            {['hero', 'top', 'left', 'right'].map((view) => (
+            {['hero', 'top', 'left', 'right', 'section'].map((view) => (
               <button key={view} type="button" onClick={() => sceneRef.current?.setView(view)}>{view}</button>
             ))}
           </div>

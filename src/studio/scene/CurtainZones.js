@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { studioLayout } from '../config/studioConfig'
+import { roofHeightAt } from './studioGeometry'
 
 function createCurtainSurface(spec, material, folds = 22) {
   const xSegments = folds
@@ -57,7 +58,10 @@ function createCeilingCanopy(spec, material) {
       const radialZ = Math.sin(zRatio * Math.PI)
       const mainSag = radialX * radialZ * spec.slope
       const folds = Math.sin(xRatio * Math.PI * 7) * 0.12 * radialZ
-      vertices.push(x, -mainSag + folds, z)
+      const worldX = spec.position[0] + x
+      const worldZ = spec.position[2] + z
+      const attachedY = roofHeightAt(worldX, worldZ) - spec.anchorGap
+      vertices.push(x, attachedY - mainSag + folds, z)
     }
   }
 
@@ -77,8 +81,8 @@ function createCeilingCanopy(spec, material) {
   geometry.computeVertexNormals()
   const canopy = new THREE.Mesh(geometry, material)
   canopy.name = 'CeilingCanopy'
-  canopy.position.set(...spec.position)
-  canopy.rotation.set(...spec.rotation)
+  canopy.position.set(spec.position[0], 0, spec.position[2])
+  canopy.rotation.set(0, spec.rotation[1], 0)
   canopy.castShadow = true
   canopy.receiveShadow = true
   canopy.userData.structureName = 'Ceiling Canopy'
@@ -90,10 +94,12 @@ export function createCurtainZones(materials) {
   group.name = 'CurtainZones'
 
   const redCurtain = createCurtainSurface(studioLayout.redCurtain, materials.redCurtain, 28)
+  redCurtain.name = 'RedCurtain'
   redCurtain.userData.structureName = 'Red Curtain Zone'
   group.add(redCurtain)
 
   const rearCurtain = createCurtainSurface(studioLayout.rearCurtain, materials.rearCurtain, 24)
+  rearCurtain.name = 'RearCurtain'
   rearCurtain.userData.structureName = 'Rear Curtain'
   group.add(rearCurtain)
 
