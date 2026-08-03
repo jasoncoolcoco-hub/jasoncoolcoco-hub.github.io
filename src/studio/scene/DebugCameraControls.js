@@ -35,12 +35,12 @@ export function createDebugCameraTools(scene, camera, controls) {
   scene.add(axes)
 
   const labels = [
-    createLabelSprite('LEFT DISPLAY WALL', [9.8, 15.8, 4]),
-    createLabelSprite('CENTRAL PADDED STAGE', [0.6, 2.6, -5.3]),
-    createLabelSprite('GLASS FACADE', [-19, 15.8, 0]),
-    createLabelSprite('RED CURTAIN', [1.8, 13.6, 12]),
-    createLabelSprite('REAR CURTAIN', [-6, 11.2, 20]),
-    createLabelSprite('CEILING CANOPY', [-1, 14.5, 2]),
+    createLabelSprite('LEFT DISPLAY WALL', [8.4, 14.2, -1.6]),
+    createLabelSprite('CENTRAL PADDED STAGE', [0.7, 2.6, -7.1]),
+    createLabelSprite('TRIANGULAR GLASS BOUNDARY', [-19, 14, -4]),
+    createLabelSprite('RED CURTAIN', [1.9, 10.8, 3.4]),
+    createLabelSprite('REAR CURTAIN', [-5.4, 6.6, 10.6]),
+    createLabelSprite('CEILING CANOPY', [-1, 17.5, -4.2]),
   ]
   labels.forEach((label) => scene.add(label))
 

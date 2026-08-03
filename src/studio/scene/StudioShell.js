@@ -85,9 +85,10 @@ function createRoofSeams(spec) {
   return new THREE.LineSegments(geometry, seamMaterial)
 }
 
-function createRoofShell(spec, materials) {
+function createTriangularRoofShell(spec, materials) {
   const group = new THREE.Group()
   group.name = 'SlopedCeiling'
+  group.userData.structureName = 'Triangular Wedge Roof'
   if (!spec.visibility) return group
 
   const xMin = -spec.width / 2
@@ -100,7 +101,9 @@ function createRoofShell(spec, materials) {
   const leftRear = roofHeightAt(xMin, zRear, spec)
   const rightRear = roofHeightAt(xMax, zRear, spec)
 
-  group.add(createRoofGrid(spec, materials.ceiling))
+  const innerSurface = createRoofGrid(spec, materials.ceiling)
+  innerSurface.userData.structureName = 'Continuous Sloped Shell Interior'
+  group.add(innerSurface)
   group.add(createRoofSeams(spec))
   group.add(createSurface([
     [xMin, leftFront + thickness, zFront],
@@ -116,7 +119,7 @@ function createRoofShell(spec, materials) {
   group.add(createSurface([
     [xMin, leftRear, zRear], [xMax, rightRear, zRear],
     [xMax, rightRear + thickness, zRear], [xMin, leftRear + thickness, zRear],
-  ], materials.ceilingEdge, { name: 'WedgeRoofRearFascia' }))
+  ], materials.ceilingEdge, { name: 'WedgeApexFascia' }))
   group.add(createSurface([
     [xMin, leftFront, zFront], [xMin, leftRear, zRear],
     [xMin, leftRear + thickness, zRear], [xMin, leftFront + thickness, zFront],
@@ -139,31 +142,12 @@ function createRoofShell(spec, materials) {
   return group
 }
 
-function createWedgeRearBoundary(materials) {
-  const group = new THREE.Group()
-  group.name = 'WedgeRearBoundary'
-  const roof = studioLayout.slopedCeiling
-  const xMin = -roof.width / 2
-  const xMax = roof.width / 2
-  const zRear = roof.depth / 2
-
-  const rearWall = createSurface([
-    [xMin, 0, zRear],
-    [xMax, 0, zRear],
-    [xMax, roofHeightAt(xMax, zRear, roof), zRear],
-    [xMin, roofHeightAt(xMin, zRear, roof), zRear],
-  ], materials.deepFloor, { name: 'SlopedRearBoundary', reverse: true })
-  rearWall.userData.structureName = 'Sloped Rear Boundary'
-  group.add(rearWall)
-  return group
-}
-
 function createStructuralColumns(materials) {
   const group = new THREE.Group()
   group.name = 'StructuralColumns'
   const columnPositions = [
     [-17.7, -14.5],
-    [-17.7, 10.5],
+    [-17.7, 5.5],
   ]
 
   columnPositions.forEach(([x, z], index) => {
@@ -180,8 +164,13 @@ export function createStudioShell(materials) {
   const root = new THREE.Group()
   root.name = 'StudioShell'
 
-  addFloorZone(root, studioLayout.floor, materials.concrete, 0.32)
-  addFloorZone(root, studioLayout.timberFloor, materials.timber, 0.1)
+  const envelope = new THREE.Group()
+  envelope.name = 'TriangularWedgeEnvelope'
+  envelope.userData.structureName = 'Single Triangular-Prism Shell'
+  addFloorZone(envelope, studioLayout.floor, materials.concrete, 0.32)
+  addFloorZone(envelope, studioLayout.timberFloor, materials.timber, 0.1)
+  envelope.add(createTriangularRoofShell(studioLayout.slopedCeiling, materials))
+  root.add(envelope)
 
   const displayWall = box(
     studioLayout.displayWall.width,
@@ -195,8 +184,6 @@ export function createStudioShell(materials) {
   displayWall.userData.structureName = 'Left Display Wall'
   root.add(displayWall)
 
-  root.add(createWedgeRearBoundary(materials))
-  root.add(createRoofShell(studioLayout.slopedCeiling, materials))
   root.add(createStructuralColumns(materials))
   return root
 }

@@ -81,6 +81,8 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   }
   if (reviewView === 'wireframe') {
     debugTools.setView('hero')
+    hideArchitectureObjects(['LeftDisplayWall', 'CurtainZones', 'CentralPaddedStage', 'StructuralColumns'])
+    debugTools.setGrid(true)
     debugTools.setWireframe(true)
   }
 

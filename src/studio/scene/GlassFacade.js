@@ -65,7 +65,7 @@ export function createGlassFacade(materials) {
       bayStart + 0.1,
       bayEnd - 0.1,
       0.12,
-      `TrapezoidGlassBay${bay + 1}`,
+      `TriangularWedgeGlassBay${bay + 1}`,
     )
     pane.renderOrder = 2
     group.add(pane)
