@@ -58,6 +58,12 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   scene.add(createStudioLighting())
 
   const debugTools = createDebugCameraTools(scene, camera, controls)
+  const hideArchitectureObjects = (names) => {
+    names.forEach((name) => {
+      const object = architecture.getObjectByName(name)
+      if (object) object.visible = false
+    })
+  }
   if (reviewView && reviewView !== 'wireframe') {
     debugTools.setView(reviewView)
     if (reviewView === 'top') {
@@ -65,10 +71,12 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
       architecture.getObjectByName('CeilingCanopy').visible = false
     }
     if (reviewView === 'section') {
-      architecture.getObjectByName('SolidSideWall').visible = false
-      architecture.getObjectByName('LeftDisplayWall').visible = false
-      architecture.getObjectByName('LeftLevelChanges').visible = false
-      architecture.getObjectByName('CurtainZones').visible = false
+      hideArchitectureObjects(['LeftDisplayWall', 'CurtainZones', 'CentralPaddedStage', 'StructuralColumns'])
+    }
+    if (reviewView === 'shell') {
+      hideArchitectureObjects(['LeftDisplayWall', 'CurtainZones', 'CentralPaddedStage', 'StructuralColumns'])
+      debugTools.setGrid(true)
+      debugTools.setAxes(true)
     }
   }
   if (reviewView === 'wireframe') {

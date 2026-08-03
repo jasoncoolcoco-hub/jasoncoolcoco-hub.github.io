@@ -139,23 +139,13 @@ function createRoofShell(spec, materials) {
   return group
 }
 
-function createWedgeBoundaryWalls(materials) {
+function createWedgeRearBoundary(materials) {
   const group = new THREE.Group()
-  group.name = 'WedgeBoundaryWalls'
+  group.name = 'WedgeRearBoundary'
   const roof = studioLayout.slopedCeiling
   const xMin = -roof.width / 2
   const xMax = roof.width / 2
-  const zFront = -roof.depth / 2
   const zRear = roof.depth / 2
-
-  const solidSideWall = createSurface([
-    [xMax, 0, zFront],
-    [xMax, 0, zRear],
-    [xMax, roofHeightAt(xMax, zRear, roof), zRear],
-    [xMax, roofHeightAt(xMax, zFront, roof), zFront],
-  ], materials.displayWall, { name: 'SolidSideWall' })
-  solidSideWall.userData.structureName = 'Trapezoid Solid Side Wall'
-  group.add(solidSideWall)
 
   const rearWall = createSurface([
     [xMin, 0, zRear],
@@ -168,33 +158,12 @@ function createWedgeBoundaryWalls(materials) {
   return group
 }
 
-function createLeftLevelChanges(materials) {
-  const group = new THREE.Group()
-  group.name = 'LeftLevelChanges'
-
-  const platform = box(12.2, 0.64, 14.4, materials.paleFloor)
-  platform.position.set(15.2, 0.3, 16.3)
-  group.add(platform)
-
-  for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
-    const step = box(2.7, 0.17 + stepIndex * 0.17, 0.7, materials.stair)
-    step.position.set(19.8, 0.085 + stepIndex * 0.085, 7.2 + stepIndex * 0.68)
-    group.add(step)
-  }
-
-  const leftMass = box(1.55, 11.2, 13.2, materials.deepFloor)
-  leftMass.position.set(21.1, 5.6, 14.2)
-  group.add(leftMass)
-  return group
-}
-
 function createStructuralColumns(materials) {
   const group = new THREE.Group()
   group.name = 'StructuralColumns'
   const columnPositions = [
-    [-19.4, -15.5],
-    [-19.4, 11],
-    [19.5, 18.8],
+    [-17.7, -14.5],
+    [-17.7, 10.5],
   ]
 
   columnPositions.forEach(([x, z], index) => {
@@ -213,8 +182,6 @@ export function createStudioShell(materials) {
 
   addFloorZone(root, studioLayout.floor, materials.concrete, 0.32)
   addFloorZone(root, studioLayout.timberFloor, materials.timber, 0.1)
-  addFloorZone(root, studioLayout.displayApron, materials.paleFloor, 0.2)
-  addFloorZone(root, studioLayout.deepWorkZone, materials.deepFloor, 0.16)
 
   const displayWall = box(
     studioLayout.displayWall.width,
@@ -228,9 +195,8 @@ export function createStudioShell(materials) {
   displayWall.userData.structureName = 'Left Display Wall'
   root.add(displayWall)
 
-  root.add(createWedgeBoundaryWalls(materials))
+  root.add(createWedgeRearBoundary(materials))
   root.add(createRoofShell(studioLayout.slopedCeiling, materials))
-  root.add(createLeftLevelChanges(materials))
   root.add(createStructuralColumns(materials))
   return root
 }

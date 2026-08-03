@@ -25,7 +25,7 @@ function createLabelSprite(text, position) {
 }
 
 export function createDebugCameraTools(scene, camera, controls) {
-  const grid = new THREE.GridHelper(64, 64, '#b9a47b', '#665f55')
+  const grid = new THREE.GridHelper(52, 52, '#b9a47b', '#665f55')
   grid.position.y = 0.035
   grid.visible = false
   scene.add(grid)
@@ -35,12 +35,12 @@ export function createDebugCameraTools(scene, camera, controls) {
   scene.add(axes)
 
   const labels = [
-    createLabelSprite('LEFT DISPLAY WALL', [12.5, 14.4, 6.5]),
-    createLabelSprite('CENTRAL PADDED STAGE', [0.2, 2.6, -7.2]),
-    createLabelSprite('GLASS FACADE', [-21, 13.8, 0]),
-    createLabelSprite('RED CURTAIN', [4.2, 12, 15.2]),
-    createLabelSprite('REAR CURTAIN', [-6.8, 9.2, 23.2]),
-    createLabelSprite('CEILING CANOPY', [-1.2, 12.2, 2.8]),
+    createLabelSprite('LEFT DISPLAY WALL', [9.8, 15.8, 4]),
+    createLabelSprite('CENTRAL PADDED STAGE', [0.6, 2.6, -5.3]),
+    createLabelSprite('GLASS FACADE', [-19, 15.8, 0]),
+    createLabelSprite('RED CURTAIN', [1.8, 13.6, 12]),
+    createLabelSprite('REAR CURTAIN', [-6, 11.2, 20]),
+    createLabelSprite('CEILING CANOPY', [-1, 14.5, 2]),
   ]
   labels.forEach((label) => scene.add(label))
 
