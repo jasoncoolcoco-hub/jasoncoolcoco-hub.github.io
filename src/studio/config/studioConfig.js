@@ -4,7 +4,11 @@ export const studioShellBaseline = approvedRectangularStudioShellV1
 
 export const studioDimensions = approvedRectangularStudioShellV1.dimensions
 
-export const floorPlan = approvedRectangularStudioShellV1.floorPlan
+export const roomFootprint = approvedRectangularStudioShellV1.roomFootprint
+
+export const floorPlan = roomFootprint
+
+export const roofCorners = approvedRectangularStudioShellV1.roofCorners
 
 export const studioLayout = {
   floor: approvedRectangularStudioShellV1.floor,
@@ -71,14 +75,7 @@ export const studioLayout = {
   },
 }
 
-export const heroCameraConfig = {
-  position: [24, 38, -48],
-  target: [-3.5, 8.5, 4],
-  fov: 66,
-  near: 0.4,
-  far: 180,
-  roll: -0.018,
-}
+export const heroCameraConfig = approvedRectangularStudioShellV1.heroCameraConfig
 
 export const debugViews = {
   hero: heroCameraConfig,
