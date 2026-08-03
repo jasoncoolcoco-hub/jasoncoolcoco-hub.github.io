@@ -2,26 +2,19 @@ import * as THREE from 'three'
 import { studioLayout } from '../config/studioConfig'
 
 const stageOutline = [
-  [-6.8, -4.8],
-  [-5.8, -5.35],
-  [3.9, -5.2],
-  [6.7, -3.7],
-  [6.2, 3.6],
-  [4.4, 5.15],
-  [-5.9, 4.9],
-  [-7.1, 2.8],
+  [-10.9, -2.3],
+  [-10.2, -5.5],
+  [-7.8, -7.9],
+  [-1.6, -8.25],
+  [4.3, -7.95],
+  [8.7, -6.1],
+  [10.7, -3.25],
+  [10.35, 3.9],
+  [7.35, 7.55],
+  [0.3, 8.15],
+  [-6.9, 7.45],
+  [-10.55, 4.1],
 ]
-
-function pointInsidePolygon(x, z, polygon) {
-  let inside = false
-  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index, index += 1) {
-    const [x1, z1] = polygon[index]
-    const [x2, z2] = polygon[previous]
-    const intersects = ((z1 > z) !== (z2 > z)) && (x < ((x2 - x1) * (z - z1)) / (z2 - z1) + x1)
-    if (intersects) inside = !inside
-  }
-  return inside
-}
 
 function createStageBase(material, height) {
   const shape = new THREE.Shape()
@@ -47,46 +40,42 @@ function createStageBase(material, height) {
 
 function createQuiltedTop(material, seamMaterial, baseHeight) {
   const group = new THREE.Group()
-  const cellsX = 6
-  const cellsZ = 5
-  const minX = -6.3
-  const maxX = 6
-  const minZ = -4.55
-  const maxZ = 4.45
-  const cellWidth = (maxX - minX) / cellsX
-  const cellDepth = (maxZ - minZ) / cellsZ
+  const topPositions = []
   const seamPoints = []
+  const centerY = baseHeight + 0.15
+  const outerY = baseHeight + 0.045
 
-  for (let zIndex = 0; zIndex < cellsZ; zIndex += 1) {
-    for (let xIndex = 0; xIndex < cellsX; xIndex += 1) {
-      const x0 = minX + xIndex * cellWidth
-      const x1 = x0 + cellWidth
-      const z0 = minZ + zIndex * cellDepth
-      const z1 = z0 + cellDepth
-      const centerX = (x0 + x1) / 2
-      const centerZ = (z0 + z1) / 2
-      const corners = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]
-      if (!corners.every(([x, z]) => pointInsidePolygon(x, z, stageOutline))) continue
+  stageOutline.forEach(([outerX, outerZ], index) => {
+    const [nextOuterX, nextOuterZ] = stageOutline[(index + 1) % stageOutline.length]
+    const innerScale = 0.54
+    const innerX = outerX * innerScale
+    const innerZ = outerZ * innerScale
+    const nextInnerX = nextOuterX * innerScale
+    const nextInnerZ = nextOuterZ * innerScale
+    const innerY = baseHeight + 0.13 + (index % 2) * 0.025
+    const nextInnerY = baseHeight + 0.13 + ((index + 1) % 2) * 0.025
 
-      const cornerY = baseHeight + 0.035 + ((xIndex + zIndex) % 2) * 0.018
-      const centerY = baseHeight + 0.15 + Math.sin((xIndex + 1) * (zIndex + 2)) * 0.018
-      const positions = [
-        x0, cornerY, z0, centerX, centerY, centerZ, x1, cornerY, z0,
-        x1, cornerY, z0, centerX, centerY, centerZ, x1, cornerY, z1,
-        x1, cornerY, z1, centerX, centerY, centerZ, x0, cornerY, z1,
-        x0, cornerY, z1, centerX, centerY, centerZ, x0, cornerY, z0,
-      ]
-      const geometry = new THREE.BufferGeometry()
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-      geometry.computeVertexNormals()
-      const module = new THREE.Mesh(geometry, material)
-      module.castShadow = true
-      module.receiveShadow = true
-      group.add(module)
+    topPositions.push(
+      outerX, outerY, outerZ, nextOuterX, outerY, nextOuterZ, nextInnerX, nextInnerY, nextInnerZ,
+      outerX, outerY, outerZ, nextInnerX, nextInnerY, nextInnerZ, innerX, innerY, innerZ,
+      innerX, innerY, innerZ, nextInnerX, nextInnerY, nextInnerZ, 0, centerY, 0,
+    )
 
-      corners.forEach(([x, z]) => seamPoints.push(x, cornerY + 0.006, z, centerX, centerY + 0.006, centerZ))
-    }
-  }
+    seamPoints.push(
+      outerX, outerY + 0.008, outerZ, nextOuterX, outerY + 0.008, nextOuterZ,
+      outerX, outerY + 0.008, outerZ, innerX, innerY + 0.008, innerZ,
+      innerX, innerY + 0.008, innerZ, nextInnerX, nextInnerY + 0.008, nextInnerZ,
+      innerX, innerY + 0.008, innerZ, 0, centerY + 0.008, 0,
+    )
+  })
+
+  const topGeometry = new THREE.BufferGeometry()
+  topGeometry.setAttribute('position', new THREE.Float32BufferAttribute(topPositions, 3))
+  topGeometry.computeVertexNormals()
+  const top = new THREE.Mesh(topGeometry, material)
+  top.castShadow = true
+  top.receiveShadow = true
+  group.add(top)
 
   const seamGeometry = new THREE.BufferGeometry()
   seamGeometry.setAttribute('position', new THREE.Float32BufferAttribute(seamPoints, 3))
@@ -101,7 +90,7 @@ export function createCentralPaddedStage(materials) {
   group.position.set(...spec.position)
   group.rotation.set(...spec.rotation)
   group.userData.structureName = 'Central Padded Stage'
-  group.scale.set(spec.width / 13.8, 1, spec.depth / 10.5)
+  group.scale.set(spec.width / 21.6, 1, spec.depth / 16.4)
   group.add(createStageBase(materials.stage, spec.height))
   group.add(createQuiltedTop(materials.stage, materials.stageSeam, spec.height))
   return group

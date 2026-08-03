@@ -12,7 +12,7 @@ import { createStudioShell } from './StudioShell'
 export function createFredStudioScene({ mount, debug = false, reviewView = null, onCameraChange }) {
   const scene = new THREE.Scene()
   scene.background = new THREE.Color('#11120f')
-  scene.fog = new THREE.Fog('#151511', 52, 92)
+  scene.fog = new THREE.Fog('#151511', 76, 132)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.65))
@@ -38,8 +38,8 @@ export function createFredStudioScene({ mount, debug = false, reviewView = null,
   controls.dampingFactor = 0.065
   controls.enabled = debug
   controls.enablePan = debug
-  controls.minDistance = 15
-  controls.maxDistance = 52
+  controls.minDistance = 22
+  controls.maxDistance = 76
   controls.minPolarAngle = Math.PI * 0.08
   controls.maxPolarAngle = Math.PI * 0.47
   controls.minAzimuthAngle = -Math.PI

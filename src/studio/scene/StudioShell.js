@@ -27,8 +27,8 @@ function createSlopedCeiling(spec, materials) {
   group.name = 'SlopedCeiling'
   if (!spec.visibility) return group
 
-  const xSegments = 12
-  const zSegments = 14
+  const xSegments = 14
+  const zSegments = 20
   const vertices = []
   const indices = []
   const uvs = []
@@ -40,7 +40,7 @@ function createSlopedCeiling(spec, materials) {
       const xRatio = xIndex / xSegments
       const x = -spec.width / 2 + xRatio * spec.width
       const baseY = ceilingHeight(xRatio, zRatio, spec.slope)
-      const variation = Math.sin(xRatio * Math.PI * 5) * Math.sin(zRatio * Math.PI * 3) * 0.045
+      const variation = Math.sin(xRatio * Math.PI * 5) * Math.sin(zRatio * Math.PI * 3) * 0.035
       vertices.push(x, baseY + variation, z)
       uvs.push(xRatio, zRatio)
     }
@@ -93,10 +93,24 @@ function createSlopedCeiling(spec, materials) {
   seamGeometry.setAttribute('position', new THREE.Float32BufferAttribute(seamPoints, 3))
   group.add(new THREE.LineSegments(seamGeometry, seamMaterial))
 
-  const frontBeam = box(spec.width, 0.28, 0.34, materials.ceilingEdge)
+  const frontBeam = box(spec.width, 0.38, 0.46, materials.ceilingEdge)
   frontBeam.position.set(0, (spec.slope.leftFront + spec.slope.rightFront) / 2 - 0.14, -spec.depth / 2)
   frontBeam.rotation.z = Math.atan2(spec.slope.leftFront - spec.slope.rightFront, spec.width)
   group.add(frontBeam)
+
+  ;[0.17, 0.5, 0.83].forEach((xRatio) => {
+    const startY = ceilingHeight(xRatio, 0, spec.slope)
+    const endY = ceilingHeight(xRatio, 1, spec.slope)
+    const run = spec.depth
+    const beam = box(0.28, 0.26, Math.hypot(run, endY - startY), materials.ceilingEdge)
+    beam.position.set(
+      -spec.width / 2 + xRatio * spec.width,
+      (startY + endY) / 2 - 0.1,
+      0,
+    )
+    beam.rotation.x = -Math.atan2(endY - startY, run)
+    group.add(beam)
+  })
 
   return group
 }
@@ -105,18 +119,18 @@ function createLeftLevelChanges(materials) {
   const group = new THREE.Group()
   group.name = 'LeftLevelChanges'
 
-  const platform = box(8.5, 0.52, 9.6, materials.paleFloor)
-  platform.position.set(10.7, 0.24, 11.3)
+  const platform = box(12.2, 0.64, 14.4, materials.paleFloor)
+  platform.position.set(15.2, 0.3, 16.3)
   group.add(platform)
 
-  for (let stepIndex = 0; stepIndex < 8; stepIndex += 1) {
-    const step = box(2.1, 0.16 + stepIndex * 0.16, 0.58, materials.stair)
-    step.position.set(14, 0.08 + stepIndex * 0.08, 5.2 + stepIndex * 0.55)
+  for (let stepIndex = 0; stepIndex < 10; stepIndex += 1) {
+    const step = box(2.7, 0.17 + stepIndex * 0.17, 0.7, materials.stair)
+    step.position.set(19.8, 0.085 + stepIndex * 0.085, 7.2 + stepIndex * 0.68)
     group.add(step)
   }
 
-  const leftMass = box(1.2, 7.5, 8.8, materials.deepFloor)
-  leftMass.position.set(15.5, 3.75, 9.6)
+  const leftMass = box(1.55, 11.2, 13.2, materials.deepFloor)
+  leftMass.position.set(21.1, 5.6, 14.2)
   group.add(leftMass)
   return group
 }
@@ -125,9 +139,9 @@ function createStructuralColumns(materials) {
   const group = new THREE.Group()
   group.name = 'StructuralColumns'
   const columnPositions = [
-    [-12.55, 4.6, -10.8],
-    [-12.55, 4.8, 7.3],
-    [13.85, 4.15, 13.2],
+    [-18.55, 7.7, -15.8],
+    [-18.55, 6.3, 10.8],
+    [19.25, 6.4, 19.2],
   ]
 
   columnPositions.forEach(([x, y, z], index) => {
@@ -159,8 +173,8 @@ export function createStudioShell(materials) {
   displayWall.userData.structureName = 'Left Display Wall'
   root.add(displayWall)
 
-  const rearCorner = box(8.4, 7.2, 0.38, materials.deepFloor)
-  rearCorner.position.set(10.7, 3.6, studioDimensions.depth / 2 - 0.18)
+  const rearCorner = box(12.6, 10.8, 0.48, materials.deepFloor)
+  rearCorner.position.set(15, 5.4, studioDimensions.depth / 2 - 0.22)
   root.add(rearCorner)
 
   root.add(createSlopedCeiling(studioLayout.slopedCeiling, materials))
