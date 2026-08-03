@@ -162,7 +162,7 @@ function createRearTriangularWall(materials) {
     [xTaper, taperedTop, zRear],
     [xWall1, wall1Top, zRear],
   ], materials.deepFloor, { name: 'Face2RearTriangularSurface', reverse: true })
-  wall.userData.structureName = 'Wall 2 rising from 0.9m to the Wall 1 junction'
+  wall.userData.structureName = 'Wall 2 rising away from the 8m Wall 1 junction to 20.5m'
   group.add(wall)
 
   const outlineMaterial = new THREE.LineBasicMaterial({ color: '#c9aa7d', transparent: true, opacity: 0.68 })

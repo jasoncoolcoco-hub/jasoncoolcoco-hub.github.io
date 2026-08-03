@@ -2,8 +2,8 @@ export const studioDimensions = {
   unit: 'estimated metres',
   width: 40,
   depth: 48,
-  maximumHeight: 26.5,
-  minimumCeilingHeight: 0.9,
+  maximumHeight: 31.5,
+  minimumCeilingHeight: 8,
 }
 
 export const studioLayout = {
@@ -81,7 +81,7 @@ export const studioLayout = {
     width: 40,
     depth: 48,
     thickness: 0.7,
-    slope: { leftFront: 26.5, rightFront: 25, leftRear: 12.5, rightRear: 0.9 },
+    slope: { leftFront: 31.5, rightFront: 30.5, leftRear: 8, rightRear: 20.5 },
     elevation: 0,
     material: 'ceiling',
     visibility: true,
@@ -100,9 +100,9 @@ export const studioLayout = {
 }
 
 export const heroCameraConfig = {
-  position: [16, 22.5, -31.5],
-  target: [-3.8, 4.4, 3.5],
-  fov: 67,
+  position: [16.5, 25, -32.5],
+  target: [-3.5, 5.7, 4],
+  fov: 66,
   near: 0.4,
   far: 160,
   roll: -0.018,
@@ -111,7 +111,7 @@ export const heroCameraConfig = {
 export const debugViews = {
   hero: heroCameraConfig,
   top: {
-    position: [0, 76, 0.01],
+    position: [0, 82, 0.01],
     target: [0, 0, 0],
     fov: 50,
   },
@@ -126,13 +126,13 @@ export const debugViews = {
     fov: 50,
   },
   section: {
-    position: [45, 16, -32],
-    target: [-5, 7, 8],
+    position: [47, 19, -34],
+    target: [-5, 9, 8],
     fov: 55,
   },
   shell: {
-    position: [45, 27, -37],
-    target: [-3, 7.5, 2],
+    position: [47, 30, -39],
+    target: [-3, 10, 2],
     fov: 55,
   },
 }
