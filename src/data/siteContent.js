@@ -92,6 +92,10 @@ export const siteContent = {
       pegboard: 'EMPTY PEGBOARD',
     },
   },
+  studioV1: {
+    metaTitle: 'Fred Studio Hard-Shell V1 — Jason Li',
+    metaDescription: 'A large-scale 3D studio hard-shell study for Jason Li\'s personal website.',
+  },
   navigation: {
     label: 'Website chapters',
     menuOpen: 'CHAPTERS',

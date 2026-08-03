@@ -1,0 +1,85 @@
+import * as THREE from 'three'
+import { debugViews, studioDimensions, studioLayout } from '../config/studioConfig'
+
+function createLabelSprite(text, position) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 96
+  const context = canvas.getContext('2d')
+  context.fillStyle = 'rgba(12, 14, 14, 0.78)'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.fillStyle = '#f1eee7'
+  context.font = '600 28px Arial'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText(text, canvas.width / 2, canvas.height / 2)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true })
+  const sprite = new THREE.Sprite(material)
+  sprite.position.set(...position)
+  sprite.scale.set(4.8, 0.9, 1)
+  sprite.visible = false
+  return sprite
+}
+
+export function createDebugCameraTools(scene, camera, controls) {
+  const grid = new THREE.GridHelper(40, 40, '#b9a47b', '#665f55')
+  grid.position.y = 0.035
+  grid.visible = false
+  scene.add(grid)
+
+  const axes = new THREE.AxesHelper(6)
+  axes.visible = false
+  scene.add(axes)
+
+  const labels = [
+    createLabelSprite('LEFT DISPLAY WALL', [8.9, 9.8, 6.9]),
+    createLabelSprite('CENTRAL PADDED STAGE', [1.4, 2.2, -4.8]),
+    createLabelSprite('GLASS FACADE', [-13.8, 9.8, 0]),
+    createLabelSprite('RED CURTAIN', [2.7, 10.1, 11.1]),
+    createLabelSprite('REAR CURTAIN', [-5.2, 9.2, 15.9]),
+    createLabelSprite('CEILING CANOPY', [-0.2, 8.4, 2.6]),
+  ]
+  labels.forEach((label) => scene.add(label))
+
+  const setView = (viewName) => {
+    const view = debugViews[viewName] || debugViews.hero
+    camera.position.set(...view.position)
+    camera.fov = view.fov
+    camera.updateProjectionMatrix()
+    controls.target.set(...view.target)
+    camera.up.set(0, 1, 0)
+    controls.update()
+    if (viewName === 'hero' && view.roll) camera.rotateZ(view.roll)
+  }
+
+  const setWireframe = (enabled) => {
+    scene.traverse((object) => {
+      if (!object.isMesh || !object.material || object.material.transparent) return
+      object.material.wireframe = enabled
+    })
+  }
+
+  return {
+    setView,
+    setGrid(visible) { grid.visible = visible },
+    setAxes(visible) { axes.visible = visible },
+    setLabels(visible) { labels.forEach((label) => { label.visible = visible }) },
+    setWireframe,
+    setFov(fov) {
+      camera.fov = Number(fov)
+      camera.updateProjectionMatrix()
+    },
+    getCameraState() {
+      return {
+        position: camera.position.toArray().map((value) => Number(value.toFixed(2))),
+        target: controls.target.toArray().map((value) => Number(value.toFixed(2))),
+        fov: Number(camera.fov.toFixed(1)),
+      }
+    },
+    dimensions: studioDimensions,
+    structures: studioLayout,
+  }
+}

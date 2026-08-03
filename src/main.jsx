@@ -5,6 +5,7 @@ import './styles/projects.css'
 import './styles/global.css'
 import './styles/footprints.css'
 import './styles/room-v1.css'
+import './styles/studio-v1.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

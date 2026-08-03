@@ -1,0 +1,177 @@
+export const studioDimensions = {
+  unit: 'estimated metres',
+  width: 30,
+  depth: 36,
+  maximumHeight: 12.5,
+  minimumCeilingHeight: 6.8,
+}
+
+export const studioLayout = {
+  floor: {
+    position: [0, -0.18, 0],
+    width: 30,
+    depth: 36,
+    elevation: 0,
+    material: 'concrete',
+    visibility: true,
+  },
+  timberFloor: {
+    position: [-8.6, 0.025, 1],
+    width: 12.8,
+    depth: 34,
+    elevation: 0.025,
+    material: 'timber',
+    visibility: true,
+  },
+  displayApron: {
+    position: [9.2, 0.08, 4.8],
+    width: 11.7,
+    depth: 19.2,
+    elevation: 0.08,
+    material: 'paleFloor',
+    visibility: true,
+  },
+  deepWorkZone: {
+    position: [-1.8, 0.055, 11.9],
+    width: 9,
+    depth: 7.2,
+    elevation: 0.055,
+    material: 'deepFloor',
+    visibility: true,
+  },
+  displayWall: {
+    position: [8.9, 4.7, 6.9],
+    rotation: [0, 0.09, 0],
+    width: 12.8,
+    height: 8.8,
+    depth: 0.42,
+    elevation: 0.3,
+    material: 'displayWall',
+    visibility: true,
+  },
+  redCurtain: {
+    position: [2.7, 5.15, 11.1],
+    rotation: [0, -0.02, 0],
+    width: 11.2,
+    height: 8.7,
+    depth: 0.16,
+    elevation: 0.8,
+    material: 'redCurtain',
+    visibility: true,
+  },
+  rearCurtain: {
+    position: [-5.2, 4.7, 15.9],
+    rotation: [0, 0, 0],
+    width: 8.7,
+    height: 7.4,
+    depth: 0.14,
+    elevation: 1,
+    material: 'rearCurtain',
+    visibility: true,
+  },
+  centralStage: {
+    position: [1.4, 0.16, -4.8],
+    rotation: [0, 0.035, 0],
+    width: 14.8,
+    depth: 11.5,
+    height: 0.68,
+    elevation: 0.16,
+    material: 'stage',
+    visibility: true,
+  },
+  glassFacade: {
+    position: [-14.72, 5.35, 1.2],
+    rotation: [0, 0, 0],
+    width: 0.3,
+    height: 10.3,
+    depth: 33.4,
+    elevation: 0.2,
+    material: 'glass',
+    visibility: true,
+  },
+  slopedCeiling: {
+    position: [0, 0, 0],
+    rotation: [0, 0, 0],
+    width: 31,
+    depth: 43,
+    slope: { leftFront: 12.5, rightFront: 10.8, leftRear: 10.3, rightRear: 7.2 },
+    elevation: 0,
+    material: 'ceiling',
+    visibility: true,
+  },
+  ceilingCanopy: {
+    position: [-0.2, 9.15, 1.8],
+    rotation: [0, -0.03, 0],
+    width: 17.2,
+    depth: 15.2,
+    slope: 2.15,
+    elevation: 9.15,
+    material: 'canopy',
+    visibility: true,
+  },
+}
+
+export const heroCameraConfig = {
+  position: [13.2, 10.05, -17.8],
+  target: [0.2, 1, 2],
+  fov: 64,
+  near: 0.25,
+  far: 110,
+  roll: -0.025,
+}
+
+export const debugViews = {
+  hero: heroCameraConfig,
+  top: {
+    position: [0, 42, 0.01],
+    target: [0, 0, 0],
+    fov: 48,
+  },
+  left: {
+    position: [32, 8.5, 6],
+    target: [0, 3.8, 1],
+    fov: 48,
+  },
+  right: {
+    position: [28, 9.5, -17],
+    target: [0, 4, 2],
+    fov: 48,
+  },
+}
+
+export const studioMaterials = {
+  concrete: { color: '#8d8273', roughness: 0.94 },
+  paleFloor: { color: '#b9aa95', roughness: 0.95 },
+  deepFloor: { color: '#766e64', roughness: 0.96 },
+  timber: { color: '#765039', roughness: 0.76 },
+  displayWall: { color: '#ddd8cd', roughness: 0.92 },
+  ceiling: { color: '#a88866', roughness: 0.88 },
+  ceilingEdge: { color: '#5c4939', roughness: 0.9 },
+  canopy: { color: '#d7d0c1', roughness: 0.96 },
+  redCurtain: { color: '#6d190f', roughness: 0.98 },
+  rearCurtain: { color: '#d8d6cf', roughness: 0.97 },
+  stage: { color: '#d8cdbd', roughness: 0.93 },
+  stageSeam: { color: '#8d8276' },
+  glass: { color: '#397682', roughness: 0.24, opacity: 0.42 },
+  glassFrame: { color: '#778783', roughness: 0.4, metalness: 0.56 },
+  column: { color: '#7b3b25', roughness: 0.72 },
+  darkExterior: { color: '#082a32', roughness: 1 },
+  stair: { color: '#8b8175', roughness: 0.86 },
+}
+
+export const studioLightingConfig = {
+  hemisphere: { sky: '#f0ddc4', ground: '#342b27', intensity: 1.42 },
+  warmKey: { color: '#ffe3b6', intensity: 2.45, position: [10, 15, -6] },
+  wallFill: { color: '#fff0d5', intensity: 9, position: [10, 7, -2], distance: 28 },
+  coolFacade: { color: '#7bc4d6', intensity: 14, position: [-12.5, 7, 5], distance: 34 },
+  ceilingFill: { color: '#e9b77d', intensity: 9, position: [0, 7.8, -10], distance: 31 },
+}
+
+export const inferredGeometry = [
+  'Room boundaries beyond the photographed view',
+  'Ceiling height interpolation and roof thickness',
+  'Rear depth behind the white curtain',
+  'Exact glass bay spacing and exterior void depth',
+  'Left platform footprint and stair run',
+  'Central padded-stage underside and unseen rear edge',
+]
