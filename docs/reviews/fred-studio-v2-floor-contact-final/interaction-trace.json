@@ -1,0 +1,91 @@
+{
+  "route": "/studio-v2-import-test",
+  "debugRoute": "/studio-v2-import-test?debug=1",
+  "date": "2026-08-05",
+  "floorSolver": {
+    "floorMesh": "Plane_Material002_0 / Material.002",
+    "floorY": 0.020542593133827006,
+    "cameraFloorClearance": 0.7,
+    "targetFloorClearance": 0.53,
+    "floorEpsilonRadians": 0.004,
+    "minimumSafeCameraY": 0.720542593133827,
+    "minimumSafeTargetY": 0.550542593133827
+  },
+  "cleanFinalFloorSession": {
+    "aggressiveDownwardDrags": 8,
+    "horizontalReversalActionsAtFloor": 20,
+    "alternatingZoomActionsAtFloor": 10,
+    "heldDownwardDrags": 6,
+    "cameraY": 0.7332,
+    "candidateCameraY": 0.7332,
+    "targetY": 1.62,
+    "radius": 3.2857,
+    "polarAngle": 1.8441,
+    "dynamicMaximumPolarAngle": 1.8441,
+    "floorCorrections": 6,
+    "lastCancelledComponent": "POLAR.DOWN",
+    "lastDampingCleared": true,
+    "interiorSafe": true,
+    "settledFramesIdentical": true
+  },
+  "additionalTests": [
+    {
+      "name": "held downward input at physical floor limit",
+      "actions": 14,
+      "cameraY": 0.7365,
+      "settledFramesIdentical": true
+    },
+    {
+      "name": "small horizontal reversal at physical floor limit",
+      "actions": 20,
+      "cameraYBefore": 0.7365,
+      "cameraYAfter": 0.7365,
+      "stableY": true
+    },
+    {
+      "name": "rapid alternating zoom near floor",
+      "actions": 10,
+      "stayedAboveMinimumSafeY": true
+    },
+    {
+      "name": "rapid downward/upward reversal and release",
+      "actions": 26,
+      "cameraY": 0.7355,
+      "settledFramesIdentical": true
+    },
+    {
+      "name": "official lower polar boundary",
+      "actions": 20,
+      "stableBeyondLimit": true
+    },
+    {
+      "name": "official 360 rotation plus narrow zoom",
+      "rotationActions": 24,
+      "zoomActions": 20,
+      "settledFramesIdentical": true,
+      "uiFree": true
+    },
+    {
+      "name": "sofa, wall, and glass regression",
+      "interiorSafe": true,
+      "settledFramesIdentical": true
+    },
+    {
+      "name": "kitchen-island and rear-wall regression",
+      "interiorSafe": true,
+      "settledFramesIdentical": true
+    },
+    {
+      "name": "ceiling regression after release",
+      "interiorSafe": true,
+      "settledFramesIdentical": true
+    }
+  ],
+  "officialRouteDom": "main > img only",
+  "officialOpeningMatchesApprovedSha256": true,
+  "officialOpeningSha256": "d4ee1238e72d75630cc03d1c46c214d6af479ba3778b98828b0e864158fad6ca",
+  "consoleErrors": 0,
+  "consoleWarnings": [
+    "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead."
+  ]
+}

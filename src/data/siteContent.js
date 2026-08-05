@@ -96,6 +96,10 @@ export const siteContent = {
     metaTitle: 'Fred Studio Hard-Shell V1 — Jason Li',
     metaDescription: 'A large-scale 3D studio hard-shell study for Jason Li\'s personal website.',
   },
+  studioV2: {
+    metaTitle: 'Fred Studio Imported Loft V2 — Jason Li',
+    metaDescription: 'A faithful browser presentation of the furnished loft model in Fred Studio V2.',
+  },
   navigation: {
     label: 'Website chapters',
     menuOpen: 'CHAPTERS',

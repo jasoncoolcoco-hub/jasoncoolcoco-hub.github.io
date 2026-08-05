@@ -6,6 +6,7 @@ import './styles/global.css'
 import './styles/footprints.css'
 import './styles/room-v1.css'
 import './styles/studio-v1.css'
+import './studio-v2/studio-v2.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

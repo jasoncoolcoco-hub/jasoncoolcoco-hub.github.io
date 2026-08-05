@@ -1,0 +1,77 @@
+{
+  "route": "/studio-v2-import-test",
+  "date": "2026-08-05",
+  "officialControls": {
+    "rotate": true,
+    "pan": false,
+    "zoom": true,
+    "autoRotate": false,
+    "dampingFactor": 0.14,
+    "fixedTarget": [-6.001383, 1.889144, 0.2856],
+    "minDistance": 0.36,
+    "maxDistance": 0.48,
+    "minPolarAngle": 1.3,
+    "maxPolarAngle": 1.7,
+    "minAzimuthAngle": "-Infinity",
+    "maxAzimuthAngle": "Infinity"
+  },
+  "tests": [
+    {
+      "name": "repeated full horizontal rotations",
+      "actions": 24,
+      "result": "passed",
+      "settledFramesIdentical": true,
+      "settleSecondsAfterExtremeInput": 3.5
+    },
+    {
+      "name": "horizontal direction reversal",
+      "actions": 24,
+      "result": "passed",
+      "settledFramesIdentical": true
+    },
+    {
+      "name": "zoom-out limit plus continued input",
+      "actions": 16,
+      "result": "passed",
+      "frameHashStableBeyondLimit": true
+    },
+    {
+      "name": "zoom-in limit plus continued input",
+      "actions": 16,
+      "result": "passed",
+      "frameHashStableBeyondLimit": true
+    },
+    {
+      "name": "rapid zoom direction reversal",
+      "actions": 20,
+      "result": "passed"
+    },
+    {
+      "name": "rotation held against upper polar boundary",
+      "actions": 14,
+      "result": "passed",
+      "frameHashStableBeyondLimit": true
+    },
+    {
+      "name": "rotation held against lower polar boundary",
+      "actions": 14,
+      "result": "passed",
+      "frameHashStableBeyondLimit": true
+    },
+    {
+      "name": "debug cage and minimum-distance reproduction",
+      "result": "passed",
+      "corrections": 2,
+      "stabilizations": 2,
+      "lastCancelledComponents": ["CAMERA.Y", "FULL MOVEMENT"],
+      "lastDampingCleared": true,
+      "lastValidDistance": 1.2,
+      "interiorSafe": true
+    }
+  ],
+  "officialRouteDom": "main > img only",
+  "consoleErrors": 0,
+  "consoleWarnings": [
+    "THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead."
+  ]
+}
