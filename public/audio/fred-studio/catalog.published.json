@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "defaultTrackId": "cmon-latin-mafia-fred-edit",
+  "tracks": [
+    {
+      "id": "cmon-latin-mafia-fred-edit",
+      "title": "Cmon",
+      "version": "LATIN MAFIA, KatzPascale, Fred edit",
+      "artist": "Fred again..",
+      "file": "/audio/fred-studio/tracks/published/cmon-latin-mafia-fred-edit.m4a",
+      "cover": null,
+      "enabled": true,
+      "loop": false,
+      "volume": 0.8
+    }
+  ]
+}
