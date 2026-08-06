@@ -14,7 +14,6 @@ import {
   STUDIO_V2_LIGHTING_CANDIDATES,
   STUDIO_V2_SELECTED_LIGHTING,
   STUDIO_V2_MODEL_TRANSFORM,
-  STUDIO_V2_MODEL_URL,
   STUDIO_V2_OFFICIAL_CONTROLS,
   STUDIO_V2_RENDERING,
 } from './studioV2Config'
@@ -29,6 +28,10 @@ import {
   removeStudioV2WindowDecoration,
 } from './studioV2ModelPruning'
 import { acquireStudioV2Model } from './studioV2ModelResource'
+import { loadStudioV2PlacedObjects } from './studioV2PlacedObjects'
+import { createStudioV2DeliveryConfig } from './studioV2DerivativeConfig'
+import { createStudioV2GltfLoader } from './studioV2GltfLoader'
+import { createStudioV2EntryGate } from './studioV2EntryGate'
 
 function roundedVector(vector) {
   return vector.toArray().map((value) => Number(value.toFixed(3)))
@@ -61,22 +64,39 @@ export function createStudioV2Scene({
   capture = false,
   debug = false,
   onDiagnostics,
+  onEntryState,
   onError,
   onProgress,
   onReady,
+  onRoomReady,
+  onStudioV2Ready,
+  deliveryConfig,
+  entryTestConfig,
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
+  initialAssetMaterialMode = 'refined',
   initialLightingCandidate,
   pixelRatioCap = STUDIO_V2_RENDERING.maxPixelRatio,
+  forcedViewport,
 }) {
+  const activeDeliveryConfig = deliveryConfig ?? createStudioV2DeliveryConfig({}, false)
   const initialLighting = STUDIO_V2_LIGHTING_CANDIDATES[initialLightingCandidate]
     ?? STUDIO_V2_LIGHTING
   const indirectLighting = STUDIO_V2_LIGHTING
   const officialPresentation = !debug && !capture
   const stableOrbitMode = !capture
+  const renderSize = () => ({
+    width: forcedViewport?.[0] ?? Math.max(1, mount.clientWidth),
+    height: forcedViewport?.[1] ?? Math.max(1, mount.clientHeight),
+  })
+  const initialRenderSize = renderSize()
   RectAreaLightUniformsLib.init()
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(STUDIO_V2_RENDERING.clearColor)
   scene.environmentIntensity = initialLighting.environmentIntensity
+  const entryRoot = new THREE.Group()
+  entryRoot.name = 'STUDIO_V2_ENTRY_ROOT'
+  entryRoot.userData.studioV2Id = 'STUDIO_V2_ENTRY_ROOT'
+  scene.add(entryRoot)
 
   const renderer = new THREE.WebGLRenderer({
     alpha: false,
@@ -84,7 +104,7 @@ export function createStudioV2Scene({
     powerPreference: 'high-performance',
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
-  renderer.setSize(mount.clientWidth, mount.clientHeight)
+  renderer.setSize(initialRenderSize.width, initialRenderSize.height)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = initialLighting.exposure
@@ -100,11 +120,11 @@ export function createStudioV2Scene({
   let activeBaseFov = initialPreset.fov
   const initialResponsivePreset = {
     ...initialPreset,
-    fov: responsiveFov(initialPreset.fov, mount.clientWidth),
+    fov: responsiveFov(initialPreset.fov, initialRenderSize.width),
   }
   const camera = new THREE.PerspectiveCamera(
     initialResponsivePreset.fov,
-    mount.clientWidth / mount.clientHeight,
+    initialRenderSize.width / initialRenderSize.height,
     initialPreset.near,
     initialPreset.far,
   )
@@ -133,7 +153,7 @@ export function createStudioV2Scene({
   controls.rotateSpeed = STUDIO_V2_CONTROLS.rotateSpeed
   controls.zoomSpeed = STUDIO_V2_CONTROLS.zoomSpeed
   controls.panSpeed = STUDIO_V2_CONTROLS.panSpeed
-  controls.enabled = !debug
+  controls.enabled = false
   let orbitStabilizations = 0
   let rearWallPreviewEnabled = false
   let rearClampState = 'CLEAR'
@@ -275,47 +295,6 @@ export function createStudioV2Scene({
   lighting.add(hemisphere, keyLight, fillLight, windowFill, ceilingBounce)
   scene.add(lighting)
 
-  const axesHelper = new THREE.AxesHelper(8)
-  axesHelper.visible = false
-  const gridHelper = new THREE.GridHelper(32, 32, '#9d8568', '#4d5452')
-  gridHelper.visible = false
-  const cameraBoundsHelper = new THREE.Box3Helper(cameraSafety.cameraBounds, '#4da3ff')
-  const targetBoundsHelper = new THREE.Box3Helper(cameraSafety.targetBounds, '#59d6c7')
-  const furnitureColliderHelpers = cameraSafety.majorFurnitureColliders.map((collider) => (
-    new THREE.Box3Helper(collider.box, '#bd6cff')
-  ))
-  const safeVolumeHelper = new THREE.Mesh(
-    new THREE.CylinderGeometry(
-      OFFICIAL_CAMERA_SAFE_VOLUME.horizontalRadius,
-      OFFICIAL_CAMERA_SAFE_VOLUME.horizontalRadius,
-      OFFICIAL_CAMERA_SAFE_VOLUME.maxY - OFFICIAL_CAMERA_SAFE_VOLUME.minY,
-      48,
-      1,
-      true,
-    ),
-    new THREE.MeshBasicMaterial({
-      color: '#66e0a3',
-      transparent: true,
-      opacity: 0.36,
-      wireframe: true,
-      depthTest: false,
-    }),
-  )
-  safeVolumeHelper.name = 'OfficialCameraSafeVolumeHelper'
-  safeVolumeHelper.position.set(
-    OFFICIAL_CAMERA_SAFE_VOLUME.center[0],
-    (OFFICIAL_CAMERA_SAFE_VOLUME.minY + OFFICIAL_CAMERA_SAFE_VOLUME.maxY) / 2,
-    OFFICIAL_CAMERA_SAFE_VOLUME.center[2],
-  )
-  const safetyHelpers = [
-    cameraBoundsHelper,
-    targetBoundsHelper,
-    safeVolumeHelper,
-    ...furnitureColliderHelpers,
-  ]
-  safetyHelpers.forEach((helper) => { helper.visible = false })
-  scene.add(axesHelper, gridHelper, ...safetyHelpers)
-
   const hemisphereHelper = new THREE.HemisphereLightHelper(hemisphere, 1)
   const keyHelper = new THREE.DirectionalLightHelper(keyLight, 1.5)
   const fillHelper = new THREE.DirectionalLightHelper(fillLight, 1.2)
@@ -327,8 +306,7 @@ export function createStudioV2Scene({
 
   let disposed = false
   let modelRoot = null
-  let fullBoundsHelper = null
-  let interiorBoundsHelper = null
+  let spatialDebug = null
   let modelAudit = null
   let environmentRenderTarget = null
   let pmremGenerator = null
@@ -337,7 +315,12 @@ export function createStudioV2Scene({
   let diningSetRemoval = null
   let windowDecorationRemoval = null
   let materialTuningReport = []
+  let placedObjectsResource = null
+  let placedObjectRecords = []
   let maximumAnisotropy = 1
+  let modelResource = null
+  let roomLoaderSupport = null
+  let roomTextureFormats = []
   const visualState = {
     ibl: true,
     shadows: true,
@@ -367,7 +350,38 @@ export function createStudioV2Scene({
     shadowCasters: 1,
   }
   const loadStartedAt = performance.now()
-  const modelResource = acquireStudioV2Model(STUDIO_V2_MODEL_URL, onProgress)
+  const parallelEntryLoading = officialPresentation
+    || capture
+    || activeDeliveryConfig.loading !== 'lazy'
+  const entryGate = createStudioV2EntryGate({
+    deliveryConfig: activeDeliveryConfig,
+    onChange: (state) => {
+      mount.dataset.entryPhase = state.phase
+      mount.dataset.sceneReady = String(state.sceneReady)
+      onEntryState?.(state)
+    },
+    startedAt: loadStartedAt,
+    testConfig: entryTestConfig,
+  })
+  mount.dataset.interactionsEnabled = 'false'
+
+  function textureFormatsFor(root) {
+    const formats = new Set()
+    root?.traverse((object) => {
+      const materials = Array.isArray(object.material) ? object.material : [object.material]
+      materials.forEach((material) => {
+        if (!material) return
+        Object.values(material).forEach((value) => {
+          if (!value?.isTexture || value.format === undefined) return
+          const match = Object.entries(THREE).find(([name, constant]) => (
+            name.endsWith('Format') && constant === value.format
+          ))
+          formats.add(match?.[0] ?? `FORMAT_${value.format}`)
+        })
+      })
+    })
+    return [...formats].sort()
+  }
 
   function configureEnvironment() {
     const candidate = findStudioV2EnvironmentMesh(modelRoot, modelAudit)
@@ -425,42 +439,198 @@ export function createStudioV2Scene({
     })
   }
 
-  const readyPromise = modelResource.promise.then((gltf) => {
+  async function waitForEntryAsset(assetId, promise) {
+    const delay = entryTestConfig?.delays?.[assetId] ?? 0
+    const [asset] = await Promise.all([
+      promise,
+      delay > 0 ? new Promise((resolve) => window.setTimeout(resolve, delay)) : Promise.resolve(),
+    ])
+    if (entryTestConfig?.failAsset === assetId) {
+      const error = new Error(`Entry-critical asset test failure: ${assetId}`)
+      error.assetId = assetId
+      throw error
+    }
+    return asset
+  }
+
+  function prepareRoom(gltf) {
     if (disposed) return null
     modelRoot = gltf.scene
     modelRoot.name = 'FredStudioV2ImportedLoft'
+    modelRoot.userData.studioV2Id = 'ROOM_ENVIRONMENT'
     modelRoot.position.set(...STUDIO_V2_MODEL_TRANSFORM.position)
     modelRoot.rotation.set(...STUDIO_V2_MODEL_TRANSFORM.rotation)
     modelRoot.scale.setScalar(STUDIO_V2_MODEL_TRANSFORM.scale)
     diningSetRemoval = removeStudioV2DiningSet(modelRoot)
     windowDecorationRemoval = removeStudioV2WindowDecoration(modelRoot)
-    scene.add(modelRoot)
+    entryRoot.add(modelRoot)
     modelAudit = auditStudioV2Model(modelRoot)
 
     const tuned = applyStudioV2MaterialTuning(modelRoot, renderer)
     materialTuningReport = tuned.report
     maximumAnisotropy = tuned.anisotropy
+    roomTextureFormats = textureFormatsFor(modelRoot)
     const environment = configureEnvironment()
     configureShadows()
+    const firstRoomFrameMs = performance.now() - loadStartedAt
+    mount.dataset.roomReady = 'true'
+    entryGate.markAssetReady('ROOM_ENVIRONMENT', { url: activeDeliveryConfig.roomUrl })
+    onRoomReady?.({
+      ...modelAudit,
+      firstRoomFrameMs: Number(firstRoomFrameMs.toFixed(1)),
+      delivery: activeDeliveryConfig,
+    })
+    return { environment, firstRoomFrameMs, gltf, tuned }
+  }
 
-    fullBoundsHelper = new THREE.Box3Helper(modelAudit.fullBounds, '#ffb65c')
-    interiorBoundsHelper = new THREE.Box3Helper(modelAudit.interiorBounds, '#66d9ff')
-    fullBoundsHelper.visible = false
-    interiorBoundsHelper.visible = false
-    scene.add(fullBoundsHelper, interiorBoundsHelper)
+  const loadPlacedObjects = () => loadStudioV2PlacedObjects(
+    entryRoot,
+    renderer,
+    activeDeliveryConfig,
+    {
+      onAssetReady: (assetId, detail) => {
+        if (assetId !== 'MACBOOK_ISLAND_01') entryGate.markAssetReady(assetId, detail)
+      },
+      onPlacementReady: (anchorName, detail) => entryGate.markAssetReady(anchorName, detail),
+      parallel: parallelEntryLoading,
+      testConfig: entryTestConfig,
+    },
+  )
 
+  const readyPromise = (async () => {
+    entryGate.setPhase('loading-entry-assets')
+    const placedObjectsPromise = parallelEntryLoading ? loadPlacedObjects() : null
+    roomLoaderSupport = await createStudioV2GltfLoader(renderer, activeDeliveryConfig)
+    modelResource = acquireStudioV2Model(
+      activeDeliveryConfig.roomUrl,
+      onProgress,
+      roomLoaderSupport.loader,
+    )
+    const roomPreparationPromise = waitForEntryAsset(
+      'ROOM_ENVIRONMENT',
+      modelResource.promise,
+    ).then(prepareRoom)
+    let roomPreparation
+    if (parallelEntryLoading) {
+      [roomPreparation, placedObjectsResource] = await Promise.all([
+        roomPreparationPromise,
+        placedObjectsPromise,
+      ])
+    } else {
+      roomPreparation = await roomPreparationPromise
+      await new Promise((resolve) => requestAnimationFrame(() => resolve()))
+      placedObjectsResource = await loadPlacedObjects()
+    }
+    if (!roomPreparation || disposed) {
+      placedObjectsResource?.dispose()
+      placedObjectsResource = null
+      return null
+    }
+
+    const { environment, firstRoomFrameMs, gltf, tuned } = roomPreparation
+    placedObjectsResource.setMaterialMode(initialAssetMaterialMode)
+    placedObjectRecords = placedObjectsResource.records
+    entryGate.markCondition('texturesReady', {
+      formats: [...new Set([...roomTextureFormats, ...placedObjectsResource.textureFormats])],
+    })
+    entryGate.markCondition('materialsReady', {
+      roomMaterials: materialTuningReport.length,
+      placedMaterials: placedObjectRecords.reduce(
+        (total, record) => total + (record.resources?.materials ?? 0),
+        0,
+      ),
+    })
+    entryGate.markCondition('anchorsReady', {
+      anchors: placedObjectRecords.map(({ anchorName }) => anchorName),
+    })
+    entryRoot.updateMatrixWorld(true)
+    camera.updateMatrixWorld(true)
+    entryGate.markCondition('worldMatricesReady')
+    entryGate.markCondition('shadowsReady')
+
+    const openingSemanticIds = new Set()
+    entryRoot.traverse((object) => {
+      if (object.userData.studioV2Id) openingSemanticIds.add(object.userData.studioV2Id)
+    })
+    const openingGroupsPresent = [
+      'ROOM_ENVIRONMENT',
+      'MACBOOK_ISLAND_01',
+      'MARSHALL_GUITAR_FLOOR_01',
+    ].every((semanticId) => openingSemanticIds.has(semanticId))
+    if (!openingGroupsPresent) {
+      throw new Error('Entry-critical opening groups were not all registered before warm-up.')
+    }
+    entryGate.markCondition('openingVisibleGroupsReady', {
+      semanticIds: [...openingSemanticIds].sort(),
+    })
+
+    if (debug) {
+      const { createStudioV2SpatialDebug } = await import('./studioV2SpatialDebug')
+      spatialDebug = createStudioV2SpatialDebug({
+        scene,
+        camera,
+        renderer,
+        modelRoot,
+        interiorBounds: modelAudit.interiorBounds,
+        cameraBounds: cameraSafety.cameraBounds,
+        targetBounds: cameraSafety.targetBounds,
+        environmentMeshName: environment?.mesh,
+      })
+    }
+
+    entryGate.setPhase('compiling-shaders')
+    entryRoot.updateMatrixWorld(true)
+    scene.updateMatrixWorld(true)
+    camera.updateMatrixWorld(true)
+    if (typeof renderer.compileAsync === 'function') {
+      await renderer.compileAsync(scene, camera)
+    } else {
+      renderer.compile(scene, camera)
+    }
+    entryGate.markCondition('shaderReady', {
+      method: typeof renderer.compileAsync === 'function' ? 'compileAsync' : 'compile',
+    })
+    entryGate.setPhase('warming-first-frame')
+    renderer.render(scene, camera)
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()))
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()))
+    if (disposed) return null
+    entryGate.markCondition('warmupReady', { hiddenFrames: 2, warmupRender: true })
+    const entry = entryGate.markSceneReady()
     controls.enabled = exploreEnabled
+    mount.dataset.interactionsEnabled = String(controls.enabled)
+
     const loadTimeMs = performance.now() - loadStartedAt
+    mount.dataset.completeReadyMs = loadTimeMs.toFixed(1)
+    mount.dataset.firstVisibleFrameMs = loadTimeMs.toFixed(1)
+    mount.dataset.criticalRequests = String(entry.requests.length)
     const audit = {
       ...modelAudit,
       animations: gltf.animations.length,
       loadTimeMs: Number(loadTimeMs.toFixed(1)),
+      completeReadyMs: Number(loadTimeMs.toFixed(1)),
+      firstVisibleFrameMs: Number(loadTimeMs.toFixed(1)),
+      firstRoomFrameMs: Number(firstRoomFrameMs.toFixed(1)),
+      delivery: {
+        ...activeDeliveryConfig,
+        entryLoading: parallelEntryLoading ? 'parallel-atomic' : 'debug-room-first-sequential',
+        selectedGpuTextureFormat: [...new Set([
+          ...roomTextureFormats,
+          ...placedObjectsResource.textureFormats,
+        ])].join(', '),
+        gpuTextureFormats: [...new Set([
+          ...roomTextureFormats,
+          ...placedObjectsResource.textureFormats,
+        ])],
+      },
+      entry,
       environment,
       maximumAnisotropy,
       materialTuningReport,
       materialSegmentation: tuned.segmentation,
       diningSetRemoval,
       windowDecorationRemoval,
+      placedObjects: placedObjectRecords,
       cameraSafety: cameraSafety.record(),
       root: {
         position: STUDIO_V2_MODEL_TRANSFORM.position,
@@ -469,16 +639,21 @@ export function createStudioV2Scene({
       },
     }
     mount.dataset.modelReady = 'true'
+    onStudioV2Ready?.(audit)
     onReady?.(audit)
     return audit
-  }).catch((error) => {
-    if (!disposed) onError?.(error)
+  })().catch((error) => {
+    if (!disposed) {
+      controls.enabled = false
+      mount.dataset.interactionsEnabled = 'false'
+      entryGate.fail(error.assetId ?? null, error)
+      onError?.(error)
+    }
     return null
   })
 
   const resize = () => {
-    const width = Math.max(1, mount.clientWidth)
-    const height = Math.max(1, mount.clientHeight)
+    const { width, height } = renderSize()
     camera.aspect = width / height
     if (!cameraTween) camera.fov = responsiveFov(activeBaseFov, width)
     camera.updateProjectionMatrix()
@@ -591,7 +766,9 @@ export function createStudioV2Scene({
           ...cameraSafety.record(),
           stabilizations: orbitStabilizations,
         },
-        viewport: [mount.clientWidth, mount.clientHeight],
+        spatial: spatialDebug?.getState() ?? null,
+        entry: entryGate.snapshot(),
+        viewport: [renderSize().width, renderSize().height],
       })
       frameCount = 0
       lastSampleAt = time
@@ -602,6 +779,7 @@ export function createStudioV2Scene({
 
   const runtime = {
     readyPromise,
+    sceneReadyPromise: readyPromise,
     resetCamera({ smooth = true } = {}) {
       startCameraTween(cameraConfigForPreset(STUDIO_V2_DEFAULT_CAMERA), smooth ? 900 : 0)
     },
@@ -620,7 +798,8 @@ export function createStudioV2Scene({
       controls.enableRotate = true
       controls.enablePan = false
       controls.enableZoom = stableOrbitMode ? OFFICIAL_CAMERA_SAFE_VOLUME.zoom : true
-      controls.enabled = Boolean(modelRoot) && enabled
+      controls.enabled = entryGate.snapshot().sceneReady && Boolean(modelRoot) && enabled
+      mount.dataset.interactionsEnabled = String(controls.enabled)
     },
     setOfficialRearWallPreview(enabled) {
       if (!debug) return false
@@ -631,15 +810,64 @@ export function createStudioV2Scene({
       return rearWallPreviewEnabled
     },
     setAxes(visible) {
-      axesHelper.visible = visible
+      return spatialDebug?.setAxes(visible) ?? false
     },
     setGrid(visible) {
-      gridHelper.visible = visible
+      return spatialDebug?.setGrid(visible) ?? false
     },
     setBounds(visible) {
-      if (fullBoundsHelper) fullBoundsHelper.visible = visible
-      if (interiorBoundsHelper) interiorBoundsHelper.visible = visible
-      safetyHelpers.forEach((helper) => { helper.visible = visible })
+      return spatialDebug?.setBounds(visible) ?? false
+    },
+    setPickPosition(enabled) {
+      return spatialDebug?.setPickEnabled(enabled) ?? false
+    },
+    clearPick() {
+      spatialDebug?.clearPick()
+    },
+    copyPickedPosition() {
+      return spatialDebug?.copyPosition() ?? 'position: null'
+    },
+    copyPickedPositionAndNormal() {
+      return spatialDebug?.copyPositionAndNormal() ?? 'position: null\nsurfaceNormal: null'
+    },
+    setPlaceholderVisible(visible) {
+      return spatialDebug?.setPlaceholderVisible(visible) ?? false
+    },
+    setPlaceholderPosition(axis, value) {
+      spatialDebug?.setPlaceholderPosition(axis, value)
+    },
+    setPlaceholderRotationDegrees(axis, value) {
+      spatialDebug?.setPlaceholderRotationDegrees(axis, value)
+    },
+    setPlaceholderSize(axis, value) {
+      spatialDebug?.setPlaceholderSize(axis, value)
+    },
+    setPlaceholderUniformScale(value) {
+      spatialDebug?.setPlaceholderUniformScale(value)
+    },
+    resetPlaceholder() {
+      spatialDebug?.resetPlaceholder()
+    },
+    movePlaceholderToPick() {
+      return spatialDebug?.movePlaceholderToPick() ?? false
+    },
+    alignPlaceholderToPick() {
+      return spatialDebug?.alignPlaceholderToPick() ?? false
+    },
+    copyPlaceholderTransform() {
+      return spatialDebug?.copyPlaceholderTransform() ?? ''
+    },
+    savePlaceholderAsAnchor(name) {
+      return spatialDebug?.saveAnchorDraft(name) ?? ''
+    },
+    copyAnchor() {
+      return spatialDebug?.copyAnchor() ?? ''
+    },
+    clearUnsavedAnchor() {
+      spatialDebug?.clearAnchorDraft()
+    },
+    getSpatialState() {
+      return spatialDebug?.getState() ?? null
     },
     setLightHelpers(visible) {
       lightHelpers.forEach((helper) => { helper.visible = visible })
@@ -719,6 +947,31 @@ export function createStudioV2Scene({
     getWindowDecorationRemoval() {
       return windowDecorationRemoval
     },
+    getPlacedObjects() {
+      return placedObjectRecords
+    },
+    getAssetDeliveryConfig() {
+      return {
+        ...activeDeliveryConfig,
+        selectedGpuTextureFormat: [...new Set([
+          ...roomTextureFormats,
+          ...(placedObjectsResource?.textureFormats ?? []),
+        ])].join(', ') || roomLoaderSupport?.selectedGpuTextureFormat,
+        gpuTextureFormats: [...new Set([
+          ...roomTextureFormats,
+          ...(placedObjectsResource?.textureFormats ?? []),
+        ])],
+      }
+    },
+    getSceneReadyState() {
+      return entryGate.snapshot()
+    },
+    getAssetMaterialMode() {
+      return placedObjectsResource?.getMaterialMode() ?? 'refined'
+    },
+    setAssetMaterialMode(mode) {
+      return placedObjectsResource?.setMaterialMode(mode) ?? 'refined'
+    },
     getVisualConfig() {
       return {
         ...visualState,
@@ -741,28 +994,25 @@ export function createStudioV2Scene({
       cancelAnimationFrame(animationFrame)
       resizeObserver.disconnect()
       controls.dispose()
-      if (modelRoot?.parent === scene) scene.remove(modelRoot)
-      modelResource.release()
+      placedObjectsResource?.dispose()
+      modelResource?.release()
+      roomLoaderSupport?.dispose()
+      entryRoot.removeFromParent()
       scene.environment = null
       environmentRenderTarget?.dispose()
       pmremGenerator?.dispose()
-      axesHelper.geometry.dispose()
-      axesHelper.material.dispose()
-      gridHelper.geometry.dispose()
-      if (Array.isArray(gridHelper.material)) gridHelper.material.forEach((material) => material.dispose())
-      else gridHelper.material.dispose()
-      safetyHelpers.forEach((helper) => {
-        helper.geometry.dispose()
-        helper.material.dispose()
-      })
-      fullBoundsHelper?.geometry.dispose()
-      fullBoundsHelper?.material.dispose()
-      interiorBoundsHelper?.geometry.dispose()
-      interiorBoundsHelper?.material.dispose()
+      spatialDebug?.dispose()
       lightHelpers.forEach((helper) => helper.dispose?.())
       renderer.dispose()
       renderer.domElement.remove()
       delete mount.dataset.modelReady
+      delete mount.dataset.roomReady
+      delete mount.dataset.entryPhase
+      delete mount.dataset.completeReadyMs
+      delete mount.dataset.criticalRequests
+      delete mount.dataset.firstVisibleFrameMs
+      delete mount.dataset.interactionsEnabled
+      delete mount.dataset.sceneReady
       if (window.__FRED_STUDIO_V2_DIAGNOSTICS__ === diagnostics) {
         delete window.__FRED_STUDIO_V2_DIAGNOSTICS__
       }

@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-08-05T17:03:17.342Z",
+  "encoder": "toktx 4.4.2 through glTF-Transform 4.4.2",
+  "resolutionPolicy": "Unchanged source dimensions",
+  "dataTextures": {
+    "slots": "{normalTexture,metallicRoughnessTexture,occlusionTexture,specularTexture,specularColorTexture}",
+    "mode": "UASTC level 3 minimum, Zstd 18, RDO disabled; room and MacBook retained their already-completed level 4 data pass",
+    "colorSpace": "linear/non-colour"
+  },
+  "colourTextures": {
+    "slots": "{baseColorTexture,emissiveTexture}",
+    "mode": "UASTC level 2, Zstd 20, RDO disabled after the higher-level paths exceeded the time budget",
+    "colorSpace": "sRGB"
+  },
+  "records": [
+    {
+      "id": "room",
+      "source": "public/models/fred-studio-v2/loft_interior_6_for_free.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2/room_ktx2.glb",
+      "sourceBytes": 24059568,
+      "derivativeBytes": 29360656,
+      "sourceSha256": "5760cd49693e08773676b192090a50985787cf731d0c6e7e284f1c4814638c19",
+      "derivativeSha256": "95e3c7aff852db9400e9806c9d0440789a853f1a8e15ed9f2f0256f230eb46ec",
+      "dataUastcLevel": 4,
+      "colourUastcLevel": 2
+    },
+    {
+      "id": "macbook",
+      "source": "public/models/fred-studio-v2/objects/macbook_pro_2021.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2/macbook_pro_2021_ktx2.glb",
+      "sourceBytes": 2548260,
+      "derivativeBytes": 3367380,
+      "sourceSha256": "1a38db1f63a4699573a0393c888b2191030c99cf81c2d3325712a69cb2b7af5f",
+      "derivativeSha256": "abd22b8eba9cc8bfe4000311198d9dcc2b6f4ab4cbc40721434a4d098dcede16",
+      "dataUastcLevel": 4,
+      "colourUastcLevel": 2
+    },
+    {
+      "id": "marshall-source-split",
+      "source": "public/models/fred-studio-v2/optimised/marshall_amp_optimised.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2/marshall_amp_optimised_ktx2.glb",
+      "sourceBytes": 19443612,
+      "derivativeBytes": 17551760,
+      "sourceSha256": "47e0630bf88457d9cf16ea7be1b4804943bf1e3bc8aacf4ce1dc88f2c7b9ec8a",
+      "derivativeSha256": "7abe8da8f7c890b8aabea4ca4405cf6ba58fa5f5a927af9b849e7b7f99e45557",
+      "dataUastcLevel": 3,
+      "colourUastcLevel": 2
+    },
+    {
+      "id": "guitar-source-split",
+      "source": "public/models/fred-studio-v2/optimised/gibson_guitar_optimised.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_optimised_ktx2.glb",
+      "sourceBytes": 32015596,
+      "derivativeBytes": 31928096,
+      "sourceSha256": "4d2c8775ff5db62c7456d6f9fc00b7257579b4fc31e16eca38a4560471779c1e",
+      "derivativeSha256": "0880ba5f1a8b921344e04c8f218b0036913181b77f89115d34fc7a12af7f06de",
+      "dataUastcLevel": 3,
+      "colourUastcLevel": 2
+    }
+  ]
+}

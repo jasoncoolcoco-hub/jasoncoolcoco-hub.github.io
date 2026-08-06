@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "purpose": "Reversible Fred Studio V2 derivative spike and rollback manifest",
+  "sourceDefault": true,
+  "centralRuntimeConfiguration": "src/studio-v2/studioV2DerivativeConfig.js",
+  "runtimeFeatureFlag": "Derivative selection is accepted only when debug=1 or capture=1; the official route ignores delivery query parameters.",
+  "sources": [
+    {"id":"room","path":"public/models/fred-studio-v2/loft_interior_6_for_free.glb","bytes":24059568,"sha256":"5760cd49693e08773676b192090a50985787cf731d0c6e7e284f1c4814638c19","triangles":77410,"worldBounds":{"size":[39.52,15.503,39.52],"center":[0,5.659,0]}},
+    {"id":"macbook","path":"public/models/fred-studio-v2/objects/macbook_pro_2021.glb","bytes":2548260,"sha256":"1a38db1f63a4699573a0393c888b2191030c99cf81c2d3325712a69cb2b7af5f","triangles":1190,"finalWorldBounds":{"size":[0.2499,0.25,0.3557],"center":[0.961,1.54,-0.05]}},
+    {"id":"marshall-guitar-combined","path":"public/models/fred-studio-v2/objects/marshall_amp.glb","bytes":50101456,"sha256":"3b65fe43920c4d1fdfc593ad76e157a080aae435274bf5f244e54149bbebe8df","triangles":424034,"bounds":{"min":[-0.70913038,-0.00446808,-0.36767019],"max":[0.17223356,0.98504885,0.38740171],"size":[0.88136394,0.98951693,0.75507191]},"finalWorldBounds":{"size":[1.0664,1.0227,1.091],"center":[-2.0212,0.5324,1.392]}}
+  ],
+  "geometryDerivatives": [
+    {"asset":"marshall","level":"source-split","path":"public/models/fred-studio-v2/optimised/marshall_amp_optimised.glb","bytes":19443612,"sha256":"47e0630bf88457d9cf16ea7be1b4804943bf1e3bc8aacf4ce1dc88f2c7b9ec8a","triangles":114167,"bounds":{"min":[-0.22777415,-0.00145942,-0.36767019],"max":[0.17223356,0.97480736,0.38740171]}},
+    {"asset":"marshall","level":"conservative","path":"public/models/fred-studio-v2/optimised/marshall_amp_conservative.glb","bytes":17438172,"sha256":"18bf611ff657babda3aabc02cef9e092af69626b6b60691fc05db463d74e0462","triangles":108875,"bounds":{"min":[-0.22777415,-0.00145942,-0.36767019],"max":[0.17223356,0.97480736,0.38740171]},"decision":"ACCEPT"},
+    {"asset":"marshall","level":"light","path":"public/models/fred-studio-v2/optimised/marshall_amp_light.glb","bytes":17211816,"sha256":"1e9d9a9260de48d8617d147cdd79bcbb17fe99e419077ad80d11231e476bd0b0","triangles":102707,"bounds":{"min":[-0.22777415,-0.00145942,-0.36767019],"max":[0.17223356,0.97480736,0.38740171]},"decision":"REJECT — LOW BENEFIT"},
+    {"asset":"guitar","level":"source-split","path":"public/models/fred-studio-v2/optimised/gibson_guitar_optimised.glb","bytes":32015596,"sha256":"4d2c8775ff5db62c7456d6f9fc00b7257579b4fc31e16eca38a4560471779c1e","triangles":309867,"bounds":{"min":[-0.70913038,-0.00446808,-0.25877844],"max":[-0.11283241,0.98504885,0.31707671]}},
+    {"asset":"guitar","level":"conservative","path":"public/models/fred-studio-v2/optimised/gibson_guitar_conservative.glb","bytes":27072900,"sha256":"ad85dc4caffae200817b0604e6b7e343b38258c6c9873ce7a304bfafcfb625cf","triangles":239989,"bounds":{"min":[-0.70913038,-0.00446808,-0.25877844],"max":[-0.11283241,0.98504885,0.31707671]},"decision":"ACCEPT"},
+    {"asset":"guitar","level":"light","path":"public/models/fred-studio-v2/optimised/gibson_guitar_light.glb","bytes":25476576,"sha256":"a62f4aace2ca6c1120e7c640f4922d9a44d948734eeaf52a9302c195835877c3","triangles":202191,"bounds":{"min":[-0.70913038,-0.00446808,-0.25877844],"max":[-0.11283241,0.98504885,0.31707671]},"decision":"ACCEPT WITH LIMITATION"},
+    {"asset":"guitar","level":"moderate","path":"public/models/fred-studio-v2/optimised/gibson_guitar_moderate.glb","bytes":24072524,"sha256":"f80b4bf39f8de84f5da94c3afddb76646cc312e34ad5b544407d76b26f8b9ac4","triangles":169335,"bounds":{"min":[-0.70913038,-0.00446808,-0.25877844],"max":[-0.11283241,0.98504885,0.31707671]},"decision":"REJECT — LOW BENEFIT"}
+  ],
+  "ktx2": {
+    "encoder": "toktx 4.4.2 through glTF-Transform 4.4.2",
+    "colour": "UASTC level 2, Zstd 20, sRGB, unchanged resolution",
+    "data": "UASTC level 3 minimum (room/MacBook level 4), Zstd 18, linear, unchanged resolution",
+    "runtimeGpuFormatMeasured": "RGBA_ASTC_4x4_Format",
+    "records": [
+      {"id":"room","path":"public/models/fred-studio-v2/optimised/ktx2/room_ktx2.glb","bytes":29360656,"sha256":"95e3c7aff852db9400e9806c9d0440789a853f1a8e15ed9f2f0256f230eb46ec","decision":"REJECT — LOW BENEFIT"},
+      {"id":"macbook","path":"public/models/fred-studio-v2/optimised/ktx2/macbook_pro_2021_ktx2.glb","bytes":3367380,"sha256":"abd22b8eba9cc8bfe4000311198d9dcc2b6f4ab4cbc40721434a4d098dcede16","decision":"REJECT — LOW BENEFIT"},
+      {"id":"marshall-source-split","path":"public/models/fred-studio-v2/optimised/ktx2/marshall_amp_optimised_ktx2.glb","bytes":17551760,"sha256":"7abe8da8f7c890b8aabea4ca4405cf6ba58fa5f5a927af9b849e7b7f99e45557","decision":"ACCEPT WITH LIMITATION"},
+      {"id":"guitar-source-split","path":"public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_optimised_ktx2.glb","bytes":31928096,"sha256":"0880ba5f1a8b921344e04c8f218b0036913181b77f89115d34fc7a12af7f06de","decision":"REJECT — LOW BENEFIT"}
+    ]
+  },
+  "meshopt": {
+    "encoder": "glTF-Transform 4.4.2 + meshoptimizer 0.23.0",
+    "settings": {"level":"high","quantizationVolume":"mesh","positionBits":14,"normalBits":10,"texcoordBits":12},
+    "selected": [
+      {"id":"room","path":"public/models/fred-studio-v2/optimised/meshopt/room_meshopt.glb","bytes":18419836,"sha256":"6945807926a6a235f751e3f5ac0ee8b2aba563e3ea9f6936354bd4bf4cf8e277"},
+      {"id":"macbook","path":"public/models/fred-studio-v2/optimised/meshopt/macbook_pro_2021_meshopt.glb","bytes":2450836,"sha256":"9849f5307ebe5a637d62ccf0e10a621bc04b627a3dcc79e26ad6f9931015d12f"},
+      {"id":"marshall-conservative","path":"public/models/fred-studio-v2/optimised/meshopt/marshall_amp_conservative_meshopt.glb","bytes":9977004,"sha256":"796ff9b053e0d1ff0560fb8fc7ceac949bc1d0d6c446ad626131c61a12b8740f"},
+      {"id":"guitar-conservative","path":"public/models/fred-studio-v2/optimised/meshopt/gibson_guitar_conservative_meshopt.glb","bytes":17332576,"sha256":"fadc5e4ca8df846c28ea82ae540eabc8145f9c984c8a15e076643fed9d33722c"}
+    ]
+  },
+  "anchors": {
+    "MARSHALL_GUITAR_FLOOR_01":{"position":[-2.05,0.021,1.36],"rotation":[0,-0.959931,0],"scale":1,"surfaceNormal":[0,1,0]},
+    "MACBOOK_ISLAND_01":{"position":[0.961,1.415,-0.05],"rotation":[0,0,0],"scale":1,"surfaceNormal":[0,1,0]},
+    "splitMusicNormalisation":{"offset":[0.26844841,0.01856808,-0.00986576],"scale":1}
+  },
+  "stableIds": ["MARSHALL_GUITAR_FLOOR_01","MARSHALL_AMP","GIBSON_GUITAR","MACBOOK_ISLAND_01"],
+  "materialRoles": ["macbook-aluminium-deck","macbook-display-glass","macbook-hinge","marshall-cabinet-tolex-grille-atlas","marshall-control-panel","marshall-hardware","marshall-small-accessory","marshall-label","guitar-lacquered-lower-body","guitar-body-detail-hardware-atlas","guitar-neck","guitar-fretboard","guitar-strings-hardware","guitar-lacquered-body","guitar-cable-jacket","guitar-cable-detail"],
+  "textureMapping": {"colour":["map","emissiveMap"],"linearData":["normalMap","roughnessMap","metalnessMap","aoMap"]},
+  "authoritativeGeneratedManifests": [
+    "generated/fred-studio-v2-optimisation/manifests/geometry-derivatives.json",
+    "generated/fred-studio-v2-optimisation/manifests/ktx2-assets.json",
+    "generated/fred-studio-v2-optimisation/manifests/ktx2-geometry-derivatives.json",
+    "generated/fred-studio-v2-optimisation/manifests/meshopt-assets.json"
+  ],
+  "rollback": "Remove derivative query parameters or call createStudioV2DeliveryConfig with allowDerivatives=false. No anchor or placement re-authoring is required."
+}

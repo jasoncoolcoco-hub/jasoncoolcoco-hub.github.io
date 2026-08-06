@@ -3,7 +3,13 @@ export default function StudioV2Loading({ error, progress, visible, onRetry }) {
   const roundedProgress = Math.round(progress)
 
   return (
-    <div className={`studio-v2__loading${error ? ' studio-v2__loading--error' : ''}`} role="status" aria-live="polite">
+    <div
+      className={`studio-v2__loading${error ? ' studio-v2__loading--error' : ''}`}
+      data-loading-state={error ? 'error' : 'loading'}
+      data-testid="studio-v2-loading-cover"
+      role="status"
+      aria-live="polite"
+    >
       <div className="studio-v2__loading-content">
         <span className="studio-v2__loading-kicker">FRED STUDIO / V2</span>
         <p>{error ? 'THE STUDIO COULD NOT BE LOADED' : 'LOADING STUDIO'}</p>

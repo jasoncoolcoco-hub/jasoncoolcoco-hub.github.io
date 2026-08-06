@@ -1,4 +1,5 @@
 node_modules/
+/node_modules
 dist/
 .DS_Store
 
@@ -6,3 +7,6 @@ dist/
 source_assets/
 90_Backup/
 1. Photo Dump/
+
+# Fred Studio V2 local KTX2 encoder intermediates (manifests remain tracked).
+generated/fred-studio-v2-optimisation/textures-ktx2/*-data.glb

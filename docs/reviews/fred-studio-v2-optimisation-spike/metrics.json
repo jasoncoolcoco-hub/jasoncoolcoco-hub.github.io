@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-08-06T00:00:00+08:00",
+  "server": "http://127.0.0.1:5178",
+  "dpr": 1,
+  "measurementMethod": "Three.js WebGLRenderer diagnostics; three stabilised one-second FPS samples per state",
+  "historicalSourceBaseline": {
+    "status": "prior verified measurement, not represented as a new test",
+    "viewports": ["1728x1117", "1440x900"],
+    "fps": 60,
+    "renderedTriangles": 930370,
+    "drawCalls": 94,
+    "geometries": 68,
+    "runtimeTextures": 64,
+    "completeSceneReadyMsRange": [480.2, 546.4]
+  },
+  "assetTotals": {
+    "source": {"bytes": 76709284, "sourceTriangles": 502634, "renderedTriangles": 930370},
+    "sourceKtx2Split": {"bytes": 82207892, "sourceTriangles": 502634, "renderedTriangles": 930370},
+    "conservative": {"bytes": 71118900, "sourceTriangles": 427464, "renderedTriangles": 780030},
+    "light": {"bytes": 69296220, "sourceTriangles": 383498, "renderedTriangles": 692098},
+    "conservativeMeshopt": {"bytes": 48180252, "sourceTriangles": 427464, "renderedTriangles": 780030}
+  },
+  "measurements": [
+    {"id":"A","configuration":"source","viewport":"1728x1117","fpsSamples":[59,60,60],"averageFps":59.67,"minimumObservedFps":59,"frameTimeRangeMs":[16.67,16.95],"drawCalls":94,"renderedTriangles":930370,"geometries":68,"runtimeTextures":64,"loadMs":552.6,"firstRoomFrameMs":297.8,"completeSceneReadyMs":552.6,"controlsInteractiveMs":552.6,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"A","configuration":"source","viewport":"1440x900","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":930370,"geometries":68,"runtimeTextures":64,"loadMs":518.6,"firstRoomFrameMs":256.0,"completeSceneReadyMs":518.6,"controlsInteractiveMs":518.6,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"B","configuration":"source geometry + KTX2","viewport":"1728x1117","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":930370,"geometries":68,"runtimeTextures":64,"loadMs":592.8,"firstRoomFrameMs":373.4,"completeSceneReadyMs":592.8,"controlsInteractiveMs":592.8,"gpuTextureFormat":"RGBA_ASTC_4x4_Format"},
+    {"id":"B","configuration":"source geometry + KTX2","viewport":"1440x900","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":930370,"geometries":68,"runtimeTextures":64,"loadMs":611.4,"firstRoomFrameMs":344.4,"completeSceneReadyMs":611.4,"controlsInteractiveMs":611.4,"gpuTextureFormat":"RGBA_ASTC_4x4_Format"},
+    {"id":"C","configuration":"conservative guitar + conservative Marshall","viewport":"1728x1117","fpsSamples":[59,60,60],"averageFps":59.67,"minimumObservedFps":59,"frameTimeRangeMs":[16.67,16.95],"drawCalls":94,"renderedTriangles":780030,"geometries":68,"runtimeTextures":64,"loadMs":581.1,"firstRoomFrameMs":290.2,"completeSceneReadyMs":581.1,"controlsInteractiveMs":581.1,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"C","configuration":"conservative guitar + conservative Marshall","viewport":"1440x900","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":780030,"geometries":68,"runtimeTextures":64,"loadMs":523.8,"firstRoomFrameMs":270.7,"completeSceneReadyMs":523.8,"controlsInteractiveMs":523.8,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"D","configuration":"light guitar + light Marshall","viewport":"1728x1117","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":692098,"geometries":68,"runtimeTextures":64,"loadMs":519.4,"firstRoomFrameMs":248.7,"completeSceneReadyMs":519.4,"controlsInteractiveMs":519.4,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"D","configuration":"light guitar + light Marshall","viewport":"1440x900","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":692098,"geometries":68,"runtimeTextures":64,"loadMs":536.8,"firstRoomFrameMs":266.1,"completeSceneReadyMs":536.8,"controlsInteractiveMs":536.8,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"E","configuration":"conservative + Meshopt","viewport":"1728x1117","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":780030,"geometries":68,"runtimeTextures":64,"loadMs":601.9,"firstRoomFrameMs":304.3,"completeSceneReadyMs":601.9,"controlsInteractiveMs":601.9,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"E","configuration":"conservative + Meshopt","viewport":"1440x900","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":780030,"geometries":68,"runtimeTextures":64,"loadMs":714.6,"firstRoomFrameMs":273.0,"completeSceneReadyMs":714.6,"controlsInteractiveMs":714.6,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"F","configuration":"conservative + Meshopt + lazy + debug split","viewport":"1728x1117","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":780030,"geometries":68,"runtimeTextures":64,"loadMs":720.0,"firstRoomFrameMs":252.0,"completeSceneReadyMs":720.0,"controlsInteractiveMs":252.0,"gpuTextureFormat":"RGBAFormat"},
+    {"id":"F","configuration":"conservative + Meshopt + lazy + debug split","viewport":"1440x900","fpsSamples":[60,60,60],"averageFps":60,"minimumObservedFps":60,"frameTimeRangeMs":[16.67,16.67],"drawCalls":94,"renderedTriangles":780030,"geometries":68,"runtimeTextures":64,"loadMs":518.5,"firstRoomFrameMs":236.7,"completeSceneReadyMs":518.5,"controlsInteractiveMs":236.7,"gpuTextureFormat":"RGBAFormat"}
+  ],
+  "textureDownloadBytes": "Textures are embedded in the GLBs; separate network bytes are not attributable without changing the container.",
+  "console": {"warnings": [], "errors": [], "note": "No new error UI or dev-server error output appeared during the completed route checks."}
+}

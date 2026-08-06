@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-08-05T16:41:01.980Z",
+  "combinedMarshallGuitar": {
+    "file": "public/models/fred-studio-v2/objects/marshall_amp.glb",
+    "bytes": 50101456,
+    "sha256": "3b65fe43920c4d1fdfc593ad76e157a080aae435274bf5f244e54149bbebe8df",
+    "triangles": 424034,
+    "bounds": {
+      "min": [
+        -0.70913038,
+        -0.00446808,
+        -0.36767019
+      ],
+      "max": [
+        0.17223356,
+        0.98504885,
+        0.38740171
+      ],
+      "size": [
+        0.88136394,
+        0.98951693,
+        0.75507191
+      ]
+    }
+  }
+}

@@ -6,6 +6,22 @@ import {
   STUDIO_V2_MODEL_TRANSFORM,
   STUDIO_V2_RENDERING,
 } from './studioV2Config'
+import {
+  STUDIO_V2_ANCHORS,
+  STUDIO_V2_ANCHOR_NAMES,
+  formatStudioV2Anchor,
+} from './studioV2Anchors'
+import {
+  STUDIO_V2_APPROVED_OPENING_CAMERA,
+  STUDIO_V2_COORDINATE_SYSTEM,
+  STUDIO_V2_FLOOR_Y,
+  STUDIO_V2_INTERIOR_BOUNDS,
+  STUDIO_V2_INTERIOR_CENTER,
+} from './studioV2Coordinates'
+import {
+  STUDIO_V2_DERIVATIVE_OPTIONS,
+  STUDIO_V2_OFFICIAL_DELIVERY,
+} from './studioV2DerivativeConfig'
 
 function vectorText(vector) {
   return vector?.join(', ') ?? '—'
@@ -15,13 +31,37 @@ function boundsText(record) {
   return record ? `${vectorText(record.size)} · C ${vectorText(record.center)}` : '—'
 }
 
+function materialValueText(record) {
+  if (!record) return '—'
+  const { original, refined } = record
+  const clearcoat = refined.clearcoat === null ? '' : ` · CC ${refined.clearcoat}`
+  return `M ${original.metalness}→${refined.metalness} · R ${original.roughness}→${refined.roughness} · ENV ${original.envMapIntensity}→${refined.envMapIntensity}${clearcoat}`
+}
+
+function readinessText(value) {
+  return value ? 'READY' : 'PENDING'
+}
+
 async function copyJson(value) {
   await navigator.clipboard.writeText(JSON.stringify(value, null, 2))
+}
+
+async function copyText(value) {
+  await navigator.clipboard.writeText(value)
 }
 
 function InspectorRow({ label, value }) {
   return <div><dt>{label}</dt><dd>{value ?? '—'}</dd></div>
 }
+
+const PLACED_OBJECT_ANCHOR_NAMES = Object.freeze([
+  'MARSHALL_GUITAR_FLOOR_01',
+  'MACBOOK_ISLAND_01',
+])
+
+const placedObjectAnchorText = PLACED_OBJECT_ANCHOR_NAMES
+  .map((name) => formatStudioV2Anchor(name, STUDIO_V2_ANCHORS[name]))
+  .join('\n\n')
 
 function ToggleButton({ children, active, onClick, disabled = false }) {
   return (
@@ -31,10 +71,43 @@ function ToggleButton({ children, active, onClick, disabled = false }) {
   )
 }
 
-export default function StudioV2DebugPanel({ audit, diagnostics, runtime }) {
-  const [helpers, setHelpers] = useState({ axes: false, grid: false, bounds: false, lights: false })
+function setDeliverySearchParam(name, value, defaultValue) {
+  const params = new URLSearchParams(window.location.search)
+  params.set('debug', '1')
+  if (value === defaultValue) params.delete(name)
+  else params.set(name, value)
+  window.location.search = params.toString()
+}
+
+function SpatialNumber({ label, value, step = 0.01, onChange }) {
+  return (
+    <label className="studio-v2__debug-number">
+      <span>{label}</span>
+      <input
+        type="number"
+        value={value}
+        step={step}
+        onChange={(event) => {
+          const next = Number(event.currentTarget.value)
+          if (Number.isFinite(next)) onChange(next)
+        }}
+      />
+    </label>
+  )
+}
+
+export default function StudioV2DebugPanel({ audit, diagnostics, entryState, runtime }) {
+  const [helpers, setHelpers] = useState({ lights: false })
+  const [assetMaterialMode, setAssetMaterialMode] = useState('refined')
+  const [, setSpatialRevision] = useState(0)
+  const [anchorName, setAnchorName] = useState(STUDIO_V2_ANCHOR_NAMES[0])
   const visual = diagnostics?.visual ?? runtime?.getVisualConfig?.() ?? {}
   const safety = diagnostics?.safety ?? runtime?.getCameraSafety?.() ?? {}
+  const delivery = runtime?.getAssetDeliveryConfig?.() ?? audit?.delivery ?? {}
+  const entry = entryState
+    ?? diagnostics?.entry
+    ?? runtime?.getSceneReadyState?.()
+    ?? {}
 
   if (!runtime) return null
 
@@ -42,6 +115,21 @@ export default function StudioV2DebugPanel({ audit, diagnostics, runtime }) {
     const next = !helpers[name]
     setHelpers((current) => ({ ...current, [name]: next }))
     setter(next)
+  }
+
+  const runSpatial = (action) => {
+    action()
+    setSpatialRevision((current) => current + 1)
+  }
+  const spatial = runtime.getSpatialState?.() ?? diagnostics?.spatial ?? null
+  const placeholder = spatial?.placeholder
+  const picked = spatial?.pick
+  const placedObjects = runtime.getPlacedObjects?.() ?? []
+  const materialOverrides = placedObjects.flatMap((record) => record.resources.materialOverrides ?? [])
+  const materialOverrideById = Object.fromEntries(materialOverrides.map((record) => [record.id, record]))
+
+  const switchAssetMaterialMode = (mode) => {
+    setAssetMaterialMode(runtime.setAssetMaterialMode?.(mode) ?? mode)
   }
 
   return (
@@ -62,6 +150,301 @@ export default function StudioV2DebugPanel({ audit, diagnostics, runtime }) {
           <InspectorRow label="VIEWPORT" value={vectorText(diagnostics?.viewport)} />
           <InspectorRow label="LOAD" value={audit ? `${audit.loadTimeMs} MS` : null} />
           <InspectorRow label="ANISOTROPY" value={audit?.maximumAnisotropy} />
+          <InspectorRow label="ROOM FIRST FRAME" value={audit?.firstRoomFrameMs ? `${audit.firstRoomFrameMs} MS` : null} />
+        </dl>
+      </section>
+
+      <section className="studio-v2__debug-section studio-v2__debug-section--entry">
+        <h2>SCENE READY GATE</h2>
+        <dl>
+          <InspectorRow label="PHASE" value={entry.phase?.toUpperCase?.()} />
+          <InspectorRow label="TOTAL PROGRESS" value={Number.isFinite(entry.progress) ? `${Math.round(entry.progress)}%` : null} />
+          <InspectorRow label="ROOM READY" value={readinessText(entry.roomReady)} />
+          <InspectorRow label="MACBOOK READY" value={readinessText(entry.macBookReady)} />
+          <InspectorRow label="MARSHALL READY" value={readinessText(entry.marshallReady)} />
+          <InspectorRow label="GUITAR READY" value={readinessText(entry.guitarReady)} />
+          <InspectorRow label="MUSIC GROUP READY" value={readinessText(entry.marshallGroupReady)} />
+          <InspectorRow label="TEXTURES READY" value={readinessText(entry.texturesReady)} />
+          <InspectorRow label="MATERIALS READY" value={readinessText(entry.materialsReady)} />
+          <InspectorRow label="ANCHORS READY" value={readinessText(entry.anchorsReady)} />
+          <InspectorRow label="WORLD MATRICES READY" value={readinessText(entry.worldMatricesReady)} />
+          <InspectorRow label="SHADER READY" value={readinessText(entry.shaderReady)} />
+          <InspectorRow label="WARM-UP READY" value={readinessText(entry.warmupReady)} />
+          <InspectorRow label="SCENE READY" value={readinessText(entry.sceneReady)} />
+          <InspectorRow label="INTERACTIONS" value={entry.interactionsEnabled ? 'ENABLED' : 'DISABLED'} />
+          <InspectorRow label="CRITICAL REQUESTS" value={entry.requests?.length} />
+          <InspectorRow label="ERROR" value={entry.error ? `${entry.error.assetId ?? 'SCENE'} · ${entry.error.message}` : 'NONE'} />
+        </dl>
+      </section>
+
+      <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
+        <h2>ASSET DELIVERY</h2>
+        <h3>GUITAR</h3>
+        <div className="studio-v2__debug-actions">
+          {STUDIO_V2_DERIVATIVE_OPTIONS.guitar.map((value) => (
+            <ToggleButton
+              key={value}
+              active={(delivery.guitar ?? 'source') === value}
+              onClick={() => setDeliverySearchParam('guitar', value, STUDIO_V2_OFFICIAL_DELIVERY.guitar)}
+            >
+              {value.toUpperCase()}
+            </ToggleButton>
+          ))}
+        </div>
+        <h3>MARSHALL</h3>
+        <div className="studio-v2__debug-actions">
+          {STUDIO_V2_DERIVATIVE_OPTIONS.marshall.map((value) => (
+            <ToggleButton
+              key={value}
+              active={(delivery.marshall ?? 'source') === value}
+              onClick={() => setDeliverySearchParam('marshall', value, STUDIO_V2_OFFICIAL_DELIVERY.marshall)}
+            >
+              {value.toUpperCase()}
+            </ToggleButton>
+          ))}
+        </div>
+        <h3>TEXTURES</h3>
+        <div className="studio-v2__debug-actions">
+          {STUDIO_V2_DERIVATIVE_OPTIONS.textures.map((value) => (
+            <ToggleButton
+              key={value}
+              active={(delivery.textures ?? 'source') === value}
+              onClick={() => setDeliverySearchParam('textures', value, STUDIO_V2_OFFICIAL_DELIVERY.textures)}
+            >
+              {value.toUpperCase()}
+            </ToggleButton>
+          ))}
+        </div>
+        <h3>MESH COMPRESSION</h3>
+        <div className="studio-v2__debug-actions">
+          {STUDIO_V2_DERIVATIVE_OPTIONS.meshCompression.map((value) => (
+            <ToggleButton
+              key={value}
+              active={(delivery.meshCompression ?? 'off') === value}
+              onClick={() => setDeliverySearchParam('mesh', value, STUDIO_V2_OFFICIAL_DELIVERY.meshCompression)}
+            >
+              {value.toUpperCase()}
+            </ToggleButton>
+          ))}
+        </div>
+        <h3>LOADING</h3>
+        <div className="studio-v2__debug-actions">
+          {STUDIO_V2_DERIVATIVE_OPTIONS.loading.map((value) => (
+            <ToggleButton
+              key={value}
+              active={(delivery.loading ?? 'eager') === value}
+              onClick={() => setDeliverySearchParam('loading', value, STUDIO_V2_OFFICIAL_DELIVERY.loading)}
+            >
+              {value.toUpperCase()}
+            </ToggleButton>
+          ))}
+          <ToggleButton
+            active={Boolean(delivery.selectiveShadows)}
+            onClick={() => setDeliverySearchParam(
+              'microShadows',
+              delivery.selectiveShadows ? 'on' : 'off',
+              'on',
+            )}
+          >
+            MICRO SHADOWS {delivery.selectiveShadows ? 'OFF' : 'ON'}
+          </ToggleButton>
+        </div>
+        <dl>
+          <InspectorRow label="OFFICIAL DEFAULT" value={delivery.officialDefault ? 'APPROVED OPTIMISED' : 'DEBUG OVERRIDE'} />
+          <InspectorRow label="GPU TEXTURE FORMAT" value={delivery.selectedGpuTextureFormat} />
+          <InspectorRow label="ROOM" value={delivery.roomUrl} />
+          <InspectorRow label="MACBOOK" value={delivery.macbookUrl} />
+          <InspectorRow label="MARSHALL" value={delivery.marshallUrl ?? delivery.musicUrl} />
+          <InspectorRow label="GUITAR" value={delivery.guitarUrl ?? delivery.musicUrl} />
+        </dl>
+      </section>
+
+      <section className="studio-v2__debug-section studio-v2__debug-section--materials">
+        <h2>ASSET MATERIALS</h2>
+        <div className="studio-v2__debug-actions">
+          <ToggleButton
+            active={assetMaterialMode === 'original'}
+            onClick={() => switchAssetMaterialMode('original')}
+          >
+            ORIGINAL
+          </ToggleButton>
+          <ToggleButton
+            active={assetMaterialMode === 'refined'}
+            onClick={() => switchAssetMaterialMode('refined')}
+          >
+            REFINED
+          </ToggleButton>
+        </div>
+        <dl>
+          <InspectorRow label="MODE" value={assetMaterialMode.toUpperCase()} />
+          <InspectorRow label="OVERRIDES" value={materialOverrides.length} />
+          <InspectorRow label="ANISOTROPY" value={placedObjects[0]?.resources.anisotropy} />
+          <InspectorRow
+            label="COLOUR SPACE FIXES"
+            value={placedObjects.reduce((total, record) => total + (record.resources.colorSpaceCorrections?.length ?? 0), 0)}
+          />
+          <InspectorRow label="MAC ALUMINIUM" value={materialValueText(materialOverrideById['macbook-aluminium-deck'])} />
+          <InspectorRow label="MAC SCREEN" value={materialValueText(materialOverrideById['macbook-display-glass'])} />
+          <InspectorRow label="MARSHALL CABINET" value={materialValueText(materialOverrideById['marshall-cabinet-tolex-grille-atlas'])} />
+          <InspectorRow label="MARSHALL PANEL" value={materialValueText(materialOverrideById['marshall-control-panel'])} />
+          <InspectorRow label="GUITAR BODY" value={materialValueText(materialOverrideById['guitar-lacquered-body'])} />
+          <InspectorRow label="GUITAR FRETBOARD" value={materialValueText(materialOverrideById['guitar-fretboard'])} />
+          <InspectorRow label="GUITAR STRINGS" value={materialValueText(materialOverrideById['guitar-strings-hardware'])} />
+          <InspectorRow label="NORMAL CORRECTIONS" value="NONE REQUIRED" />
+        </dl>
+      </section>
+
+      <section className="studio-v2__debug-section studio-v2__debug-section--spatial">
+        <h2>SPATIAL / PLACEMENT</h2>
+        <dl>
+          <InspectorRow label="UNITS" value={STUDIO_V2_COORDINATE_SYSTEM.unit.toUpperCase()} />
+          <InspectorRow label="ORIGIN" value={vectorText(STUDIO_V2_COORDINATE_SYSTEM.origin)} />
+          <InspectorRow label="+X" value={STUDIO_V2_COORDINATE_SYSTEM.axes.x} />
+          <InspectorRow label="+Y" value={STUDIO_V2_COORDINATE_SYSTEM.axes.y} />
+          <InspectorRow label="+Z" value={STUDIO_V2_COORDINATE_SYSTEM.axes.z} />
+          <InspectorRow label="FLOOR Y" value={STUDIO_V2_FLOOR_Y.toFixed(3)} />
+          <InspectorRow label="INTERIOR C" value={vectorText(STUDIO_V2_INTERIOR_CENTER)} />
+          <InspectorRow label="INTERIOR MIN" value={vectorText(STUDIO_V2_INTERIOR_BOUNDS.min)} />
+          <InspectorRow label="INTERIOR MAX" value={vectorText(STUDIO_V2_INTERIOR_BOUNDS.max)} />
+          <InspectorRow label="OPEN CAMERA" value={vectorText(STUDIO_V2_APPROVED_OPENING_CAMERA.constrainedPosition)} />
+          <InspectorRow label="OPEN TARGET" value={vectorText(STUDIO_V2_APPROVED_OPENING_CAMERA.constrainedTarget)} />
+          <InspectorRow label="GRID" value={spatial ? `${spatial.grid.minorStep} MINOR / ${spatial.grid.majorStep} MAJOR` : 'LOADING'} />
+        </dl>
+        <div className="studio-v2__debug-actions">
+          <ToggleButton
+            active={Boolean(spatial?.axes)}
+            disabled={!spatial}
+            onClick={() => runSpatial(() => runtime.setAxes(!spatial?.axes))}
+          >
+            AXES
+          </ToggleButton>
+          <ToggleButton
+            active={Boolean(spatial?.grid?.visible)}
+            disabled={!spatial}
+            onClick={() => runSpatial(() => runtime.setGrid(!spatial?.grid?.visible))}
+          >
+            GRID
+          </ToggleButton>
+          <ToggleButton
+            active={Boolean(spatial?.bounds)}
+            disabled={!spatial}
+            onClick={() => runSpatial(() => runtime.setBounds(!spatial?.bounds))}
+          >
+            BOUNDS
+          </ToggleButton>
+          <ToggleButton
+            active={Boolean(spatial?.pickEnabled)}
+            disabled={!spatial}
+            onClick={() => runSpatial(() => runtime.setPickPosition(!spatial?.pickEnabled))}
+          >
+            PICK POSITION
+          </ToggleButton>
+          <button type="button" disabled={!picked} onClick={() => runSpatial(runtime.clearPick)}>
+            CLEAR PICK
+          </button>
+        </div>
+
+        <h3>PICK INSPECTOR</h3>
+        <dl>
+          <InspectorRow label="POSITION" value={vectorText(picked?.position)} />
+          <InspectorRow label="NORMAL" value={vectorText(picked?.normal)} />
+          <InspectorRow label="MESH" value={picked?.mesh} />
+          <InspectorRow label="MATERIAL" value={picked?.material} />
+          <InspectorRow label="SURFACE" value={picked?.surfaceType} />
+          <InspectorRow label="CAM DIST" value={picked?.cameraDistance} />
+        </dl>
+        <div className="studio-v2__debug-actions">
+          <button type="button" disabled={!picked} onClick={() => copyText(runtime.copyPickedPosition())}>
+            COPY POSITION
+          </button>
+          <button type="button" disabled={!picked} onClick={() => copyText(runtime.copyPickedPositionAndNormal())}>
+            COPY POSITION + NORMAL
+          </button>
+        </div>
+
+        <h3>PLACEMENT_PLACEHOLDER</h3>
+        <div className="studio-v2__debug-actions">
+          <ToggleButton
+            active={Boolean(placeholder?.visible)}
+            disabled={!placeholder}
+            onClick={() => runSpatial(() => runtime.setPlaceholderVisible(!placeholder?.visible))}
+          >
+            {placeholder?.visible ? 'HIDE' : 'SHOW'}
+          </ToggleButton>
+          <button type="button" disabled={!placeholder} onClick={() => runSpatial(runtime.resetPlaceholder)}>RESET</button>
+          <button type="button" disabled={!picked} onClick={() => runSpatial(runtime.movePlaceholderToPick)}>MOVE TO PICKED</button>
+          <button type="button" disabled={!picked} onClick={() => runSpatial(runtime.alignPlaceholderToPick)}>ALIGN TO PICKED</button>
+        </div>
+        {placeholder && (
+          <>
+            <div className="studio-v2__debug-number-grid">
+              {['X', 'Y', 'Z'].map((axis, index) => (
+                <SpatialNumber
+                  key={`position-${axis}`}
+                  label={`POS ${axis}`}
+                  value={placeholder.position[index]}
+                  onChange={(value) => runSpatial(() => runtime.setPlaceholderPosition(index, value))}
+                />
+              ))}
+              {['X', 'Y', 'Z'].map((axis, index) => (
+                <SpatialNumber
+                  key={`rotation-${axis}`}
+                  label={`ROT ${axis}°`}
+                  value={placeholder.rotationDegrees[index]}
+                  step={1}
+                  onChange={(value) => runSpatial(() => runtime.setPlaceholderRotationDegrees(index, value))}
+                />
+              ))}
+              {['W', 'H', 'D'].map((axis, index) => (
+                <SpatialNumber
+                  key={`size-${axis}`}
+                  label={axis}
+                  value={placeholder.size[index]}
+                  onChange={(value) => runSpatial(() => runtime.setPlaceholderSize(index, value))}
+                />
+              ))}
+              <SpatialNumber
+                label="SCALE"
+                value={placeholder.uniformScale}
+                onChange={(value) => runSpatial(() => runtime.setPlaceholderUniformScale(value))}
+              />
+            </div>
+            <button className="studio-v2__debug-copy" type="button" onClick={() => copyText(runtime.copyPlaceholderTransform())}>
+              COPY TRANSFORM
+            </button>
+          </>
+        )}
+
+        <h3>NAMED ANCHOR DRAFT</h3>
+        <label className="studio-v2__debug-select">
+          <span>ANCHOR NAME</span>
+          <select value={anchorName} onChange={(event) => setAnchorName(event.currentTarget.value)}>
+            {STUDIO_V2_ANCHOR_NAMES.map((name) => <option key={name}>{name}</option>)}
+          </select>
+        </label>
+        <div className="studio-v2__debug-actions">
+          <button type="button" disabled={!placeholder} onClick={() => runSpatial(() => runtime.savePlaceholderAsAnchor(anchorName))}>
+            SAVE PLACEHOLDER AS ANCHOR
+          </button>
+          <button type="button" disabled={!spatial?.anchorDraft} onClick={() => copyText(runtime.copyAnchor())}>
+            COPY ANCHOR
+          </button>
+          <button type="button" disabled={!spatial?.anchorDraft} onClick={() => runSpatial(runtime.clearUnsavedAnchor)}>
+            CLEAR UNSAVED ANCHOR
+          </button>
+        </div>
+        <pre className="studio-v2__debug-output">{spatial?.anchorCopyText ?? `${anchorName}: null`}</pre>
+
+        <h3>PLACED OBJECT ANCHORS</h3>
+        <pre className="studio-v2__debug-output">{placedObjectAnchorText}</pre>
+        <dl>
+          {placedObjects.map((record) => (
+            <InspectorRow
+              key={record.anchorName}
+              label={record.anchorName}
+              value={`ASSET ${record.assetScale} · ${record.resources.meshes} MESHES · WORLD ${boundsText(record.worldBounds)}`}
+            />
+          ))}
         </dl>
       </section>
 
@@ -254,9 +637,6 @@ export default function StudioV2DebugPanel({ audit, diagnostics, runtime }) {
           <InspectorRow label="ROOT SCALE" value={STUDIO_V2_MODEL_TRANSFORM.scale} />
         </dl>
         <div className="studio-v2__debug-actions">
-          <ToggleButton active={helpers.axes} onClick={() => toggleHelper('axes', runtime.setAxes)}>AXES</ToggleButton>
-          <ToggleButton active={helpers.grid} onClick={() => toggleHelper('grid', runtime.setGrid)}>GRID</ToggleButton>
-          <ToggleButton active={helpers.bounds} onClick={() => toggleHelper('bounds', runtime.setBounds)}>COLLIDERS / BOUNDS</ToggleButton>
           <ToggleButton active={helpers.lights} onClick={() => toggleHelper('lights', runtime.setLightHelpers)}>LIGHTS</ToggleButton>
         </div>
       </section>

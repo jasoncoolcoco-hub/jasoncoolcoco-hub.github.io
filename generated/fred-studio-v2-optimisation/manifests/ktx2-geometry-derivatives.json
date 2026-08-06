@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-08-05T17:04:20.153Z",
+  "records": [
+    {
+      "asset": "marshall",
+      "level": "conservative",
+      "file": "public/models/fred-studio-v2/optimised/ktx2/marshall_amp_conservative_ktx2.glb",
+      "bytes": 15546328,
+      "sha256": "be5f9c0d92f59123d222365dddb7be248ba01c0382be28bcd058faa179f2a2ec",
+      "triangles": 108875,
+      "bounds": {
+        "min": [
+          -0.22777415,
+          -0.00145942,
+          -0.36767019
+        ],
+        "max": [
+          0.17223356,
+          0.97480736,
+          0.38740171
+        ]
+      }
+    },
+    {
+      "asset": "marshall",
+      "level": "light",
+      "file": "public/models/fred-studio-v2/optimised/ktx2/marshall_amp_light_ktx2.glb",
+      "bytes": 15319972,
+      "sha256": "d4bc1b0447e84c89322c1b802f7e01735c71d4afaa1bb72e7f88e9cad91397d2",
+      "triangles": 102707,
+      "bounds": {
+        "min": [
+          -0.22777415,
+          -0.00145942,
+          -0.36767019
+        ],
+        "max": [
+          0.17223356,
+          0.97480736,
+          0.38740171
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "conservative",
+      "file": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_conservative_ktx2.glb",
+      "bytes": 26985408,
+      "sha256": "e907650d334ea747729c3b0b7febb8123946dcd9c4a0eb09a434b4d682d01b85",
+      "triangles": 239989,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "light",
+      "file": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_light_ktx2.glb",
+      "bytes": 25389076,
+      "sha256": "5bd4e2843ea9b53e7b318fdf8fce6bbd09636ff4b38f59c829fc385b7bed96fd",
+      "triangles": 202191,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "moderate",
+      "file": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_moderate_ktx2.glb",
+      "bytes": 23985028,
+      "sha256": "c5b62f844b72c2cb0eeadf2debd279280309b02699f93529e9a8f192f339072b",
+      "triangles": 169335,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ]
+      }
+    }
+  ]
+}

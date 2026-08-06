@@ -31,11 +31,13 @@
 
 .studio-v2__canvas {
   opacity: 0;
+  pointer-events: none;
   transition: opacity 900ms ease;
 }
 
 .studio-v2--ready .studio-v2__canvas {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .studio-v2__header {
@@ -250,6 +252,20 @@
   letter-spacing: 0.15em;
 }
 
+.studio-v2__debug-section h3 {
+  margin: 14px 0 7px;
+  color: rgba(243, 238, 228, 0.62);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.studio-v2__debug-section--spatial {
+  padding: 10px;
+  border: 1px solid rgba(155, 179, 190, 0.22);
+  background: rgba(110, 130, 140, 0.06);
+}
+
 .studio-v2__debug dl div {
   display: grid;
   grid-template-columns: 92px 1fr;
@@ -320,6 +336,50 @@
 .studio-v2__debug-copy {
   width: 100%;
   margin-top: 8px;
+}
+
+.studio-v2__debug-number-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.studio-v2__debug-number,
+.studio-v2__debug-select {
+  display: grid;
+  gap: 4px;
+  color: rgba(243, 238, 228, 0.5);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.studio-v2__debug-number input,
+.studio-v2__debug-select select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--studio-ink);
+  font: inherit;
+}
+
+.studio-v2__debug-select {
+  margin-top: 8px;
+}
+
+.studio-v2__debug-output {
+  max-height: 140px;
+  margin: 9px 0 0;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(243, 238, 228, 0.72);
+  font: 8px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 700px) {

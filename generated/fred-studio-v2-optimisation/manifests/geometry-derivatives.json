@@ -1,0 +1,743 @@
+{
+  "generatedAt": "2026-08-05T16:41:01.980Z",
+  "toolchain": {
+    "gltfTransform": "4.4.2",
+    "meshoptimizer": "0.23.0",
+    "blender": null
+  },
+  "source": {
+    "file": "public/models/fred-studio-v2/objects/marshall_amp.glb",
+    "bytes": 50101456,
+    "sha256": "3b65fe43920c4d1fdfc593ad76e157a080aae435274bf5f244e54149bbebe8df",
+    "triangles": 424034,
+    "bounds": {
+      "min": [
+        -0.70913038,
+        -0.00446808,
+        -0.36767019
+      ],
+      "max": [
+        0.17223356,
+        0.98504885,
+        0.38740171
+      ],
+      "size": [
+        0.88136394,
+        0.98951693,
+        0.75507191
+      ]
+    }
+  },
+  "derivatives": [
+    {
+      "asset": "marshall",
+      "level": "source-split",
+      "strategy": "Lossless hierarchy split only.",
+      "file": "public/models/fred-studio-v2/optimised/marshall_amp_optimised.glb",
+      "bytes": 19443612,
+      "sha256": "47e0630bf88457d9cf16ea7be1b4804943bf1e3bc8aacf4ce1dc88f2c7b9ec8a",
+      "triangles": 114167,
+      "bounds": {
+        "min": [
+          -0.22777415,
+          -0.00145942,
+          -0.36767019
+        ],
+        "max": [
+          0.17223356,
+          0.97480736,
+          0.38740171
+        ],
+        "size": [
+          0.40000771,
+          0.97626678,
+          0.75507191
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "source-split",
+      "strategy": "Lossless hierarchy split only.",
+      "file": "public/models/fred-studio-v2/optimised/gibson_guitar_optimised.glb",
+      "bytes": 32015596,
+      "sha256": "4d2c8775ff5db62c7456d6f9fc00b7257579b4fc31e16eca38a4560471779c1e",
+      "triangles": 309867,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ],
+        "size": [
+          0.59629797,
+          0.98951693,
+          0.57585515
+        ]
+      }
+    },
+    {
+      "asset": "marshall",
+      "level": "conservative",
+      "componentResults": [
+        {
+          "mesh": "Cube.024_Marshall Amp Body_0",
+          "ratio": 0.97,
+          "before": 6943,
+          "after": 6733,
+          "saved": 210
+        },
+        {
+          "mesh": "Cube.027_Marshall Amp Body_0",
+          "ratio": 0.95,
+          "before": 51328,
+          "after": 48760,
+          "saved": 2568
+        },
+        {
+          "mesh": "Cube.027_Marshall Amp Panel_0",
+          "ratio": 0.92,
+          "before": 33535,
+          "after": 32689,
+          "saved": 846
+        },
+        {
+          "mesh": "Cube.027_Marshall Amp Panel_0",
+          "ratio": 0.92,
+          "before": 4101,
+          "after": 4101,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.027_Anis_0",
+          "ratio": 0.98,
+          "before": 1920,
+          "after": 1920,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.028_Material_0",
+          "ratio": 0.88,
+          "before": 13886,
+          "after": 12218,
+          "saved": 1668
+        },
+        {
+          "mesh": "Cube.029_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.030_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.031_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.032_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.033_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.034_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.035_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.036_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.037_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.038_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.039_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.040_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.041_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.042_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.043_Anis_0",
+          "ratio": 0.98,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Plane.005_Label_0",
+          "ratio": 1,
+          "before": 54,
+          "after": 54,
+          "saved": 0
+        }
+      ],
+      "strategy": "Component-weighted simplification; silhouette and named front materials receive higher retention.",
+      "file": "public/models/fred-studio-v2/optimised/marshall_amp_conservative.glb",
+      "bytes": 17438172,
+      "sha256": "18bf611ff657babda3aabc02cef9e092af69626b6b60691fc05db463d74e0462",
+      "triangles": 108875,
+      "bounds": {
+        "min": [
+          -0.22777415,
+          -0.00145942,
+          -0.36767019
+        ],
+        "max": [
+          0.17223356,
+          0.97480736,
+          0.38740171
+        ],
+        "size": [
+          0.40000771,
+          0.97626678,
+          0.75507191
+        ]
+      }
+    },
+    {
+      "asset": "marshall",
+      "level": "light",
+      "componentResults": [
+        {
+          "mesh": "Cube.024_Marshall Amp Body_0",
+          "ratio": 0.92,
+          "before": 6943,
+          "after": 6387,
+          "saved": 556
+        },
+        {
+          "mesh": "Cube.027_Marshall Amp Body_0",
+          "ratio": 0.88,
+          "before": 51328,
+          "after": 45168,
+          "saved": 6160
+        },
+        {
+          "mesh": "Cube.027_Marshall Amp Panel_0",
+          "ratio": 0.82,
+          "before": 33535,
+          "after": 32681,
+          "saved": 854
+        },
+        {
+          "mesh": "Cube.027_Marshall Amp Panel_0",
+          "ratio": 0.82,
+          "before": 4101,
+          "after": 4101,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.027_Anis_0",
+          "ratio": 0.94,
+          "before": 1920,
+          "after": 1920,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.028_Material_0",
+          "ratio": 0.72,
+          "before": 13886,
+          "after": 9996,
+          "saved": 3890
+        },
+        {
+          "mesh": "Cube.029_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.030_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.031_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.032_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.033_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.034_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.035_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.036_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.037_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.038_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.039_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.040_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.041_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.042_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Cube.043_Anis_0",
+          "ratio": 0.94,
+          "before": 160,
+          "after": 160,
+          "saved": 0
+        },
+        {
+          "mesh": "Plane.005_Label_0",
+          "ratio": 1,
+          "before": 54,
+          "after": 54,
+          "saved": 0
+        }
+      ],
+      "strategy": "Component-weighted simplification; silhouette and named front materials receive higher retention.",
+      "file": "public/models/fred-studio-v2/optimised/marshall_amp_light.glb",
+      "bytes": 17211816,
+      "sha256": "1e9d9a9260de48d8617d147cdd79bcbb17fe99e419077ad80d11231e476bd0b0",
+      "triangles": 102707,
+      "bounds": {
+        "min": [
+          -0.22777415,
+          -0.00145942,
+          -0.36767019
+        ],
+        "max": [
+          0.17223356,
+          0.97480736,
+          0.38740171
+        ],
+        "size": [
+          0.40000771,
+          0.97626678,
+          0.75507191
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "conservative",
+      "componentResults": [
+        {
+          "mesh": "Les_Paul_Body.001_Body_Bottom_0",
+          "ratio": 0.9,
+          "before": 27036,
+          "after": 24332,
+          "saved": 2704
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body Detail_0",
+          "ratio": 0.68,
+          "before": 102393,
+          "after": 69627,
+          "saved": 32766
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body Detail_0",
+          "ratio": 0.68,
+          "before": 38519,
+          "after": 26191,
+          "saved": 12328
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Neck_0",
+          "ratio": 0.88,
+          "before": 60172,
+          "after": 52950,
+          "saved": 7222
+        },
+        {
+          "mesh": "Les_Paul_Body.001_FretBoard_0",
+          "ratio": 0.95,
+          "before": 15808,
+          "after": 15016,
+          "saved": 792
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Strings_0",
+          "ratio": 0.72,
+          "before": 49296,
+          "after": 35492,
+          "saved": 13804
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body_0",
+          "ratio": 1,
+          "before": 4920,
+          "after": 4920,
+          "saved": 0
+        },
+        {
+          "mesh": "Les_Paul_BodyCover.001_Body_0",
+          "ratio": 1,
+          "before": 6023,
+          "after": 6023,
+          "saved": 0
+        },
+        {
+          "mesh": "BezierCurve.001_Material.006_0",
+          "ratio": 0.95,
+          "before": 5220,
+          "after": 4958,
+          "saved": 262
+        },
+        {
+          "mesh": "BezierCurve.001_Strings.001_0",
+          "ratio": 0.95,
+          "before": 480,
+          "after": 480,
+          "saved": 0
+        }
+      ],
+      "strategy": "Component-weighted simplification; body detail and strings are reduced before body/neck silhouettes.",
+      "file": "public/models/fred-studio-v2/optimised/gibson_guitar_conservative.glb",
+      "bytes": 27072900,
+      "sha256": "ad85dc4caffae200817b0604e6b7e343b38258c6c9873ce7a304bfafcfb625cf",
+      "triangles": 239989,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ],
+        "size": [
+          0.59629797,
+          0.98951693,
+          0.57585515
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "light",
+      "componentResults": [
+        {
+          "mesh": "Les_Paul_Body.001_Body_Bottom_0",
+          "ratio": 0.82,
+          "before": 27036,
+          "after": 22168,
+          "saved": 4868
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body Detail_0",
+          "ratio": 0.52,
+          "before": 102393,
+          "after": 53243,
+          "saved": 49150
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body Detail_0",
+          "ratio": 0.52,
+          "before": 38519,
+          "after": 20029,
+          "saved": 18490
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Neck_0",
+          "ratio": 0.78,
+          "before": 60172,
+          "after": 46934,
+          "saved": 13238
+        },
+        {
+          "mesh": "Les_Paul_Body.001_FretBoard_0",
+          "ratio": 0.9,
+          "before": 15808,
+          "after": 14226,
+          "saved": 1582
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Strings_0",
+          "ratio": 0.6,
+          "before": 49296,
+          "after": 29576,
+          "saved": 19720
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body_0",
+          "ratio": 1,
+          "before": 4920,
+          "after": 4920,
+          "saved": 0
+        },
+        {
+          "mesh": "Les_Paul_BodyCover.001_Body_0",
+          "ratio": 1,
+          "before": 6023,
+          "after": 6023,
+          "saved": 0
+        },
+        {
+          "mesh": "BezierCurve.001_Material.006_0",
+          "ratio": 0.88,
+          "before": 5220,
+          "after": 4592,
+          "saved": 628
+        },
+        {
+          "mesh": "BezierCurve.001_Strings.001_0",
+          "ratio": 0.88,
+          "before": 480,
+          "after": 480,
+          "saved": 0
+        }
+      ],
+      "strategy": "Component-weighted simplification; body detail and strings are reduced before body/neck silhouettes.",
+      "file": "public/models/fred-studio-v2/optimised/gibson_guitar_light.glb",
+      "bytes": 25476576,
+      "sha256": "a62f4aace2ca6c1120e7c640f4922d9a44d948734eeaf52a9302c195835877c3",
+      "triangles": 202191,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ],
+        "size": [
+          0.59629797,
+          0.98951693,
+          0.57585515
+        ]
+      }
+    },
+    {
+      "asset": "guitar",
+      "level": "moderate",
+      "componentResults": [
+        {
+          "mesh": "Les_Paul_Body.001_Body_Bottom_0",
+          "ratio": 0.72,
+          "before": 27036,
+          "after": 19464,
+          "saved": 7572
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body Detail_0",
+          "ratio": 0.4,
+          "before": 102393,
+          "after": 40957,
+          "saved": 61436
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body Detail_0",
+          "ratio": 0.4,
+          "before": 38519,
+          "after": 15407,
+          "saved": 23112
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Neck_0",
+          "ratio": 0.68,
+          "before": 60172,
+          "after": 40916,
+          "saved": 19256
+        },
+        {
+          "mesh": "Les_Paul_Body.001_FretBoard_0",
+          "ratio": 0.85,
+          "before": 15808,
+          "after": 13436,
+          "saved": 2372
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Strings_0",
+          "ratio": 0.48,
+          "before": 49296,
+          "after": 23662,
+          "saved": 25634
+        },
+        {
+          "mesh": "Les_Paul_Body.001_Body_0",
+          "ratio": 1,
+          "before": 4920,
+          "after": 4920,
+          "saved": 0
+        },
+        {
+          "mesh": "Les_Paul_BodyCover.001_Body_0",
+          "ratio": 1,
+          "before": 6023,
+          "after": 6023,
+          "saved": 0
+        },
+        {
+          "mesh": "BezierCurve.001_Material.006_0",
+          "ratio": 0.78,
+          "before": 5220,
+          "after": 4070,
+          "saved": 1150
+        },
+        {
+          "mesh": "BezierCurve.001_Strings.001_0",
+          "ratio": 0.78,
+          "before": 480,
+          "after": 480,
+          "saved": 0
+        }
+      ],
+      "strategy": "Component-weighted simplification; body detail and strings are reduced before body/neck silhouettes.",
+      "file": "public/models/fred-studio-v2/optimised/gibson_guitar_moderate.glb",
+      "bytes": 24072524,
+      "sha256": "f80b4bf39f8de84f5da94c3afddb76646cc312e34ad5b544407d76b26f8b9ac4",
+      "triangles": 169335,
+      "bounds": {
+        "min": [
+          -0.70913038,
+          -0.00446808,
+          -0.25877844
+        ],
+        "max": [
+          -0.11283241,
+          0.98504885,
+          0.31707671
+        ],
+        "size": [
+          0.59629797,
+          0.98951693,
+          0.57585515
+        ]
+      }
+    }
+  ]
+}

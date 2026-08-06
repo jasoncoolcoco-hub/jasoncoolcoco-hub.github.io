@@ -78,6 +78,62 @@ export const STUDIO_V2_CAMERA_PRESETS = {
     near: 0.05,
     far: 160,
   },
+  MUSIC_CLOSE: {
+    position: [-3.3, 0.88, 0.28],
+    target: [-2.03, 0.55, 1.4],
+    fov: 34,
+    near: 0.03,
+    far: 160,
+  },
+  GUITAR_CLOSE: {
+    position: [-3.08, 0.72, 0.5],
+    target: [-2.15, 0.53, 1.25],
+    fov: 30,
+    near: 0.03,
+    far: 160,
+  },
+  GUITAR_SIDE: {
+    position: [-1.1, 0.74, 0.2],
+    target: [-2.15, 0.53, 1.25],
+    fov: 32,
+    near: 0.03,
+    far: 160,
+  },
+  GUITAR_HEADSTOCK: {
+    position: [-3.08, 0.98, 0.5],
+    target: [-2.15, 0.9, 1.25],
+    fov: 24,
+    near: 0.03,
+    far: 160,
+  },
+  GUITAR_BODY: {
+    position: [-3.08, 0.46, 0.5],
+    target: [-2.15, 0.3, 1.25],
+    fov: 24,
+    near: 0.03,
+    far: 160,
+  },
+  MARSHALL_FRONT: {
+    position: [-3.15, 0.74, 0.54],
+    target: [-1.91, 0.52, 1.56],
+    fov: 30,
+    near: 0.03,
+    far: 160,
+  },
+  MARSHALL_CONTROL: {
+    position: [-3.12, 1.03, 0.58],
+    target: [-1.92, 0.94, 1.55],
+    fov: 22,
+    near: 0.03,
+    far: 160,
+  },
+  MACBOOK_CLOSE: {
+    position: [-0.34, 1.67, -0.05],
+    target: [0.961, 1.51, -0.05],
+    fov: 25,
+    near: 0.03,
+    far: 160,
+  },
 }
 
 export const STUDIO_V2_DEFAULT_CAMERA = 'REFERENCE'

@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-08-05T17:05:22.976Z",
+  "encoder": "glTF-Transform 4.4.2 + meshoptimizer 0.23.0",
+  "settings": {
+    "level": "high",
+    "quantizationVolume": "mesh",
+    "positionBits": 14,
+    "normalBits": 10,
+    "texcoordBits": 12
+  },
+  "records": [
+    {
+      "source": "public/models/fred-studio-v2/loft_interior_6_for_free.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/room_meshopt.glb",
+      "sourceBytes": 24059568,
+      "derivativeBytes": 18419836,
+      "sourceSha256": "5760cd49693e08773676b192090a50985787cf731d0c6e7e284f1c4814638c19",
+      "derivativeSha256": "6945807926a6a235f751e3f5ac0ee8b2aba563e3ea9f6936354bd4bf4cf8e277"
+    },
+    {
+      "source": "public/models/fred-studio-v2/objects/macbook_pro_2021.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/macbook_pro_2021_meshopt.glb",
+      "sourceBytes": 2548260,
+      "derivativeBytes": 2450836,
+      "sourceSha256": "1a38db1f63a4699573a0393c888b2191030c99cf81c2d3325712a69cb2b7af5f",
+      "derivativeSha256": "9849f5307ebe5a637d62ccf0e10a621bc04b627a3dcc79e26ad6f9931015d12f"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/marshall_amp_optimised.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/marshall_amp_optimised_meshopt.glb",
+      "sourceBytes": 19443612,
+      "derivativeBytes": 11122428,
+      "sourceSha256": "47e0630bf88457d9cf16ea7be1b4804943bf1e3bc8aacf4ce1dc88f2c7b9ec8a",
+      "derivativeSha256": "d360cfdde870c3e614ea65870ce1b939289e7ef1a76f1379d90e8ad2f8250df7"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/marshall_amp_conservative.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/marshall_amp_conservative_meshopt.glb",
+      "sourceBytes": 17438172,
+      "derivativeBytes": 9977004,
+      "sourceSha256": "18bf611ff657babda3aabc02cef9e092af69626b6b60691fc05db463d74e0462",
+      "derivativeSha256": "796ff9b053e0d1ff0560fb8fc7ceac949bc1d0d6c446ad626131c61a12b8740f"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/marshall_amp_light.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/marshall_amp_light_meshopt.glb",
+      "sourceBytes": 17211816,
+      "derivativeBytes": 9944124,
+      "sourceSha256": "1e9d9a9260de48d8617d147cdd79bcbb17fe99e419077ad80d11231e476bd0b0",
+      "derivativeSha256": "d9c140aa34200953037ac7664afc6ad379e15227d4b9b919a57b689558fc6e72"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/gibson_guitar_optimised.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/gibson_guitar_optimised_meshopt.glb",
+      "sourceBytes": 32015596,
+      "derivativeBytes": 17948596,
+      "sourceSha256": "4d2c8775ff5db62c7456d6f9fc00b7257579b4fc31e16eca38a4560471779c1e",
+      "derivativeSha256": "ef8d089f0ac52e5b06087bb044c57b6f18188dcf5db159dc36f245a44aced429"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/gibson_guitar_conservative.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/gibson_guitar_conservative_meshopt.glb",
+      "sourceBytes": 27072900,
+      "derivativeBytes": 17332576,
+      "sourceSha256": "ad85dc4caffae200817b0604e6b7e343b38258c6c9873ce7a304bfafcfb625cf",
+      "derivativeSha256": "fadc5e4ca8df846c28ea82ae540eabc8145f9c984c8a15e076643fed9d33722c"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/gibson_guitar_light.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/gibson_guitar_light_meshopt.glb",
+      "sourceBytes": 25476576,
+      "derivativeBytes": 17100196,
+      "sourceSha256": "a62f4aace2ca6c1120e7c640f4922d9a44d948734eeaf52a9302c195835877c3",
+      "derivativeSha256": "a2c1d7a569a0aa3a90f244e103339e947f8400a2f9644d7ad8017d6b00f1ab4e"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/gibson_guitar_moderate.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/meshopt/gibson_guitar_moderate_meshopt.glb",
+      "sourceBytes": 24072524,
+      "derivativeBytes": 16890688,
+      "sourceSha256": "f80b4bf39f8de84f5da94c3afddb76646cc312e34ad5b544407d76b26f8b9ac4",
+      "derivativeSha256": "63ff8d2b6b3d9e9efada1df052628190bf47248d2fa169f6c5ed7ab853bb4f1a"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/room_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/room_ktx2_meshopt.glb",
+      "sourceBytes": 29360656,
+      "derivativeBytes": 23728856,
+      "sourceSha256": "95e3c7aff852db9400e9806c9d0440789a853f1a8e15ed9f2f0256f230eb46ec",
+      "derivativeSha256": "df5551d1665313ba47bd3f8fd36bdcd8f92c2490c70165a656381044a657f997"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/macbook_pro_2021_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/macbook_pro_2021_ktx2_meshopt.glb",
+      "sourceBytes": 3367380,
+      "derivativeBytes": 3272344,
+      "sourceSha256": "abd22b8eba9cc8bfe4000311198d9dcc2b6f4ab4cbc40721434a4d098dcede16",
+      "derivativeSha256": "ac7ece7fe3b00acf0e9b3c9c04b34132851ac4b86e8c394b1b618b6b0c911b0b"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/marshall_amp_optimised_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/marshall_amp_optimised_ktx2_meshopt.glb",
+      "sourceBytes": 17551760,
+      "derivativeBytes": 9230484,
+      "sourceSha256": "7abe8da8f7c890b8aabea4ca4405cf6ba58fa5f5a927af9b849e7b7f99e45557",
+      "derivativeSha256": "6374fbe9118ba649a9ac71f15f81c394a3d3e32f8a7dec947043e2e67a4469b6"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/marshall_amp_conservative_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/marshall_amp_conservative_ktx2_meshopt.glb",
+      "sourceBytes": 15546328,
+      "derivativeBytes": 8085136,
+      "sourceSha256": "be5f9c0d92f59123d222365dddb7be248ba01c0382be28bcd058faa179f2a2ec",
+      "derivativeSha256": "2a2c16ff79466804e4ae9423a28754aba537d5d2602f649a29442e1d8992f861"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/marshall_amp_light_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/marshall_amp_light_ktx2_meshopt.glb",
+      "sourceBytes": 15319972,
+      "derivativeBytes": 8052260,
+      "sourceSha256": "d4bc1b0447e84c89322c1b802f7e01735c71d4afaa1bb72e7f88e9cad91397d2",
+      "derivativeSha256": "9dea5151b7699b1343fb951118ecb51ed8d9a97dda0da7e3fcad34dcdc3a5ffe"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_optimised_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/gibson_guitar_optimised_ktx2_meshopt.glb",
+      "sourceBytes": 31928096,
+      "derivativeBytes": 17861076,
+      "sourceSha256": "0880ba5f1a8b921344e04c8f218b0036913181b77f89115d34fc7a12af7f06de",
+      "derivativeSha256": "bd9138521a105c883875230306e3dbed6f116e53c19dfddb09de06dc230e04b8"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_conservative_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/gibson_guitar_conservative_ktx2_meshopt.glb",
+      "sourceBytes": 26985408,
+      "derivativeBytes": 17245056,
+      "sourceSha256": "e907650d334ea747729c3b0b7febb8123946dcd9c4a0eb09a434b4d682d01b85",
+      "derivativeSha256": "f58438c21ed84f821747beff18e4e7af251b2a99bdfc81bc03ad566b4fa552ca"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_light_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/gibson_guitar_light_ktx2_meshopt.glb",
+      "sourceBytes": 25389076,
+      "derivativeBytes": 17012676,
+      "sourceSha256": "5bd4e2843ea9b53e7b318fdf8fce6bbd09636ff4b38f59c829fc385b7bed96fd",
+      "derivativeSha256": "5838c2f718f4f08905f7e826777a83b37979e72ea57b178d65ea4302b386b7fe"
+    },
+    {
+      "source": "public/models/fred-studio-v2/optimised/ktx2/gibson_guitar_moderate_ktx2.glb",
+      "derivative": "public/models/fred-studio-v2/optimised/ktx2-meshopt/gibson_guitar_moderate_ktx2_meshopt.glb",
+      "sourceBytes": 23985028,
+      "derivativeBytes": 16803168,
+      "sourceSha256": "c5b62f844b72c2cb0eeadf2debd279280309b02699f93529e9a8f192f339072b",
+      "derivativeSha256": "090cdc92ba6cfc1f3e20c4626a6bc4d1b0b11c76f96dda01837377e390a59d68"
+    }
+  ]
+}

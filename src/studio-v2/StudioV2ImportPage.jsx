@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createStudioV2Scene } from './createStudioV2Scene'
-import StudioV2DebugPanel from './StudioV2DebugPanel'
 import StudioV2Loading from './StudioV2Loading'
+import {
+  createStudioV2DeliveryConfig,
+  deliveryRequestFromSearch,
+} from './studioV2DerivativeConfig'
+import { studioV2EntryTestConfig } from './studioV2EntryGate'
+
+const StudioV2DebugPanel = lazy(() => import('./StudioV2DebugPanel'))
 
 function readableLoadError(error) {
   if (error?.message?.includes('404')) return 'THE MODEL FILE WAS NOT FOUND.'
@@ -15,6 +21,7 @@ export default function StudioV2ImportPage() {
   const [audit, setAudit] = useState(null)
   const [diagnostics, setDiagnostics] = useState(null)
   const [error, setError] = useState('')
+  const [entryState, setEntryState] = useState(null)
   const [exploring, setExploring] = useState(false)
   const [loadingVisible, setLoadingVisible] = useState(true)
   const [progress, setProgress] = useState(0)
@@ -26,13 +33,34 @@ export default function StudioV2ImportPage() {
   const initialCameraPreset = debugEnabled || captureEnabled
     ? searchParams.get('view') || undefined
     : undefined
+  const initialAssetMaterialMode = debugEnabled || captureEnabled
+    ? searchParams.get('materials') || undefined
+    : undefined
   const initialLightingCandidate = debugEnabled ? searchParams.get('lighting') || undefined : undefined
   const pixelRatioCap = debugEnabled && searchParams.get('dpr') === '1' ? 1 : undefined
+  const auditViewportMatch = (debugEnabled || captureEnabled)
+    ? searchParams.get('auditViewport')?.match(/^(\d{3,4})x(\d{3,4})$/)
+    : null
+  const forcedViewport = auditViewportMatch
+    ? [Number(auditViewportMatch[1]), Number(auditViewportMatch[2])]
+    : undefined
+  const deliveryConfig = createStudioV2DeliveryConfig(
+    deliveryRequestFromSearch(searchParams),
+    debugEnabled || captureEnabled,
+  )
+  const entryTestConfig = studioV2EntryTestConfig(
+    searchParams,
+    debugEnabled || captureEnabled,
+    attempt,
+  )
+  const deliverySignature = JSON.stringify(deliveryConfig)
+  const entryTestSignature = JSON.stringify(entryTestConfig)
 
   useEffect(() => {
     if (!mountRef.current) return undefined
     setAudit(null)
     setDiagnostics(null)
+    setEntryState(null)
     setError('')
     setExploring(false)
     setLoadingVisible(true)
@@ -43,13 +71,36 @@ export default function StudioV2ImportPage() {
       capture: captureEnabled,
       debug: debugEnabled,
       onDiagnostics: setDiagnostics,
-      onError: (loadError) => setError(readableLoadError(loadError)),
-      onProgress: setProgress,
+      onEntryState: (nextEntryState) => {
+        setEntryState(nextEntryState)
+        setProgress(nextEntryState.progress)
+      },
+      onError: (loadError) => {
+        setLoadingVisible(true)
+        setError(readableLoadError(loadError))
+      },
       initialCameraPreset,
+      initialAssetMaterialMode,
       initialLightingCandidate,
       pixelRatioCap,
+      forcedViewport,
+      deliveryConfig,
+      entryTestConfig,
+      onRoomReady: (roomAudit) => {
+        setAudit(roomAudit)
+      },
+      onStudioV2Ready: (modelAudit) => {
+        window.dispatchEvent(new CustomEvent('studio-v2-ready', {
+          detail: {
+            completeReadyMs: modelAudit.completeReadyMs,
+            entry: modelAudit.entry,
+            firstVisibleFrameMs: modelAudit.firstVisibleFrameMs,
+          },
+        }))
+      },
       onReady: (modelAudit) => {
         setAudit(modelAudit)
+        setEntryState(modelAudit.entry)
         setProgress(100)
         setReady(true)
         fadeTimerRef.current = window.setTimeout(() => setLoadingVisible(false), 700)
@@ -66,7 +117,7 @@ export default function StudioV2ImportPage() {
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
-  }, [attempt, captureEnabled, debugEnabled, initialCameraPreset, initialLightingCandidate, pixelRatioCap])
+  }, [attempt, captureEnabled, debugEnabled, initialAssetMaterialMode, initialCameraPreset, initialLightingCandidate, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x')])
 
   const enableExplore = () => {
     setExploring(true)
@@ -80,7 +131,14 @@ export default function StudioV2ImportPage() {
   }
 
   return (
-    <main className={`studio-v2${ready ? ' studio-v2--ready' : ''}`}>
+    <main
+      className={`studio-v2${ready ? ' studio-v2--ready' : ''}`}
+      data-scene-ready={ready}
+      data-entry-phase={entryState?.phase ?? 'initialising'}
+      data-complete-ready-ms={entryState?.completeReadyMs ?? ''}
+      data-interactions-enabled={entryState?.interactionsEnabled ?? false}
+      data-critical-requests={entryState?.requests?.length ?? 0}
+    >
       <div
         ref={mountRef}
         className="studio-v2__canvas"
@@ -103,20 +161,21 @@ export default function StudioV2ImportPage() {
         <p className="studio-v2__hint">SELECT EXPLORE TO ORBIT THE LOFT</p>
       )}
 
+      <StudioV2Loading
+        error={error}
+        progress={progress}
+        visible={loadingVisible || Boolean(error)}
+        onRetry={() => setAttempt((value) => value + 1)}
+      />
       {debugEnabled && !captureEnabled && (
-        <StudioV2Loading
-          error={error}
-          progress={progress}
-          visible={loadingVisible || Boolean(error)}
-          onRetry={() => setAttempt((value) => value + 1)}
-        />
-      )}
-      {debugEnabled && !captureEnabled && (
-        <StudioV2DebugPanel
-          audit={audit}
-          diagnostics={diagnostics}
-          runtime={runtime}
-        />
+        <Suspense fallback={null}>
+          <StudioV2DebugPanel
+            audit={audit}
+            diagnostics={diagnostics}
+            entryState={entryState}
+            runtime={runtime}
+          />
+        </Suspense>
       )}
     </main>
   )

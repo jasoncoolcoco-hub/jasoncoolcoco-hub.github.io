@@ -33,7 +33,7 @@ function scheduleResourceCleanup(entry) {
   }, 0)
 }
 
-function createResource(url) {
+function createResource(url, loader = new GLTFLoader()) {
   const subscribers = new Set()
   const entry = {
     asset: null,
@@ -42,8 +42,8 @@ function createResource(url) {
     refs: 0,
     settled: false,
     subscribers,
+    url,
   }
-  const loader = new GLTFLoader()
   entry.promise = new Promise((resolve, reject) => {
     loader.load(
       url,
@@ -70,12 +70,12 @@ function createResource(url) {
   return entry
 }
 
-export function acquireStudioV2Model(url, onProgress) {
+export function acquireStudioV2Model(url, onProgress, loader) {
   if (resource?.error && resource.refs === 0) {
     if (resource.cleanupTimer) window.clearTimeout(resource.cleanupTimer)
     resource = null
   }
-  if (!resource) resource = createResource(url)
+  if (!resource || resource.url !== url) resource = createResource(url, loader)
   const entry = resource
   if (entry.cleanupTimer) {
     window.clearTimeout(entry.cleanupTimer)
