@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createStudioV2Scene } from './createStudioV2Scene'
 import StudioV2Loading from './StudioV2Loading'
+import StudioV2RadioScreenPlayer from './StudioV2RadioScreenPlayer'
 import {
   createStudioV2DeliveryConfig,
   deliveryRequestFromSearch,
@@ -19,6 +20,7 @@ function readableLoadError(error) {
 export default function StudioV2ImportPage() {
   const mountRef = useRef(null)
   const fadeTimerRef = useRef(null)
+  const radioCloseRef = useRef(null)
   const [attempt, setAttempt] = useState(0)
   const [audit, setAudit] = useState(null)
   const [diagnostics, setDiagnostics] = useState(null)
@@ -31,6 +33,12 @@ export default function StudioV2ImportPage() {
   const [runtime, setRuntime] = useState(null)
   const [audioController, setAudioController] = useState(null)
   const [audioState, setAudioState] = useState(null)
+  const [radioPanelState, setRadioPanelState] = useState(null)
+  const [radioScreenRequest, setRadioScreenRequest] = useState(null)
+  const [radioTransitionSpeed, setRadioTransitionSpeed] = useState(() => {
+    const requestedSpeed = Number(new URLSearchParams(window.location.search).get('radioSpeed'))
+    return [1, 0.5, 0.25].includes(requestedSpeed) ? requestedSpeed : 1
+  })
   const searchParams = new URLSearchParams(window.location.search)
   const debugEnabled = searchParams.get('debug') === '1'
   const captureEnabled = searchParams.get('capture') === '1'
@@ -59,6 +67,12 @@ export default function StudioV2ImportPage() {
   )
   const deliverySignature = JSON.stringify(deliveryConfig)
   const entryTestSignature = JSON.stringify(entryTestConfig)
+  const requestedFixtureCount = (debugEnabled || captureEnabled)
+    ? Number(searchParams.get('radioFixture'))
+    : null
+  const radioFixtureCount = [1, 6, 20].includes(requestedFixtureCount)
+    ? requestedFixtureCount
+    : null
 
   useEffect(() => {
     if (!mountRef.current) return undefined
@@ -70,6 +84,8 @@ export default function StudioV2ImportPage() {
     setLoadingVisible(true)
     setProgress(0)
     setReady(false)
+    setRadioPanelState(null)
+    setRadioScreenRequest(null)
     const catalogueOverride = debugEnabled ? searchParams.get('audioCatalog') : null
     const catalogueSource = resolveStudioV2AudioCatalogue({
       debug: debugEnabled,
@@ -93,6 +109,10 @@ export default function StudioV2ImportPage() {
         setLoadingVisible(true)
         setError(readableLoadError(loadError))
       },
+      onRadioPanelOpenRequest: (startBounds) => {
+        setRadioScreenRequest({ key: performance.now(), startBounds })
+      },
+      onRadioPanelCloseRequest: (options) => radioCloseRef.current?.(options),
       initialCameraPreset,
       initialAssetMaterialMode,
       initialLightingCandidate,
@@ -121,6 +141,7 @@ export default function StudioV2ImportPage() {
         fadeTimerRef.current = window.setTimeout(() => setLoadingVisible(false), 700)
       },
     })
+    const unsubscribeRadioPanel = scene.subscribeRadioPanel(setRadioPanelState)
     setRuntime(scene)
     document.documentElement.classList.add('studio-v2-active')
     document.body.classList.add('studio-v2-active')
@@ -128,6 +149,7 @@ export default function StudioV2ImportPage() {
     return () => {
       window.clearTimeout(fadeTimerRef.current)
       scene.dispose()
+      unsubscribeRadioPanel()
       unsubscribeAudio()
       controller.destroy()
       setRuntime(null)
@@ -174,6 +196,46 @@ export default function StudioV2ImportPage() {
         {audioState?.status === 'playing' ? 'Pause Marshall music' : 'Play Marshall music'}
       </button>
 
+      <section className="studio-v2__radio-accessible" aria-label="Fred Studio Radio">
+        <p aria-live="polite">
+          {radioPanelState?.selectedTrackTitle ?? 'Audio unavailable'}
+          {radioPanelState?.selectedTrackArtist ? ` by ${radioPanelState.selectedTrackArtist}` : ''}
+          {audioState?.status ? `, ${audioState.status}` : ''}
+        </p>
+        <button
+          type="button"
+          disabled={!ready || Boolean(error)}
+          aria-expanded={Boolean(radioScreenRequest)}
+          onClick={() => runtime?.toggleRadioPanel()}
+        >
+          Open Fred Studio Radio
+        </button>
+      </section>
+
+      {radioScreenRequest && (
+        <StudioV2RadioScreenPlayer
+          audioController={audioController}
+          audioState={audioState}
+          fixtureCount={radioFixtureCount}
+          request={radioScreenRequest}
+          runtime={runtime}
+          transitionSpeed={debugEnabled ? radioTransitionSpeed : 1}
+          registerClose={(close) => { radioCloseRef.current = close }}
+          onStateChange={(state) => runtime?.setRadioScreenState(state)}
+          onClosed={() => {
+            runtime?.setRadioScreenState({
+              open: false,
+              transitionState: 'WORLD_COMPACT',
+              handoffMode: 'WORLD_COMPACT',
+              projectedReturnBounds: runtime?.getRadioPanelScreenBounds(),
+              catalogueFixtureCount: radioFixtureCount,
+            })
+            radioCloseRef.current = null
+            setRadioScreenRequest(null)
+          }}
+        />
+      )}
+
       {debugEnabled && !captureEnabled && (
         <header className="studio-v2__header">
           <a href="/" className="studio-v2__back">BACK</a>
@@ -203,6 +265,8 @@ export default function StudioV2ImportPage() {
             entryState={entryState}
             runtime={runtime}
             audioController={audioController}
+            radioTransitionSpeed={radioTransitionSpeed}
+            onRadioTransitionSpeedChange={setRadioTransitionSpeed}
           />
         </Suspense>
       )}

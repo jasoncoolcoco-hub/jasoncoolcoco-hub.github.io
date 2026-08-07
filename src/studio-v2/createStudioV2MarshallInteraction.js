@@ -19,6 +19,7 @@ export function createStudioV2MarshallInteraction({
   root,
   sceneReady,
   criticalError,
+  blockers = [],
 }) {
   const marshall = findSemanticObject(root, 'MARSHALL_AMP')
   const guitar = findSemanticObject(root, 'GIBSON_GUITAR')
@@ -69,11 +70,12 @@ export function createStudioV2MarshallInteraction({
   const hitsMarshall = (event) => {
     if (!interactionAvailable()) return false
     updatePointer(event)
-    const candidates = [marshall, guitar].filter(Boolean)
+    const semanticRoots = [marshall, guitar, ...blockers].filter(Boolean)
+    const candidates = semanticRoots
     const nearestHit = raycaster.intersectObjects(candidates, true)[0]
     if (!nearestHit) return false
     let semanticRoot = nearestHit.object
-    while (semanticRoot && semanticRoot !== marshall && semanticRoot !== guitar) {
+    while (semanticRoot && !semanticRoots.includes(semanticRoot)) {
       semanticRoot = semanticRoot.parent
     }
     return semanticRoot === marshall
@@ -142,12 +144,14 @@ export function createStudioV2MarshallInteraction({
       && movement <= MAX_CLICK_MOVEMENT_PX
       && duration <= MAX_CLICK_DURATION_MS
       && !current.orbitDragged
+      && !event.defaultPrevented
       && interactionAvailable()
     let result = 'ignored-outside-marshall'
     if (current.beganOnMarshall && !endedOnMarshall) result = 'ignored-pointer-left-marshall'
     if (movement > MAX_CLICK_MOVEMENT_PX) result = 'ignored-camera-drag'
     else if (duration > MAX_CLICK_DURATION_MS) result = 'ignored-long-press'
     else if (current.orbitDragged) result = 'ignored-orbit-controls-drag'
+    else if (event.defaultPrevented) result = 'ignored-radio-screen-dismissal'
     else if (!sceneReady()) result = 'ignored-scene-not-ready'
     else if (criticalError()) result = 'ignored-critical-scene-error'
     else if (canToggle) result = 'toggle-requested'

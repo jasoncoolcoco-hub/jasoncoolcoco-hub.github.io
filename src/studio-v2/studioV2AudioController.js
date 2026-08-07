@@ -4,6 +4,7 @@ const INITIAL_STATE = Object.freeze({
   status: 'idle',
   catalogueStatus: 'idle',
   catalogueUrl: DEFAULT_CATALOGUE_URL,
+  defaultTrackId: null,
   trackId: null,
   trackTitle: null,
   currentTime: 0,
@@ -14,6 +15,7 @@ const INITIAL_STATE = Object.freeze({
   errorCode: null,
   tracks: [],
   audioElementCount: 1,
+  debugFixtureCount: null,
 })
 
 function errorMessage(error, fallback) {
@@ -155,7 +157,7 @@ export function createStudioV2AudioController({
     audio.addEventListener(eventName, listener)
   })
 
-  async function loadCatalogue({ force = false } = {}) {
+  async function loadCatalogue({ force = false, timeoutMs = null } = {}) {
     if (destroyed) return snapshot()
     if (catalogue && !force) return snapshot()
     if (cataloguePromise && !force) return cataloguePromise
@@ -169,6 +171,7 @@ export function createStudioV2AudioController({
         status: 'idle',
         trackId: null,
         trackTitle: null,
+        defaultTrackId: null,
         currentTime: 0,
         duration: null,
         volume: 1,
@@ -180,6 +183,14 @@ export function createStudioV2AudioController({
 
     catalogueAbortController?.abort()
     catalogueAbortController = new AbortController()
+    const requestAbortController = catalogueAbortController
+    let timedOut = false
+    const requestTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0
+      ? globalThis.setTimeout(() => {
+        timedOut = true
+        requestAbortController.abort()
+      }, timeoutMs)
+      : null
     publish({
       catalogueStatus: 'loading',
       status: selectedTrack ? state.status : 'catalog-loading',
@@ -202,6 +213,7 @@ export function createStudioV2AudioController({
           return publish({
             catalogueStatus: 'empty',
             status: 'unavailable',
+            defaultTrackId: null,
             tracks: [],
             error: 'NO_PUBLISHED_TRACK',
             errorCode: 'NO_PUBLISHED_TRACK',
@@ -210,21 +222,32 @@ export function createStudioV2AudioController({
         return publish({
           catalogueStatus: 'ready',
           status: selectedTrack ? state.status : 'idle',
-          tracks: catalogue.tracks.map(({ id, title, artist, enabled }) => ({
+          defaultTrackId: catalogue.defaultTrackId,
+          tracks: catalogue.tracks.map(({ id, title, version, artist, cover, enabled }) => ({
             id,
             title,
+            version,
             artist,
+            cover: cover ?? null,
             enabled,
           })),
           error: null,
           errorCode: null,
         })
       } catch (error) {
-        if (destroyed || error?.name === 'AbortError') return snapshot()
+        if (destroyed || (error?.name === 'AbortError' && !timedOut)) return snapshot()
         catalogue = null
         publish({ catalogueStatus: 'error' })
+        if (timedOut) {
+          return setError(
+            new Error(`Audio catalogue request timed out after ${timeoutMs} ms.`),
+            'Audio catalogue could not be loaded.',
+            'CATALOGUE_TIMEOUT',
+          )
+        }
         return setError(error, 'Audio catalogue could not be loaded.')
       } finally {
+        if (requestTimeout !== null) globalThis.clearTimeout(requestTimeout)
         cataloguePromise = null
       }
     })()
@@ -259,6 +282,47 @@ export function createStudioV2AudioController({
     })
     audio.load()
     return snapshot()
+  }
+
+  function setDebugCatalogueFixture(count) {
+    if (destroyed || !catalogue || !Number.isInteger(count) || count < 1) return snapshot()
+    const enabled = catalogue.tracks.filter(({ enabled }) => enabled)
+    if (enabled.length === 0) return snapshot()
+    const seed = enabled[0]
+    const fixtureTracks = Array.from({ length: count }, (_, index) => Object.freeze({
+      ...seed,
+      id: index === 0 ? seed.id : `debug-fixture-${index + 1}`,
+      title: index === 0 ? seed.title : `Studio Test Track ${String(index + 1).padStart(2, '0')}`,
+      artist: index === 0 ? seed.artist : 'Debug catalogue fixture',
+      debugFixture: index > 0,
+    }))
+    catalogue = Object.freeze({
+      version: catalogue.version,
+      defaultTrackId: fixtureTracks[0].id,
+      tracks: Object.freeze(fixtureTracks),
+    })
+    return publish({
+      catalogueStatus: 'ready',
+      defaultTrackId: catalogue.defaultTrackId,
+      debugFixtureCount: count,
+      tracks: fixtureTracks.map(({
+        id,
+        title,
+        version,
+        artist,
+        cover,
+        enabled: trackEnabled,
+        debugFixture,
+      }) => ({
+        id,
+        title,
+        version,
+        artist,
+        cover: cover ?? null,
+        enabled: trackEnabled,
+        debugFixture: Boolean(debugFixture),
+      })),
+    })
   }
 
   async function loadDefaultTrack() {
@@ -354,6 +418,7 @@ export function createStudioV2AudioController({
     pause,
     play,
     previous: () => moveTrack(-1),
+    setDebugCatalogueFixture,
     setTrack,
     stop,
     subscribe(listener) {

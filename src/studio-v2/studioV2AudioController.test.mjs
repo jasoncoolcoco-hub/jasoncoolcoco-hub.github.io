@@ -117,6 +117,8 @@ assert.equal(FakeAudio.instances, 1)
 assert.equal(controller.getState().audioElementCount, 1)
 await controller.loadCatalogue()
 assert.equal(controller.getState().catalogueStatus, 'ready')
+assert.equal(controller.getState().defaultTrackId, 'default-track')
+assert.equal(controller.getState().tracks[0].version, 'Test')
 await controller.play()
 assert.equal(controller.getState().trackId, 'default-track')
 assert.equal(controller.getState().status, 'playing')
@@ -138,6 +140,21 @@ assert.equal(FakeAudio.instances, 1)
 controller.stop()
 assert.equal(controller.getState().currentTime, 0)
 controller.destroy()
+
+const fixtureController = createStudioV2AudioController({
+  createAudioElement: () => new FakeAudio(),
+  fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
+})
+await fixtureController.loadCatalogue()
+fixtureController.setDebugCatalogueFixture(6)
+assert.equal(fixtureController.getState().tracks.length, 6)
+assert.equal(fixtureController.getState().debugFixtureCount, 6)
+await fixtureController.setTrack('debug-fixture-2')
+await fixtureController.play()
+assert.equal(fixtureController.getState().trackId, 'debug-fixture-2')
+assert.equal(fixtureController.getState().status, 'playing')
+assert.equal(FakeAudio.instances, 2)
+fixtureController.destroy()
 
 const emptyPublishedController = createStudioV2AudioController({
   catalogueUrl: '/audio/fred-studio/catalog.published.json',
@@ -205,6 +222,21 @@ await invalidJsonCatalogue.loadCatalogue()
 assert.equal(invalidJsonCatalogue.getState().status, 'error')
 assert.match(invalidJsonCatalogue.getState().error, /Unexpected token/)
 invalidJsonCatalogue.destroy()
+
+const timedOutCatalogue = createStudioV2AudioController({
+  createAudioElement: () => new FakeAudio(),
+  fetchImpl: async (_url, { signal }) => new Promise((_resolve, reject) => {
+    signal.addEventListener('abort', () => {
+      const error = new Error('Aborted')
+      error.name = 'AbortError'
+      reject(error)
+    })
+  }),
+})
+await timedOutCatalogue.loadCatalogue({ timeoutMs: 5 })
+assert.equal(timedOutCatalogue.getState().catalogueStatus, 'error')
+assert.equal(timedOutCatalogue.getState().errorCode, 'CATALOGUE_TIMEOUT')
+timedOutCatalogue.destroy()
 
 class RejectingAudio extends FakeAudio {
   play() {

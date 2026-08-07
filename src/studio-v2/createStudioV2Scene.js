@@ -33,6 +33,11 @@ import { createStudioV2DeliveryConfig } from './studioV2DerivativeConfig'
 import { createStudioV2GltfLoader } from './studioV2GltfLoader'
 import { createStudioV2EntryGate } from './studioV2EntryGate'
 import { createStudioV2MarshallInteraction } from './createStudioV2MarshallInteraction'
+import { createStudioV2RadioPanel } from './createStudioV2RadioPanel'
+import {
+  STUDIO_V2_RADIO_PANEL_ID,
+  STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
+} from './studioV2RadioPanelConfig'
 
 function roundedVector(vector) {
   return vector.toArray().map((value) => Number(value.toFixed(3)))
@@ -68,6 +73,8 @@ export function createStudioV2Scene({
   onEntryState,
   onError,
   onProgress,
+  onRadioPanelCloseRequest,
+  onRadioPanelOpenRequest,
   onReady,
   onRoomReady,
   onStudioV2Ready,
@@ -310,6 +317,8 @@ export function createStudioV2Scene({
   let modelRoot = null
   let marshallInteraction = null
   let unsubscribeAudioState = null
+  let radioPanel = null
+  let unsubscribeRadioPanel = null
   let spatialDebug = null
   let modelAudit = null
   let environmentRenderTarget = null
@@ -325,6 +334,14 @@ export function createStudioV2Scene({
   let modelResource = null
   let roomLoaderSupport = null
   let roomTextureFormats = []
+  let radioMetadataReadyMs = null
+  let radioPanelReadyMs = null
+  let radioPanelState = null
+  const radioPanelSubscribers = new Set()
+  const publishRadioPanelState = (nextState) => {
+    radioPanelState = nextState
+    radioPanelSubscribers.forEach((listener) => listener(nextState))
+  }
   const visualState = {
     ibl: true,
     shadows: true,
@@ -504,6 +521,37 @@ export function createStudioV2Scene({
   const readyPromise = (async () => {
     entryGate.setPhase('loading-entry-assets')
     const placedObjectsPromise = parallelEntryLoading ? loadPlacedObjects() : null
+    const radioPanelPromise = (async () => {
+      const metadataState = audioController
+        ? await audioController.loadCatalogue({
+          timeoutMs: STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
+        })
+        : null
+      radioMetadataReadyMs = Number((performance.now() - loadStartedAt).toFixed(1))
+      if (disposed) return null
+      const panel = createStudioV2RadioPanel({
+        audioController,
+        controls,
+        domElement: renderer.domElement,
+        onOpenRequest: onRadioPanelOpenRequest,
+        parent: entryRoot,
+        renderer,
+        metadataReadyAtMs: radioMetadataReadyMs,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        startedAt: loadStartedAt,
+      })
+      panel.setCamera(camera)
+      unsubscribeRadioPanel = panel.subscribe(publishRadioPanelState)
+      radioPanelReadyMs = Number((performance.now() - loadStartedAt).toFixed(1))
+      await waitForEntryAsset(STUDIO_V2_RADIO_PANEL_ID, Promise.resolve(panel))
+      entryGate.markAssetReady(STUDIO_V2_RADIO_PANEL_ID, {
+        catalogueStatus: metadataState?.catalogueStatus ?? 'unavailable',
+        fallback: metadataState?.catalogueStatus !== 'ready',
+        metadataReadyMs: radioMetadataReadyMs,
+        panelReadyMs: radioPanelReadyMs,
+      })
+      return panel
+    })()
     roomLoaderSupport = await createStudioV2GltfLoader(renderer, activeDeliveryConfig)
     modelResource = acquireStudioV2Model(
       activeDeliveryConfig.roomUrl,
@@ -516,14 +564,16 @@ export function createStudioV2Scene({
     ).then(prepareRoom)
     let roomPreparation
     if (parallelEntryLoading) {
-      [roomPreparation, placedObjectsResource] = await Promise.all([
+      [roomPreparation, placedObjectsResource, radioPanel] = await Promise.all([
         roomPreparationPromise,
         placedObjectsPromise,
+        radioPanelPromise,
       ])
     } else {
       roomPreparation = await roomPreparationPromise
       await new Promise((resolve) => requestAnimationFrame(() => resolve()))
       placedObjectsResource = await loadPlacedObjects()
+      radioPanel = await radioPanelPromise
     }
     if (!roomPreparation || disposed) {
       placedObjectsResource?.dispose()
@@ -545,7 +595,10 @@ export function createStudioV2Scene({
       ),
     })
     entryGate.markCondition('anchorsReady', {
-      anchors: placedObjectRecords.map(({ anchorName }) => anchorName),
+      anchors: [
+        ...placedObjectRecords.map(({ anchorName }) => anchorName),
+        STUDIO_V2_RADIO_PANEL_ID,
+      ],
     })
     entryRoot.updateMatrixWorld(true)
     camera.updateMatrixWorld(true)
@@ -560,6 +613,7 @@ export function createStudioV2Scene({
       'ROOM_ENVIRONMENT',
       'MACBOOK_ISLAND_01',
       'MARSHALL_GUITAR_FLOOR_01',
+      STUDIO_V2_RADIO_PANEL_ID,
     ].every((semanticId) => openingSemanticIds.has(semanticId))
     if (!openingGroupsPresent) {
       throw new Error('Entry-critical opening groups were not all registered before warm-up.')
@@ -612,13 +666,13 @@ export function createStudioV2Scene({
         root: entryRoot,
         sceneReady: () => entryGate.snapshot().sceneReady,
         criticalError: () => Boolean(entryGate.snapshot().error),
+        blockers: [radioPanel?.group].filter(Boolean),
       })
       unsubscribeAudioState = audioController.subscribe((audioState) => {
         mount.dataset.audioState = audioState.status
         mount.dataset.audioCurrentTime = Number(audioState.currentTime ?? 0).toFixed(3)
         mount.dataset.audioTrackId = audioState.trackId ?? ''
       })
-      void audioController.loadCatalogue()
     }
 
     const loadTimeMs = performance.now() - loadStartedAt
@@ -653,6 +707,7 @@ export function createStudioV2Scene({
       windowDecorationRemoval,
       placedObjects: placedObjectRecords,
       cameraSafety: cameraSafety.record(),
+      radioPanel: radioPanel?.getState() ?? null,
       root: {
         position: STUDIO_V2_MODEL_TRANSFORM.position,
         rotation: STUDIO_V2_MODEL_TRANSFORM.rotation,
@@ -754,6 +809,9 @@ export function createStudioV2Scene({
       diagnostics.triangles = renderer.info.render.triangles
       diagnostics.geometries = renderer.info.memory.geometries
       diagnostics.textures = renderer.info.memory.textures
+      mount.dataset.renderFps = String(diagnostics.fps)
+      mount.dataset.renderCalls = String(diagnostics.calls)
+      mount.dataset.renderTriangles = String(diagnostics.triangles)
       onDiagnostics?.({
         ...diagnostics,
         camera: {
@@ -788,6 +846,7 @@ export function createStudioV2Scene({
           stabilizations: orbitStabilizations,
         },
         spatial: spatialDebug?.getState() ?? null,
+        radioPanel: radioPanel?.getState() ?? radioPanelState,
         entry: entryGate.snapshot(),
         viewport: [renderSize().width, renderSize().height],
       })
@@ -996,6 +1055,57 @@ export function createStudioV2Scene({
     toggleMarshallAudio(source = 'runtime') {
       return marshallInteraction?.toggle(source) ?? Promise.resolve(audioController?.getState?.())
     },
+    getRadioPanelState() {
+      return radioPanel?.getState() ?? radioPanelState
+    },
+    subscribeRadioPanel(listener) {
+      radioPanelSubscribers.add(listener)
+      if (radioPanelState) listener(radioPanelState)
+      return () => radioPanelSubscribers.delete(listener)
+    },
+    toggleRadioPanel() {
+      return radioPanel?.openScreenPlayer() ?? null
+    },
+    setRadioPanelExpanded(expanded, options) {
+      if (expanded) return radioPanel?.openScreenPlayer() ?? null
+      onRadioPanelCloseRequest?.({ immediate: Boolean(options?.immediate) })
+      return radioPanel?.getState() ?? null
+    },
+    openRadioScreen() {
+      return radioPanel?.openScreenPlayer() ?? null
+    },
+    closeRadioScreen(options) {
+      onRadioPanelCloseRequest?.(options ?? {})
+      return radioPanel?.getState() ?? null
+    },
+    setRadioScreenState(state) {
+      return radioPanel?.setScreenPlayerState(state) ?? null
+    },
+    getRadioPanelScreenBounds() {
+      return radioPanel?.getProjectedBounds() ?? null
+    },
+    prepareRadioPanelCompactSurface() {
+      return radioPanel?.prepareCompactTexture() ?? null
+    },
+    animateRadioPanelWorldLayers(options) {
+      return radioPanel?.animateWorldLayers(options) ?? null
+    },
+    selectRadioTrack(trackId) {
+      const track = audioController?.getState?.().tracks?.find(({ id }) => id === trackId)
+      return radioPanel?.selectTrack(track) ?? Promise.resolve(null)
+    },
+    setRadioPanelPosition(axis, value) {
+      if (!debug) return radioPanel?.getState() ?? null
+      return radioPanel?.setDebugPosition(axis, value) ?? null
+    },
+    setRadioPanelRotationDegrees(axis, value) {
+      if (!debug) return radioPanel?.getState() ?? null
+      return radioPanel?.setDebugRotationDegrees(axis, value) ?? null
+    },
+    resetRadioPanelTransform() {
+      if (!debug) return radioPanel?.getState() ?? null
+      return radioPanel?.resetDebugTransform() ?? null
+    },
     getAssetMaterialMode() {
       return placedObjectsResource?.getMaterialMode() ?? 'refined'
     },
@@ -1025,6 +1135,9 @@ export function createStudioV2Scene({
       resizeObserver.disconnect()
       marshallInteraction?.dispose()
       unsubscribeAudioState?.()
+      unsubscribeRadioPanel?.()
+      radioPanel?.dispose()
+      radioPanelSubscribers.clear()
       controls.dispose()
       placedObjectsResource?.dispose()
       modelResource?.release()
@@ -1048,6 +1161,9 @@ export function createStudioV2Scene({
       delete mount.dataset.audioState
       delete mount.dataset.audioCurrentTime
       delete mount.dataset.audioTrackId
+      delete mount.dataset.renderFps
+      delete mount.dataset.renderCalls
+      delete mount.dataset.renderTriangles
       if (window.__FRED_STUDIO_V2_DIAGNOSTICS__ === diagnostics) {
         delete window.__FRED_STUDIO_V2_DIAGNOSTICS__
       }

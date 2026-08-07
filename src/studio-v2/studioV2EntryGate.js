@@ -31,6 +31,11 @@ export const ENTRY_CRITICAL_ASSETS = Object.freeze([
     fallbackResourceKey: 'musicUrl',
     semanticIds: Object.freeze(['GIBSON_GUITAR']),
   }),
+  Object.freeze({
+    id: 'MARSHALL_RADIO_PANEL_01',
+    kind: 'opening-visible-world-ui',
+    semanticIds: Object.freeze(['MARSHALL_RADIO_PANEL_01']),
+  }),
 ])
 
 export const ENTRY_READY_CONDITIONS = Object.freeze([
@@ -91,6 +96,7 @@ export function studioV2EntryTestConfig(searchParams, enabled, attempt = 0) {
     MACBOOK_ISLAND_01: safeDelay(searchParams.get('entryDelayMacbook')),
     MARSHALL_AMP: safeDelay(searchParams.get('entryDelayMarshall') ?? musicDelay),
     GIBSON_GUITAR: safeDelay(searchParams.get('entryDelayGuitar') ?? musicDelay),
+    MARSHALL_RADIO_PANEL_01: safeDelay(searchParams.get('entryDelayRadioPanel')),
   })
   const requestedFailure = searchParams.get('entryFail')
   const failAsset = attempt === 0
@@ -142,6 +148,7 @@ export function createStudioV2EntryGate({
       manifest,
       marshallGroupReady: assets.MARSHALL_GUITAR_FLOOR_01 === 'ready',
       marshallReady: assets.MARSHALL_AMP === 'ready',
+      radioPanelReady: assets.MARSHALL_RADIO_PANEL_01 === 'ready',
       materialsReady: conditions.materialsReady,
       phase,
       progress: total > 0 ? Number((completed / total * 100).toFixed(1)) : 0,

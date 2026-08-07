@@ -96,13 +96,22 @@ function SpatialNumber({ label, value, step = 0.01, onChange }) {
   )
 }
 
-export default function StudioV2DebugPanel({ audit, diagnostics, entryState, runtime, audioController }) {
+export default function StudioV2DebugPanel({
+  audit,
+  diagnostics,
+  entryState,
+  runtime,
+  audioController,
+  radioTransitionSpeed = 1,
+  onRadioTransitionSpeedChange,
+}) {
   const [helpers, setHelpers] = useState({ lights: false })
   const [assetMaterialMode, setAssetMaterialMode] = useState('refined')
   const [, setSpatialRevision] = useState(0)
   const [anchorName, setAnchorName] = useState(STUDIO_V2_ANCHOR_NAMES[0])
   const [audioState, setAudioState] = useState(() => audioController?.getState?.() ?? {})
   const [marshallInteraction, setMarshallInteraction] = useState(() => runtime?.getMarshallInteractionState?.() ?? {})
+  const [radioPanel, setRadioPanel] = useState(() => runtime?.getRadioPanelState?.() ?? {})
   const visual = diagnostics?.visual ?? runtime?.getVisualConfig?.() ?? {}
   const safety = diagnostics?.safety ?? runtime?.getCameraSafety?.() ?? {}
   const delivery = runtime?.getAssetDeliveryConfig?.() ?? audit?.delivery ?? {}
@@ -117,6 +126,10 @@ export default function StudioV2DebugPanel({ audit, diagnostics, entryState, run
 
   useEffect(() => (
     runtime?.subscribeMarshallInteraction?.(setMarshallInteraction) ?? undefined
+  ), [runtime, entry.sceneReady])
+
+  useEffect(() => (
+    runtime?.subscribeRadioPanel?.(setRadioPanel) ?? undefined
   ), [runtime, entry.sceneReady])
 
   if (!runtime) return null
@@ -174,6 +187,7 @@ export default function StudioV2DebugPanel({ audit, diagnostics, entryState, run
           <InspectorRow label="MARSHALL READY" value={readinessText(entry.marshallReady)} />
           <InspectorRow label="GUITAR READY" value={readinessText(entry.guitarReady)} />
           <InspectorRow label="MUSIC GROUP READY" value={readinessText(entry.marshallGroupReady)} />
+          <InspectorRow label="RADIO PANEL READY" value={readinessText(entry.radioPanelReady)} />
           <InspectorRow label="TEXTURES READY" value={readinessText(entry.texturesReady)} />
           <InspectorRow label="MATERIALS READY" value={readinessText(entry.materialsReady)} />
           <InspectorRow label="ANCHORS READY" value={readinessText(entry.anchorsReady)} />
@@ -185,6 +199,93 @@ export default function StudioV2DebugPanel({ audit, diagnostics, entryState, run
           <InspectorRow label="CRITICAL REQUESTS" value={entry.requests?.length} />
           <InspectorRow label="ERROR" value={entry.error ? `${entry.error.assetId ?? 'SCENE'} · ${entry.error.message}` : 'NONE'} />
         </dl>
+      </section>
+
+      <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
+        <h2>RADIO PANEL</h2>
+        <dl>
+          <InspectorRow label="SEMANTIC ID" value={radioPanel.semanticId} />
+          <InspectorRow label="POSITION" value={vectorText(radioPanel.position)} />
+          <InspectorRow label="ROTATION RAD" value={vectorText(radioPanel.rotation)} />
+          <InspectorRow label="ROTATION DEG" value={vectorText(radioPanel.rotationDegrees)} />
+          <InspectorRow label="COMPACT W/H/D" value={vectorText(radioPanel.compactDimensions)} />
+          <InspectorRow label="WORLD MODE" value={radioPanel.worldMode} />
+          <InspectorRow label="PANEL STATE" value={radioPanel.panelState} />
+          <InspectorRow label="COMPACT VISIBILITY" value={radioPanel.compactVisibilityMode} />
+          <InspectorRow label="TRANSITION PROXY" value={radioPanel.transitionProxyActive ? 'ACTIVE' : 'INACTIVE'} />
+          <InspectorRow label="FORMAL SURFACE" value={radioPanel.formalPlayerOpen ? 'OPEN' : 'CLOSED'} />
+          <InspectorRow label="OUTSIDE CLICK" value={radioPanel.outsideClickState} />
+          <InspectorRow label="COMPACT READY" value={radioPanel.compactReadiness} />
+          <InspectorRow label="PROJECTED BOUNDS" value={radioPanel.projectedScreenBounds ? JSON.stringify(radioPanel.projectedScreenBounds) : '—'} />
+          <InspectorRow label="SCREEN PLAYER" value={radioPanel.screenPlayerOpen ? 'OPEN' : 'CLOSED'} />
+          <InspectorRow label="TRANSITION" value={radioPanel.transitionState} />
+          <InspectorRow label="TRANSITION SPEED" value={`${radioTransitionSpeed}×`} />
+          <InspectorRow label="HANDOFF MODE" value={radioPanel.handoffMode} />
+          <InspectorRow label="WORLD COMPACT READY" value={readinessText(radioPanel.worldCompactReady)} />
+          <InspectorRow label="WORLD FACE OPACITY" value={radioPanel.worldLayerOpacity?.face?.toFixed?.(3) ?? '—'} />
+          <InspectorRow label="WORLD GLASS OPACITY" value={radioPanel.worldLayerOpacity?.glass?.toFixed?.(3) ?? '—'} />
+          <InspectorRow label="HANDOFF TIMING" value={radioPanel.handoffFrameTiming ? JSON.stringify(radioPanel.handoffFrameTiming) : '—'} />
+          <InspectorRow label="PROJECTED START" value={radioPanel.projectedStartBounds ? JSON.stringify(radioPanel.projectedStartBounds) : '—'} />
+          <InspectorRow label="FINAL DOM BOUNDS" value={radioPanel.finalDomBounds ? JSON.stringify(radioPanel.finalDomBounds) : '—'} />
+          <InspectorRow label="PROJECTED RETURN" value={radioPanel.projectedReturnBounds ? JSON.stringify(radioPanel.projectedReturnBounds) : '—'} />
+          <InspectorRow label="SELECTED TRACK" value={radioPanel.selectedTrackTitle ?? radioPanel.selectedTrackId} />
+          <InspectorRow label="SELECTED ARTIST" value={radioPanel.selectedTrackArtist} />
+          <InspectorRow label="TRACK COUNT" value={radioPanel.catalogueTrackCount} />
+          <InspectorRow label="HOVER HIT" value={radioPanel.hover ? 'YES' : 'NO'} />
+          <InspectorRow label="DEBUG FIXTURE" value={radioPanel.catalogueFixtureCount ?? 'OFF'} />
+          <InspectorRow label="PANEL READY" value={readinessText(radioPanel.panelReady)} />
+          <InspectorRow label="METADATA READY" value={readinessText(radioPanel.catalogueMetadataReady)} />
+          <InspectorRow label="CATALOGUE ERROR" value={radioPanel.catalogueError ?? 'NONE'} />
+          <InspectorRow label="DRAW CALLS" value={radioPanel.panelDrawCalls} />
+          <InspectorRow label="TRIANGLES" value={radioPanel.panelTriangles} />
+          <InspectorRow label="METADATA TIME" value={radioPanel.metadataReadyAtMs ? `${radioPanel.metadataReadyAtMs} MS` : '—'} />
+          <InspectorRow label="UI READY TIME" value={radioPanel.uiReadyAtMs ? `${radioPanel.uiReadyAtMs} MS` : '—'} />
+          <InspectorRow label="TEXTURE COMPACT" value={vectorText(radioPanel.textureResolution?.compact)} />
+          <InspectorRow label="TEXTURE REDRAWS" value={radioPanel.textureRedraws} />
+          <InspectorRow label="AUDIO ELEMENTS" value={audioState.audioElementCount} />
+        </dl>
+        <div className="studio-v2__debug-actions">
+          {[1, 0.5, 0.25].map((speed) => (
+            <button
+              type="button"
+              key={`radio-transition-speed-${speed}`}
+              aria-pressed={radioTransitionSpeed === speed}
+              onClick={() => onRadioTransitionSpeedChange?.(speed)}
+            >{speed}× TRANSITION</button>
+          ))}
+          <button type="button" onClick={() => runtime.closeRadioScreen({ immediate: true })}>FORCE WORLD COMPACT</button>
+          <button type="button" onClick={() => runtime.openRadioScreen()}>FORCE SCREEN PLAYER</button>
+          <button type="button" onClick={() => {
+            runtime.closeRadioScreen({ immediate: true })
+            window.setTimeout(() => runtime.openRadioScreen(), 50)
+          }}>REPLAY OPEN</button>
+          <button type="button" onClick={() => runtime.closeRadioScreen()}>REPLAY CLOSE</button>
+          <button type="button" onClick={() => runtime.resetRadioPanelTransform()}>RESET TRANSFORM</button>
+        </div>
+        <h3>WORLD POSITION</h3>
+        <div className="studio-v2__debug-number-grid">
+          {['X', 'Y', 'Z'].map((axis, index) => (
+            <SpatialNumber
+              key={`radio-position-${axis}`}
+              label={axis}
+              value={radioPanel.position?.[index] ?? 0}
+              step={0.01}
+              onChange={(value) => runtime.setRadioPanelPosition(index, value)}
+            />
+          ))}
+        </div>
+        <h3>WORLD ROTATION / DEGREES</h3>
+        <div className="studio-v2__debug-number-grid">
+          {['X', 'Y', 'Z'].map((axis, index) => (
+            <SpatialNumber
+              key={`radio-rotation-${axis}`}
+              label={axis}
+              value={radioPanel.rotationDegrees?.[index] ?? 0}
+              step={1}
+              onChange={(value) => runtime.setRadioPanelRotationDegrees(index, value)}
+            />
+          ))}
+        </div>
       </section>
 
       <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
