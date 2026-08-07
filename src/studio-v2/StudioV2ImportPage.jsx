@@ -6,6 +6,8 @@ import {
   deliveryRequestFromSearch,
 } from './studioV2DerivativeConfig'
 import { studioV2EntryTestConfig } from './studioV2EntryGate'
+import { createStudioV2AudioController } from './studioV2AudioController'
+import { resolveStudioV2AudioCatalogue } from './studioV2AudioCatalogue'
 
 const StudioV2DebugPanel = lazy(() => import('./StudioV2DebugPanel'))
 
@@ -27,6 +29,8 @@ export default function StudioV2ImportPage() {
   const [progress, setProgress] = useState(0)
   const [ready, setReady] = useState(false)
   const [runtime, setRuntime] = useState(null)
+  const [audioController, setAudioController] = useState(null)
+  const [audioState, setAudioState] = useState(null)
   const searchParams = new URLSearchParams(window.location.search)
   const debugEnabled = searchParams.get('debug') === '1'
   const captureEnabled = searchParams.get('capture') === '1'
@@ -66,6 +70,16 @@ export default function StudioV2ImportPage() {
     setLoadingVisible(true)
     setProgress(0)
     setReady(false)
+    const catalogueOverride = debugEnabled ? searchParams.get('audioCatalog') : null
+    const catalogueSource = resolveStudioV2AudioCatalogue({
+      debug: debugEnabled,
+      override: catalogueOverride,
+    })
+    const controller = createStudioV2AudioController({
+      catalogueUrl: catalogueSource.url,
+    })
+    const unsubscribeAudio = controller.subscribe(setAudioState)
+    setAudioController(controller)
     const scene = createStudioV2Scene({
       mount: mountRef.current,
       capture: captureEnabled,
@@ -86,6 +100,7 @@ export default function StudioV2ImportPage() {
       forcedViewport,
       deliveryConfig,
       entryTestConfig,
+      audioController: controller,
       onRoomReady: (roomAudit) => {
         setAudit(roomAudit)
       },
@@ -113,7 +128,10 @@ export default function StudioV2ImportPage() {
     return () => {
       window.clearTimeout(fadeTimerRef.current)
       scene.dispose()
+      unsubscribeAudio()
+      controller.destroy()
       setRuntime(null)
+      setAudioController(null)
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
@@ -146,6 +164,16 @@ export default function StudioV2ImportPage() {
         aria-label="Interactive three-dimensional presentation of a furnished loft interior"
       />
 
+      <button
+        className="studio-v2__audio-accessible-control"
+        type="button"
+        disabled={!ready || Boolean(error)}
+        aria-label={audioState?.status === 'playing' ? 'Pause Marshall music' : 'Play Marshall music'}
+        onClick={() => runtime?.toggleMarshallAudio('accessible-button')}
+      >
+        {audioState?.status === 'playing' ? 'Pause Marshall music' : 'Play Marshall music'}
+      </button>
+
       {debugEnabled && !captureEnabled && (
         <header className="studio-v2__header">
           <a href="/" className="studio-v2__back">BACK</a>
@@ -174,6 +202,7 @@ export default function StudioV2ImportPage() {
             diagnostics={diagnostics}
             entryState={entryState}
             runtime={runtime}
+            audioController={audioController}
           />
         </Suspense>
       )}

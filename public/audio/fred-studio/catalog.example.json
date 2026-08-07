@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "defaultTrackId": "example-studio-track",
+  "tracks": [
+    {
+      "id": "example-studio-track",
+      "title": "Example Studio Track",
+      "version": "Fictional documentation example",
+      "artist": "Example Artist",
+      "file": "/audio/fred-studio/tracks/published/example-studio-track.mp3",
+      "cover": null,
+      "enabled": true,
+      "loop": false,
+      "volume": 0.8
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   STUDIO_V2_CAMERA_PRESETS,
   STUDIO_V2_LIGHTING,
@@ -96,11 +96,13 @@ function SpatialNumber({ label, value, step = 0.01, onChange }) {
   )
 }
 
-export default function StudioV2DebugPanel({ audit, diagnostics, entryState, runtime }) {
+export default function StudioV2DebugPanel({ audit, diagnostics, entryState, runtime, audioController }) {
   const [helpers, setHelpers] = useState({ lights: false })
   const [assetMaterialMode, setAssetMaterialMode] = useState('refined')
   const [, setSpatialRevision] = useState(0)
   const [anchorName, setAnchorName] = useState(STUDIO_V2_ANCHOR_NAMES[0])
+  const [audioState, setAudioState] = useState(() => audioController?.getState?.() ?? {})
+  const [marshallInteraction, setMarshallInteraction] = useState(() => runtime?.getMarshallInteractionState?.() ?? {})
   const visual = diagnostics?.visual ?? runtime?.getVisualConfig?.() ?? {}
   const safety = diagnostics?.safety ?? runtime?.getCameraSafety?.() ?? {}
   const delivery = runtime?.getAssetDeliveryConfig?.() ?? audit?.delivery ?? {}
@@ -108,6 +110,14 @@ export default function StudioV2DebugPanel({ audit, diagnostics, entryState, run
     ?? diagnostics?.entry
     ?? runtime?.getSceneReadyState?.()
     ?? {}
+
+  useEffect(() => (
+    audioController?.subscribe?.(setAudioState) ?? undefined
+  ), [audioController])
+
+  useEffect(() => (
+    runtime?.subscribeMarshallInteraction?.(setMarshallInteraction) ?? undefined
+  ), [runtime, entry.sceneReady])
 
   if (!runtime) return null
 
@@ -175,6 +185,46 @@ export default function StudioV2DebugPanel({ audit, diagnostics, entryState, run
           <InspectorRow label="CRITICAL REQUESTS" value={entry.requests?.length} />
           <InspectorRow label="ERROR" value={entry.error ? `${entry.error.assetId ?? 'SCENE'} · ${entry.error.message}` : 'NONE'} />
         </dl>
+      </section>
+
+      <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
+        <h2>MARSHALL AUDIO</h2>
+        <dl>
+          <InspectorRow label="CATALOGUE" value={audioState.catalogueStatus?.toUpperCase?.()} />
+          <InspectorRow label="CATALOGUE URL" value={audioState.catalogueUrl} />
+          <InspectorRow label="TRACK ID" value={audioState.trackId} />
+          <InspectorRow label="TRACK TITLE" value={audioState.trackTitle} />
+          <InspectorRow label="AUDIO STATE" value={audioState.status?.toUpperCase?.()} />
+          <InspectorRow label="CURRENT TIME" value={Number(audioState.currentTime ?? 0).toFixed(2)} />
+          <InspectorRow label="DURATION" value={Number.isFinite(audioState.duration) ? Number(audioState.duration).toFixed(2) : '—'} />
+          <InspectorRow label="VOLUME" value={Number(audioState.volume ?? 0).toFixed(2)} />
+          <InspectorRow label="LOOP" value={audioState.loop ? 'ON' : 'OFF'} />
+          <InspectorRow label="MARSHALL HIT" value={marshallInteraction.pointerOver ? 'YES' : 'NO'} />
+          <InspectorRow label="POINTER MOVE" value={`${Number(marshallInteraction.pointerMovement ?? 0).toFixed(2)} PX`} />
+          <InspectorRow label="LAST RESULT" value={marshallInteraction.lastInteractionResult} />
+          <InspectorRow label="LAST ERROR" value={audioState.errorCode ?? audioState.error ?? 'NONE'} />
+          <InspectorRow label="ROUTE ACTIVE" value={marshallInteraction.routeActive ? 'YES' : 'NO'} />
+        </dl>
+        <div className="studio-v2__debug-actions">
+          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.play()}>PLAY</button>
+          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.pause()}>PAUSE</button>
+          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.stop()}>STOP</button>
+          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.loadCatalogue({ force: true })}>RELOAD CATALOGUE</button>
+        </div>
+        {audioState.tracks?.filter(({ enabled }) => enabled).length > 1 && (
+          <label className="studio-v2__debug-select">
+            <span>ENABLED TRACK</span>
+            <select
+              value={audioState.trackId ?? ''}
+              onChange={(event) => audioController?.setTrack(event.currentTarget.value)}
+            >
+              <option value="" disabled>SELECT TRACK</option>
+              {audioState.tracks.filter(({ enabled }) => enabled).map((track) => (
+                <option key={track.id} value={track.id}>{track.title}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </section>
 
       <section className="studio-v2__debug-section studio-v2__debug-section--delivery">

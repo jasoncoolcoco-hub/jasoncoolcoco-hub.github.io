@@ -35,6 +35,38 @@
   transition: opacity 900ms ease;
 }
 
+.studio-v2__audio-accessible-control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.studio-v2__audio-accessible-control:focus-visible {
+  z-index: 30;
+  top: 16px;
+  left: 16px;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  padding: 9px 12px;
+  border: 1px solid currentColor;
+  clip: auto;
+  clip-path: none;
+  background: #151817;
+  color: var(--studio-ink);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  white-space: normal;
+}
+
 .studio-v2--ready .studio-v2__canvas {
   opacity: 1;
   pointer-events: auto;

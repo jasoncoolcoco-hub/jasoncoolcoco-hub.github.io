@@ -10,3 +10,8 @@ source_assets/
 
 # Fred Studio V2 local KTX2 encoder intermediates (manifests remain tracked).
 generated/fred-studio-v2-optimisation/textures-ktx2/*-data.glb
+
+# Fred Studio V2 local music library.
+public/audio/fred-studio/tracks/local/*
+!public/audio/fred-studio/tracks/local/.gitkeep
+public/audio/fred-studio/catalog.local.json

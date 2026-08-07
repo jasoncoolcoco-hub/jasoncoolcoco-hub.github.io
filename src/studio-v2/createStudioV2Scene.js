@@ -32,6 +32,7 @@ import { loadStudioV2PlacedObjects } from './studioV2PlacedObjects'
 import { createStudioV2DeliveryConfig } from './studioV2DerivativeConfig'
 import { createStudioV2GltfLoader } from './studioV2GltfLoader'
 import { createStudioV2EntryGate } from './studioV2EntryGate'
+import { createStudioV2MarshallInteraction } from './createStudioV2MarshallInteraction'
 
 function roundedVector(vector) {
   return vector.toArray().map((value) => Number(value.toFixed(3)))
@@ -70,6 +71,7 @@ export function createStudioV2Scene({
   onReady,
   onRoomReady,
   onStudioV2Ready,
+  audioController,
   deliveryConfig,
   entryTestConfig,
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
@@ -306,6 +308,8 @@ export function createStudioV2Scene({
 
   let disposed = false
   let modelRoot = null
+  let marshallInteraction = null
+  let unsubscribeAudioState = null
   let spatialDebug = null
   let modelAudit = null
   let environmentRenderTarget = null
@@ -599,6 +603,23 @@ export function createStudioV2Scene({
     const entry = entryGate.markSceneReady()
     controls.enabled = exploreEnabled
     mount.dataset.interactionsEnabled = String(controls.enabled)
+    if (audioController) {
+      marshallInteraction = createStudioV2MarshallInteraction({
+        audioController,
+        camera,
+        controls,
+        domElement: renderer.domElement,
+        root: entryRoot,
+        sceneReady: () => entryGate.snapshot().sceneReady,
+        criticalError: () => Boolean(entryGate.snapshot().error),
+      })
+      unsubscribeAudioState = audioController.subscribe((audioState) => {
+        mount.dataset.audioState = audioState.status
+        mount.dataset.audioCurrentTime = Number(audioState.currentTime ?? 0).toFixed(3)
+        mount.dataset.audioTrackId = audioState.trackId ?? ''
+      })
+      void audioController.loadCatalogue()
+    }
 
     const loadTimeMs = performance.now() - loadStartedAt
     mount.dataset.completeReadyMs = loadTimeMs.toFixed(1)
@@ -966,6 +987,15 @@ export function createStudioV2Scene({
     getSceneReadyState() {
       return entryGate.snapshot()
     },
+    getMarshallInteractionState() {
+      return marshallInteraction?.getState() ?? null
+    },
+    subscribeMarshallInteraction(listener) {
+      return marshallInteraction?.subscribe(listener) ?? (() => {})
+    },
+    toggleMarshallAudio(source = 'runtime') {
+      return marshallInteraction?.toggle(source) ?? Promise.resolve(audioController?.getState?.())
+    },
     getAssetMaterialMode() {
       return placedObjectsResource?.getMaterialMode() ?? 'refined'
     },
@@ -993,6 +1023,8 @@ export function createStudioV2Scene({
       disposed = true
       cancelAnimationFrame(animationFrame)
       resizeObserver.disconnect()
+      marshallInteraction?.dispose()
+      unsubscribeAudioState?.()
       controls.dispose()
       placedObjectsResource?.dispose()
       modelResource?.release()
@@ -1013,6 +1045,9 @@ export function createStudioV2Scene({
       delete mount.dataset.firstVisibleFrameMs
       delete mount.dataset.interactionsEnabled
       delete mount.dataset.sceneReady
+      delete mount.dataset.audioState
+      delete mount.dataset.audioCurrentTime
+      delete mount.dataset.audioTrackId
       if (window.__FRED_STUDIO_V2_DIAGNOSTICS__ === diagnostics) {
         delete window.__FRED_STUDIO_V2_DIAGNOSTICS__
       }
