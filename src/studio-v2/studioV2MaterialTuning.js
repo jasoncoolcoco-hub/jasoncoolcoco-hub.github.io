@@ -22,6 +22,8 @@ function textureRecord(texture) {
     width: image?.width ?? image?.videoWidth ?? null,
     height: image?.height ?? image?.videoHeight ?? null,
     anisotropy: texture.anisotropy,
+    colorSpace: texture.colorSpace,
+    source: texture.source?.data?.src || image?.currentSrc || image?.src || null,
   }
 }
 
@@ -35,6 +37,10 @@ export function materialRecord(material) {
     roughness: typeof material.roughness === 'number' ? rounded(material.roughness) : null,
     opacity: rounded(material.opacity),
     transparent: material.transparent,
+    toneMapped: material.toneMapped,
+    vertexColors: material.vertexColors,
+    emissive: material.emissive?.getHexString ? `#${material.emissive.getHexString()}` : null,
+    emissiveIntensity: typeof material.emissiveIntensity === 'number' ? rounded(material.emissiveIntensity) : null,
     envMapIntensity: typeof material.envMapIntensity === 'number' ? rounded(material.envMapIntensity) : null,
     normalScale: material.normalScale?.isVector2
       ? material.normalScale.toArray().map(rounded)

@@ -744,7 +744,10 @@ export default function StudioV2DebugPanel({
           <ToggleButton active={false} disabled>BLOOM OFF / N.A.</ToggleButton>
         </div>
         <dl>
-          <InspectorRow label="SHADOW TYPE" value={visual.shadowType ?? 'PCFSoftShadowMap'} />
+          <InspectorRow label="TONE MAPPING" value={visual.toneMapping ?? STUDIO_V2_RENDERING.toneMapping} />
+          <InspectorRow label="ENVIRONMENT MODE" value={visual.environmentMode ?? 'ROOM_ENVIRONMENT_PMREM'} />
+          <InspectorRow label="LIGHTS" value={visual.lightCount ?? 4} />
+          <InspectorRow label="SHADOW TYPE" value={visual.shadowType ?? 'PCFShadowMap'} />
           <InspectorRow label="SHADOW CONTRIBUTION" value={Number(visual.shadowIntensity ?? STUDIO_V2_LIGHTING.key.shadowIntensity).toFixed(2)} />
           <InspectorRow label="SHADOW RADIUS" value={visual.shadowRadius ?? STUDIO_V2_LIGHTING.key.shadowRadius} />
           <InspectorRow label="SHADOW MAP" value={`${visual.shadowMapSize ?? STUDIO_V2_LIGHTING.key.shadowMapSize}²`} />
@@ -782,7 +785,8 @@ export default function StudioV2DebugPanel({
         <dl>
           <InspectorRow label="FULL BOUNDS" value={boundsText(audit?.fullBoundsRecord)} />
           <InspectorRow label="INTERIOR" value={boundsText(audit?.interiorBoundsRecord)} />
-          <InspectorRow label="ENV TEXTURE" value={vectorText(audit?.environment?.texture)} />
+          <InspectorRow label="BACKGROUND TEXTURE" value={vectorText(audit?.environment?.background?.texture)} />
+          <InspectorRow label="LIGHTING ENVIRONMENT" value={audit?.environment?.lighting?.mode ?? '—'} />
           <InspectorRow label="ROOT POS" value={vectorText(STUDIO_V2_MODEL_TRANSFORM.position)} />
           <InspectorRow label="ROOT ROT" value={vectorText(STUDIO_V2_MODEL_TRANSFORM.rotation)} />
           <InspectorRow label="ROOT SCALE" value={STUDIO_V2_MODEL_TRANSFORM.scale} />

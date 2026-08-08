@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import {
   OFFICIAL_CAMERA_SAFE_VOLUME,
   OFFICIAL_REAR_VIRTUAL_WALL,
@@ -84,12 +85,25 @@ export function createStudioV2Scene({
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
   initialAssetMaterialMode = 'refined',
   initialLightingCandidate,
+  initialToneMapping,
+  initialExposure,
   pixelRatioCap = STUDIO_V2_RENDERING.maxPixelRatio,
   forcedViewport,
 }) {
   const activeDeliveryConfig = deliveryConfig ?? createStudioV2DeliveryConfig({}, false)
   const initialLighting = STUDIO_V2_LIGHTING_CANDIDATES[initialLightingCandidate]
     ?? STUDIO_V2_LIGHTING
+  const toneMappingModes = {
+    aces: THREE.ACESFilmicToneMapping,
+    agx: THREE.AgXToneMapping,
+    neutral: THREE.NeutralToneMapping,
+  }
+  const toneMappingName = initialToneMapping?.toLowerCase() in toneMappingModes
+    ? initialToneMapping.toLowerCase()
+    : STUDIO_V2_RENDERING.toneMapping.toLowerCase()
+  const initialExposureValue = Number.isFinite(initialExposure)
+    ? initialExposure
+    : initialLighting.exposure
   const indirectLighting = STUDIO_V2_LIGHTING
   const officialPresentation = !debug && !capture
   const stableOrbitMode = !capture
@@ -115,10 +129,10 @@ export function createStudioV2Scene({
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioCap))
   renderer.setSize(initialRenderSize.width, initialRenderSize.height)
   renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = initialLighting.exposure
+  renderer.toneMapping = toneMappingModes[toneMappingName]
+  renderer.toneMappingExposure = initialExposureValue
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.shadowMap.type = THREE.PCFShadowMap
   mount.appendChild(renderer.domElement)
 
   const cameraSafety = createStudioV2CameraSafety({
@@ -250,27 +264,22 @@ export function createStudioV2Scene({
   applyCameraConfig(camera, controls, initialResponsivePreset)
   acceptCameraCandidate()
 
-  const hemisphere = new THREE.HemisphereLight(
-    initialLighting.hemisphere.sky,
-    initialLighting.hemisphere.ground,
-    initialLighting.hemisphere.intensity,
-  )
-  hemisphere.name = 'StudioV2HemisphereLight'
   const keyLight = new THREE.DirectionalLight(
     initialLighting.key.color,
     initialLighting.key.intensity,
   )
   keyLight.name = 'StudioV2KeyLight'
   keyLight.position.set(...initialLighting.key.position)
+  keyLight.target.position.set(...(initialLighting.key.target ?? [0, 0, 0]))
   keyLight.castShadow = true
   const shadowMapSize = initialLighting.key.shadowMapSize ?? 2048
   keyLight.shadow.mapSize.set(shadowMapSize, shadowMapSize)
-  keyLight.shadow.camera.left = -9
-  keyLight.shadow.camera.right = 9
-  keyLight.shadow.camera.top = 8
-  keyLight.shadow.camera.bottom = -5
-  keyLight.shadow.camera.near = 0.5
-  keyLight.shadow.camera.far = 28
+  keyLight.shadow.camera.left = initialLighting.key.shadowCamera?.left ?? -9
+  keyLight.shadow.camera.right = initialLighting.key.shadowCamera?.right ?? 9
+  keyLight.shadow.camera.top = initialLighting.key.shadowCamera?.top ?? 8
+  keyLight.shadow.camera.bottom = initialLighting.key.shadowCamera?.bottom ?? -5
+  keyLight.shadow.camera.near = initialLighting.key.shadowCamera?.near ?? 0.5
+  keyLight.shadow.camera.far = initialLighting.key.shadowCamera?.far ?? 28
   keyLight.shadow.radius = initialLighting.key.shadowRadius ?? 1
   keyLight.shadow.bias = initialLighting.key.shadowBias ?? -0.00035
   keyLight.shadow.normalBias = initialLighting.key.shadowNormalBias ?? 0.025
@@ -301,13 +310,12 @@ export function createStudioV2Scene({
   ceilingBounce.lookAt(...indirectLighting.ceilingBounce.target)
   const lighting = new THREE.Group()
   lighting.name = 'StudioV2Lighting'
-  lighting.add(hemisphere, keyLight, fillLight, windowFill, ceilingBounce)
+  lighting.add(keyLight, keyLight.target, fillLight, windowFill, ceilingBounce)
   scene.add(lighting)
 
-  const hemisphereHelper = new THREE.HemisphereLightHelper(hemisphere, 1)
   const keyHelper = new THREE.DirectionalLightHelper(keyLight, 1.5)
   const fillHelper = new THREE.DirectionalLightHelper(fillLight, 1.2)
-  const lightHelpers = [hemisphereHelper, keyHelper, fillHelper]
+  const lightHelpers = [keyHelper, fillHelper]
   lightHelpers.forEach((helper) => {
     helper.visible = false
     scene.add(helper)
@@ -350,8 +358,11 @@ export function createStudioV2Scene({
     lightingCandidate: initialLightingCandidate in STUDIO_V2_LIGHTING_CANDIDATES
       ? initialLightingCandidate
       : `${STUDIO_V2_SELECTED_LIGHTING}_FINAL`,
+    toneMapping: toneMappingName.toUpperCase(),
+    environmentMode: 'ROOM_ENVIRONMENT_PMREM',
+    lightCount: 4,
     environmentIntensity: initialLighting.environmentIntensity,
-    exposure: initialLighting.exposure,
+    exposure: initialExposureValue,
     keyIntensity: initialLighting.key.intensity,
     keyPosition: [...initialLighting.key.position],
     fillIntensity: initialLighting.fill.intensity,
@@ -363,7 +374,7 @@ export function createStudioV2Scene({
     ceilingBouncePosition: [...indirectLighting.ceilingBounce.position],
     ceilingBounceSize: [indirectLighting.ceilingBounce.width, indirectLighting.ceilingBounce.height],
     shadowIntensity: initialLighting.key.shadowIntensity,
-    shadowType: 'PCFSoftShadowMap',
+    shadowType: 'PCFShadowMap',
     shadowRadius: keyLight.shadow.radius,
     shadowMapSize,
     shadowBias: keyLight.shadow.bias,
@@ -406,22 +417,26 @@ export function createStudioV2Scene({
 
   function configureEnvironment() {
     const candidate = findStudioV2EnvironmentMesh(modelRoot, modelAudit)
-    if (!candidate) return null
-    candidate.object.visible = true
-    const equirectangularTexture = candidate.texture.clone()
-    equirectangularTexture.mapping = THREE.EquirectangularReflectionMapping
-    equirectangularTexture.colorSpace = THREE.SRGBColorSpace
-    equirectangularTexture.needsUpdate = true
+    if (candidate) candidate.object.visible = true
     pmremGenerator = new THREE.PMREMGenerator(renderer)
-    pmremGenerator.compileEquirectangularShader()
-    environmentRenderTarget = pmremGenerator.fromEquirectangular(equirectangularTexture)
+    const neutralRoomEnvironment = new RoomEnvironment()
+    environmentRenderTarget = pmremGenerator.fromScene(neutralRoomEnvironment, 0.04)
     scene.environment = environmentRenderTarget.texture
-    equirectangularTexture.dispose()
+    neutralRoomEnvironment.dispose()
     return {
-      mesh: candidate.object.name,
-      material: candidate.material.name,
-      texture: [candidate.width, candidate.height],
-      signals: candidate.score,
+      background: candidate ? {
+        mesh: candidate.object.name,
+        material: candidate.material.name,
+        texture: [candidate.width, candidate.height],
+        colorSpace: candidate.texture.colorSpace,
+        type: candidate.texture.type,
+        signals: candidate.score,
+      } : null,
+      lighting: {
+        mode: 'RoomEnvironment PMREM',
+        dynamicRange: 'procedural float scene converted by PMREM',
+        intensity: initialLighting.environmentIntensity,
+      },
     }
   }
 
@@ -434,7 +449,10 @@ export function createStudioV2Scene({
       'StudioV2KitchenHandle',
       'StudioV2KitchenAppliance',
       'StudioV2KitchenGlass',
+      'StudioV2IslandPainted',
+      'StudioV2IslandTimber',
       'StudioV2StoolLegMetal',
+      'StudioV2StoolTimber',
       'StudioV2CoffeeTableFrame',
       'Material.011',
     ])
@@ -632,7 +650,7 @@ export function createStudioV2Scene({
         interiorBounds: modelAudit.interiorBounds,
         cameraBounds: cameraSafety.cameraBounds,
         targetBounds: cameraSafety.targetBounds,
-        environmentMeshName: environment?.mesh,
+        environmentMeshName: environment?.background?.mesh,
       })
     }
 
@@ -994,12 +1012,10 @@ export function createStudioV2Scene({
       visualState.shadowIntensity = candidate.key.shadowIntensity
       scene.environmentIntensity = candidate.environmentIntensity
       renderer.toneMappingExposure = candidate.exposure
-      hemisphere.color.set(candidate.hemisphere.sky)
-      hemisphere.groundColor.set(candidate.hemisphere.ground)
-      hemisphere.intensity = candidate.hemisphere.intensity
       keyLight.color.set(candidate.key.color)
       keyLight.intensity = candidate.key.intensity
       keyLight.position.set(...candidate.key.position)
+      keyLight.target.position.set(...(candidate.key.target ?? [0, 0, 0]))
       keyLight.shadow.intensity = candidate.key.shadowIntensity
       fillLight.color.set(candidate.fill.color)
       fillLight.intensity = candidate.fill.intensity

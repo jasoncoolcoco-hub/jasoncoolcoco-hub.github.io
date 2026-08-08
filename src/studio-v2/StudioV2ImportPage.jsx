@@ -49,6 +49,15 @@ export default function StudioV2ImportPage() {
     ? searchParams.get('materials') || undefined
     : undefined
   const initialLightingCandidate = debugEnabled ? searchParams.get('lighting') || undefined : undefined
+  const initialToneMapping = debugEnabled || captureEnabled
+    ? searchParams.get('tone') || undefined
+    : undefined
+  const requestedExposure = Number(searchParams.get('exposure'))
+  const initialExposure = (debugEnabled || captureEnabled)
+    && searchParams.has('exposure')
+    && Number.isFinite(requestedExposure)
+    ? requestedExposure
+    : undefined
   const pixelRatioCap = debugEnabled && searchParams.get('dpr') === '1' ? 1 : undefined
   const auditViewportMatch = (debugEnabled || captureEnabled)
     ? searchParams.get('auditViewport')?.match(/^(\d{3,4})x(\d{3,4})$/)
@@ -116,6 +125,8 @@ export default function StudioV2ImportPage() {
       initialCameraPreset,
       initialAssetMaterialMode,
       initialLightingCandidate,
+      initialToneMapping,
+      initialExposure,
       pixelRatioCap,
       forcedViewport,
       deliveryConfig,
@@ -157,7 +168,7 @@ export default function StudioV2ImportPage() {
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
-  }, [attempt, captureEnabled, debugEnabled, initialAssetMaterialMode, initialCameraPreset, initialLightingCandidate, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x')])
+  }, [attempt, captureEnabled, debugEnabled, initialAssetMaterialMode, initialCameraPreset, initialExposure, initialLightingCandidate, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x')])
 
   const enableExplore = () => {
     setExploring(true)
