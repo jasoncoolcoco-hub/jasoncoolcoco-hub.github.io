@@ -41,6 +41,8 @@ import {
   createStudioV2FloorReflection,
   STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
 } from './studioV2FloorReflection'
+import { createStudioV2CameraDirector } from './studioV2CameraDirector'
+import { STUDIO_V2_ACCEPTED_OPENING_POSE } from './studioV2CameraPoses'
 import {
   STUDIO_V2_RADIO_PANEL_ID,
   STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
@@ -52,20 +54,6 @@ function roundedVector(vector) {
 
 function cameraConfigForPreset(presetName) {
   return STUDIO_V2_CAMERA_PRESETS[presetName] ?? STUDIO_V2_CAMERA_PRESETS[STUDIO_V2_DEFAULT_CAMERA]
-}
-
-function applyCameraConfig(camera, controls, config) {
-  camera.position.fromArray(config.position)
-  camera.fov = config.fov
-  camera.near = config.near ?? camera.near
-  camera.far = config.far ?? camera.far
-  camera.updateProjectionMatrix()
-  controls.target.fromArray(config.target)
-  controls.update()
-}
-
-function easeInOutCubic(value) {
-  return value < 0.5 ? 4 * value ** 3 : 1 - ((-2 * value + 2) ** 3) / 2
 }
 
 function responsiveFov(baseFov, width) {
@@ -173,7 +161,6 @@ export function createStudioV2Scene({
     furnitureCollisionExperimental: false,
   })
   const initialPreset = cameraSafety.clampConfig(cameraConfigForPreset(initialCameraPreset))
-  let activeBaseFov = initialPreset.fov
   const initialResponsivePreset = {
     ...initialPreset,
     fov: responsiveFov(initialPreset.fov, initialRenderSize.width),
@@ -294,8 +281,19 @@ export function createStudioV2Scene({
     return true
   }
 
-  applyCameraConfig(camera, controls, initialResponsivePreset)
-  acceptCameraCandidate()
+  const cameraDirector = createStudioV2CameraDirector({
+    camera,
+    cameraSafety,
+    controls,
+    debug,
+    domElement: renderer.domElement,
+    initialPose: initialPreset,
+    prepareOrbitLimits: applyRearWallLimits,
+    readRearBoundary: updateRearClampState,
+    responsiveFov,
+    resolveLegacyCandidate: acceptCameraCandidate,
+    scene,
+  })
 
   const keyLight = new THREE.DirectionalLight(
     initialLighting.key.color,
@@ -367,7 +365,6 @@ export function createStudioV2Scene({
   let environmentRenderTarget = null
   let pmremGenerator = null
   let exploreEnabled = !debug
-  let cameraTween = null
   let diningSetRemoval = null
   let windowDecorationRemoval = null
   let materialTuningReport = []
@@ -659,6 +656,10 @@ export function createStudioV2Scene({
         audioController,
         controls,
         domElement: renderer.domElement,
+        orbitController: {
+          getEnabled: cameraDirector.isOrbitEnabled,
+          setEnabled: (enabled) => cameraDirector.setOrbitEnabled(enabled, { owner: 'RADIO_PANEL' }),
+        },
         onOpenRequest: onRadioPanelOpenRequest,
         parent: entryRoot,
         renderer,
@@ -807,8 +808,8 @@ export function createStudioV2Scene({
     if (disposed) return null
     entryGate.markCondition('warmupReady', { hiddenFrames: 2, warmupRender: true })
     const entry = entryGate.markSceneReady()
-    controls.enabled = exploreEnabled
-    mount.dataset.interactionsEnabled = String(controls.enabled)
+    cameraDirector.setOrbitEnabled(exploreEnabled)
+    mount.dataset.interactionsEnabled = String(cameraDirector.isOrbitEnabled())
     if (audioController) {
       marshallInteraction = createStudioV2MarshallInteraction({
         audioController,
@@ -873,7 +874,7 @@ export function createStudioV2Scene({
     return audit
   })().catch((error) => {
     if (!disposed) {
-      controls.enabled = false
+      cameraDirector.setOrbitEnabled(false)
       mount.dataset.interactionsEnabled = 'false'
       entryGate.fail(error.assetId ?? null, error)
       onError?.(error)
@@ -884,54 +885,12 @@ export function createStudioV2Scene({
   const resize = () => {
     const { width, height } = renderSize()
     camera.aspect = width / height
-    if (!cameraTween) camera.fov = responsiveFov(activeBaseFov, width)
-    camera.updateProjectionMatrix()
+    cameraDirector.setViewport(width)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, width < 700 ? 1.35 : pixelRatioCap))
     renderer.setSize(width, height)
   }
   const resizeObserver = new ResizeObserver(resize)
   resizeObserver.observe(mount)
-
-  function startCameraTween(config, duration = 900) {
-    clearBlockedOrbitMotion()
-    const safeConfig = cameraSafety.clampConfig(config)
-    activeBaseFov = safeConfig.fov
-    const responsiveConfig = {
-      ...safeConfig,
-      fov: responsiveFov(safeConfig.fov, mount.clientWidth),
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || duration === 0) {
-      applyCameraConfig(camera, controls, responsiveConfig)
-      acceptCameraCandidate()
-      cameraTween = null
-      return
-    }
-    cameraTween = {
-      fromPosition: camera.position.clone(),
-      fromTarget: controls.target.clone(),
-      fromFov: camera.fov,
-      toPosition: new THREE.Vector3().fromArray(responsiveConfig.position),
-      toTarget: new THREE.Vector3().fromArray(responsiveConfig.target),
-      toFov: responsiveConfig.fov,
-      near: responsiveConfig.near ?? camera.near,
-      far: responsiveConfig.far ?? camera.far,
-      startedAt: performance.now(),
-      duration,
-    }
-  }
-
-  function updateCameraTween(time) {
-    if (!cameraTween) return
-    const progress = Math.min(1, (time - cameraTween.startedAt) / cameraTween.duration)
-    const eased = easeInOutCubic(progress)
-    camera.position.lerpVectors(cameraTween.fromPosition, cameraTween.toPosition, eased)
-    controls.target.lerpVectors(cameraTween.fromTarget, cameraTween.toTarget, eased)
-    camera.fov = THREE.MathUtils.lerp(cameraTween.fromFov, cameraTween.toFov, eased)
-    camera.near = cameraTween.near
-    camera.far = cameraTween.far
-    camera.updateProjectionMatrix()
-    if (progress >= 1) cameraTween = null
-  }
 
   const performanceCases = Object.freeze([
     {
@@ -979,12 +938,13 @@ export function createStudioV2Scene({
 
   function restorePerformanceCamera() {
     if (!performanceBaseline) return
-    camera.position.copy(performanceBaseline.position)
-    controls.target.copy(performanceBaseline.target)
-    camera.fov = performanceBaseline.fov
-    camera.updateProjectionMatrix()
-    camera.updateMatrixWorld(true)
-    controls.update()
+    cameraDirector.applyPose({
+      position: performanceBaseline.position.toArray(),
+      target: performanceBaseline.target.toArray(),
+      fov: performanceBaseline.fov,
+      near: camera.near,
+      far: camera.far,
+    })
   }
 
   function beginNextPerformanceCase(time) {
@@ -1033,10 +993,13 @@ export function createStudioV2Scene({
         : Math.sin(elapsedSeconds * 0.35) * 0.025
     const offset = performanceBaseline.position.clone().sub(performanceBaseline.target)
     offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), phase)
-    camera.position.copy(performanceBaseline.target).add(offset)
-    controls.target.copy(performanceBaseline.target)
-    camera.lookAt(controls.target)
-    camera.updateMatrixWorld(true)
+    cameraDirector.applyPose({
+      position: performanceBaseline.target.clone().add(offset).toArray(),
+      target: performanceBaseline.target.toArray(),
+      fov: performanceBaseline.fov,
+      near: camera.near,
+      far: camera.far,
+    })
   }
 
   function completePerformanceCase(time) {
@@ -1095,15 +1058,10 @@ export function createStudioV2Scene({
   let lastSampleAt = performance.now()
   const render = (time) => {
     if (time >= performanceNextAt && !performanceSample) beginNextPerformanceCase(time)
-    updateCameraTween(time)
-    // The invisible rear half-spaces are converted into OrbitControls limits
-    // before it calculates a candidate, so an invalid rear view is never rendered.
-    applyRearWallLimits()
-    cameraSafety.prepareControls(camera, controls)
-    controls.update()
-    updateRearClampState()
-    acceptCameraCandidate()
     applyPerformanceMotion(time)
+    // Camera Director owns transition, controls, safety resolution and final pose
+    // within one update cycle, so no invalid candidate reaches the renderer.
+    cameraDirector.update(time)
     lightHelpers.forEach((helper) => helper.update())
     if (performanceSample?.updateBaseline) renderer.info.reset()
     if (floorReflection) floorReflection.renderFrame(renderer, scene, camera)
@@ -1133,9 +1091,13 @@ export function createStudioV2Scene({
       diagnostics.triangles = renderer.info.render.triangles
       diagnostics.geometries = renderer.info.memory.geometries
       diagnostics.textures = renderer.info.memory.textures
+      const cameraDirectorState = cameraDirector.getDebugSnapshot()
       mount.dataset.renderFps = String(diagnostics.fps)
       mount.dataset.renderCalls = String(diagnostics.calls)
       mount.dataset.renderTriangles = String(diagnostics.triangles)
+      mount.dataset.cameraDirectorState = cameraDirectorState.state
+      mount.dataset.cameraTransition = cameraDirectorState.transition?.id ?? 'NONE'
+      mount.dataset.cameraSafetyClamp = String(cameraDirectorState.safetyClampActive)
       onDiagnostics?.({
         ...diagnostics,
         camera: {
@@ -1144,6 +1106,7 @@ export function createStudioV2Scene({
           fov: Number(camera.fov.toFixed(1)),
           safe: cameraSafety.isCameraSafe(camera.position),
         },
+        cameraDirector: cameraDirector.getDebugSnapshot(),
         orbit: {
           enabled: controls.enabled,
           pan: controls.enablePan,
@@ -1201,16 +1164,25 @@ export function createStudioV2Scene({
     readyPromise,
     sceneReadyPromise: readyPromise,
     resetCamera({ smooth = true } = {}) {
-      startCameraTween(cameraConfigForPreset(STUDIO_V2_DEFAULT_CAMERA), smooth ? 900 : 0)
+      if (smooth && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return cameraDirector.transitionTo(STUDIO_V2_ACCEPTED_OPENING_POSE, {
+          allowOfficial: true,
+          duration: 900,
+        })
+      }
+      return cameraDirector.resetToAcceptedOpening()
     },
     setCameraPreset(presetName, { smooth = false } = {}) {
-      startCameraTween(cameraConfigForPreset(presetName), smooth ? 700 : 0)
+      const pose = cameraConfigForPreset(presetName)
+      return smooth
+        ? cameraDirector.transitionTo(pose, { allowOfficial: true, duration: 700 })
+        : cameraDirector.applyPose(pose)
     },
     setCameraConfig(config, { smooth = false } = {}) {
-      startCameraTween({
-        ...runtime.getCameraConfig(),
-        ...config,
-      }, smooth ? 700 : 0)
+      const pose = { ...cameraDirector.getCurrentPose(), ...config }
+      return smooth
+        ? cameraDirector.transitionTo(pose, { allowOfficial: true, duration: 700 })
+        : cameraDirector.applyPose(pose)
     },
     setExplore(enabled) {
       exploreEnabled = enabled
@@ -1218,15 +1190,16 @@ export function createStudioV2Scene({
       controls.enableRotate = true
       controls.enablePan = false
       controls.enableZoom = stableOrbitMode ? OFFICIAL_CAMERA_SAFE_VOLUME.zoom : true
-      controls.enabled = entryGate.snapshot().sceneReady && Boolean(modelRoot) && enabled
-      mount.dataset.interactionsEnabled = String(controls.enabled)
+      cameraDirector.setOrbitEnabled(
+        entryGate.snapshot().sceneReady && Boolean(modelRoot) && enabled,
+      )
+      mount.dataset.interactionsEnabled = String(cameraDirector.isOrbitEnabled())
     },
     setOfficialRearWallPreview(enabled) {
       if (!debug) return false
       rearWallPreviewEnabled = Boolean(enabled)
       applyRearWallLimits()
-      controls.update()
-      updateRearClampState()
+      cameraDirector.update(performance.now())
       return rearWallPreviewEnabled
     },
     setAxes(visible) {
@@ -1392,17 +1365,39 @@ export function createStudioV2Scene({
       return true
     },
     getCameraConfig() {
-      return {
-        position: roundedVector(camera.position),
-        target: roundedVector(controls.target),
-        fov: Number(camera.fov.toFixed(2)),
-        near: camera.near,
-        far: camera.far,
-      }
+      return cameraDirector.getCurrentPose()
+    },
+    getCameraDirectorState() {
+      return cameraDirector.getDebugSnapshot()
+    },
+    transitionCameraTo(poseOrState, options) {
+      if (!debug) return false
+      return cameraDirector.transitionTo(poseOrState, options)
+    },
+    cancelCameraTransition(reason) {
+      if (!debug) return false
+      return cameraDirector.cancelTransition(reason)
+    },
+    captureCurrentCameraPose() {
+      if (!debug) return ''
+      return cameraDirector.captureCurrentPose()
+    },
+    resetCameraDirectorOpening({ smooth = false } = {}) {
+      if (!debug) return false
+      return cameraDirector.resetToAcceptedOpening({ smooth })
+    },
+    setCameraSafeVolumeVisible(visible) {
+      if (!debug) return false
+      return cameraDirector.setSafeVolumeVisible(visible)
+    },
+    setCameraMajorObstaclesVisible(visible) {
+      if (!debug) return false
+      return cameraDirector.setMajorObstaclesVisible(visible)
     },
     getCameraSafety() {
       return {
         ...cameraSafety.record(),
+        safeInteriorVolume: cameraDirector.getDebugSnapshot().safety,
         stabilizations: orbitStabilizations,
       }
     },
@@ -1523,6 +1518,7 @@ export function createStudioV2Scene({
       unsubscribeRadioPanel?.()
       radioPanel?.dispose()
       radioPanelSubscribers.clear()
+      cameraDirector.dispose()
       controls.dispose()
       placedObjectsResource?.dispose()
       floorReflection?.dispose()
@@ -1550,6 +1546,9 @@ export function createStudioV2Scene({
       delete mount.dataset.renderFps
       delete mount.dataset.renderCalls
       delete mount.dataset.renderTriangles
+      delete mount.dataset.cameraDirectorState
+      delete mount.dataset.cameraTransition
+      delete mount.dataset.cameraSafetyClamp
       delete mount.dataset.floorReflectionEnabled
       delete mount.dataset.floorReflectionReady
       delete mount.dataset.floorReflectionUpdates

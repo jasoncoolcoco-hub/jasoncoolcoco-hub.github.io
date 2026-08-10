@@ -120,6 +120,7 @@ export default function StudioV2DebugPanel({
   const [radioPanel, setRadioPanel] = useState(() => runtime?.getRadioPanelState?.() ?? {})
   const visual = diagnostics?.visual ?? runtime?.getVisualConfig?.() ?? {}
   const safety = diagnostics?.safety ?? runtime?.getCameraSafety?.() ?? {}
+  const cameraDirector = diagnostics?.cameraDirector ?? runtime?.getCameraDirectorState?.() ?? {}
   const delivery = runtime?.getAssetDeliveryConfig?.() ?? audit?.delivery ?? {}
   const entry = entryState
     ?? diagnostics?.entry
@@ -608,6 +609,16 @@ export default function StudioV2DebugPanel({
       <section className="studio-v2__debug-section">
         <h2>CAMERA / ORBIT</h2>
         <dl>
+          <InspectorRow label="DIRECTOR STATE" value={cameraDirector.state} />
+          <InspectorRow label="DIRECTOR INPUT OWNER" value={cameraDirector.inputOwner} />
+          <InspectorRow label="DIRECTOR INPUT TYPE" value={cameraDirector.inputType} />
+          <InspectorRow label="DIRECTOR TRANSITION" value={cameraDirector.transition?.id ?? 'NONE'} />
+          <InspectorRow label="TRANSITION PROGRESS" value={cameraDirector.transition ? cameraDirector.transition.progress : 'N.A.'} />
+          <InspectorRow label="ORBIT RADIUS" value={cameraDirector.orbitRadius} />
+          <InspectorRow label="SAFETY CLAMP" value={cameraDirector.safetyClampActive ? 'ACTIVE' : 'CLEAR'} />
+          <InspectorRow label="LAST VOLUME BOUNDARY" value={cameraDirector.safety?.lastViolatedBoundary} />
+          <InspectorRow label="SAFE REPRESENTATION" value={cameraDirector.safety?.representation} />
+          <InspectorRow label="CAMERA RADIUS" value={cameraDirector.safety?.cameraRadius} />
           <InspectorRow label="CAMERA" value={vectorText(diagnostics?.camera?.position)} />
           <InspectorRow label="REQUESTED CAMERA" value={vectorText(safety.requestedCameraPosition)} />
           <InspectorRow label="LAST BLOCKED CAMERA" value={vectorText(safety.lastBlockedRequestedCameraPosition)} />
@@ -687,6 +698,42 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="LAST CLAMP" value={safety.lastCorrection} />
         </dl>
         <div className="studio-v2__debug-actions">
+          <button type="button" onClick={() => runtime.transitionCameraTo('ROOM_WIDE_START_CANDIDATE', { duration: 1200 })}>
+            TRANSITION WIDE
+          </button>
+          <button type="button" onClick={() => runtime.transitionCameraTo('TABLE_OVERVIEW_CANDIDATE', { duration: 1200 })}>
+            TRANSITION TABLE
+          </button>
+          <button type="button" onClick={() => runtime.cancelCameraTransition('DEBUG_CANCEL')}>
+            CANCEL TRANSITION
+          </button>
+          <button type="button" onClick={() => runtime.resetCameraDirectorOpening({ smooth: false })}>
+            RESET ACCEPTED OPENING
+          </button>
+        </div>
+        <div className="studio-v2__debug-actions">
+          <ToggleButton
+            active={Boolean(helpers.safeVolume)}
+            onClick={() => {
+              const visible = !helpers.safeVolume
+              runtime.setCameraSafeVolumeVisible(visible)
+              setHelpers((current) => ({ ...current, safeVolume: visible }))
+            }}
+          >
+            SAFE VOLUME {helpers.safeVolume ? 'ON' : 'OFF'}
+          </ToggleButton>
+          <ToggleButton
+            active={Boolean(helpers.cameraObstacles)}
+            onClick={() => {
+              const visible = !helpers.cameraObstacles
+              runtime.setCameraMajorObstaclesVisible(visible)
+              setHelpers((current) => ({ ...current, cameraObstacles: visible }))
+            }}
+          >
+            MAJOR OBSTACLES {helpers.cameraObstacles ? 'ON' : 'OFF'}
+          </ToggleButton>
+        </div>
+        <div className="studio-v2__debug-actions">
           <ToggleButton
             active={Boolean(diagnostics?.orbit?.rearWall?.previewEnabled)}
             onClick={() => runtime.setOfficialRearWallPreview(!diagnostics?.orbit?.rearWall?.previewEnabled)}
@@ -703,6 +750,9 @@ export default function StudioV2DebugPanel({
         </div>
         <button className="studio-v2__debug-copy" type="button" onClick={() => copyJson(runtime.getCameraConfig())}>
           COPY CAMERA CONFIG
+        </button>
+        <button className="studio-v2__debug-copy" type="button" onClick={() => copyText(runtime.captureCurrentCameraPose())}>
+          COPY DIRECTOR POSE
         </button>
       </section>
 

@@ -163,6 +163,7 @@ export function createStudioV2RadioPanel({
   controls,
   domElement,
   onOpenRequest,
+  orbitController,
   parent,
   renderer,
   metadataReadyAtMs = null,
@@ -443,9 +444,10 @@ export function createStudioV2RadioPanel({
       y: event.clientY,
       startedAt: performance.now(),
       movement: 0,
-      controlsEnabled: controls.enabled,
+      controlsEnabled: orbitController?.getEnabled?.() ?? controls.enabled,
     }
-    controls.enabled = false
+    if (orbitController) orbitController.setEnabled(false)
+    else controls.enabled = false
     event.preventDefault()
     event.stopImmediatePropagation()
   }
@@ -454,7 +456,8 @@ export function createStudioV2RadioPanel({
     if (!activePointer || activePointer.id !== event.pointerId) return
     const pointerRecord = activePointer
     activePointer = null
-    controls.enabled = pointerRecord.controlsEnabled
+    if (orbitController) orbitController.setEnabled(pointerRecord.controlsEnabled)
+    else controls.enabled = pointerRecord.controlsEnabled
     const movement = Math.max(
       pointerRecord.movement,
       Math.hypot(event.clientX - pointerRecord.x, event.clientY - pointerRecord.y),
@@ -469,7 +472,8 @@ export function createStudioV2RadioPanel({
 
   function handlePointerCancel(event) {
     if (!activePointer) return
-    controls.enabled = activePointer.controlsEnabled
+    if (orbitController) orbitController.setEnabled(activePointer.controlsEnabled)
+    else controls.enabled = activePointer.controlsEnabled
     activePointer = null
     event.preventDefault()
     event.stopImmediatePropagation()
@@ -518,6 +522,11 @@ export function createStudioV2RadioPanel({
     dispose() {
       if (disposed) return
       disposed = true
+      if (activePointer) {
+        if (orbitController) orbitController.setEnabled(activePointer.controlsEnabled)
+        else controls.enabled = activePointer.controlsEnabled
+        activePointer = null
+      }
       cancelWorldLayerAnimation()
       unsubscribeAudio()
       domElement.removeEventListener('pointerdown', handlePointerDown, true)

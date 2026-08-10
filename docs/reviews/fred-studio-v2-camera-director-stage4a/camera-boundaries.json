@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+  "cameraRadiusMeters": 0.12,
+  "targetMarginMeters": 0.12,
+  "hysteresisMeters": 0.004,
+  "boundaries": [
+    {"id": "FLOOR", "role": "floor", "normal": [0, 1, 0], "minimumDot": 0.140542593133827},
+    {"id": "CEILING", "role": "ceiling", "normal": [0, -1, 0], "minimumDot": -3.5},
+    {"id": "LEFT_WALL", "role": "side-wall", "normal": [1, 0, 0], "minimumDot": -6.43},
+    {"id": "REAR_PROTECTION", "role": "rear-virtual-protection", "normal": [-1, 0, 0], "minimumDot": -4.93},
+    {"id": "SIDE_WALL", "role": "side-wall", "normal": [0, 0, 1], "minimumDot": -4.53},
+    {"id": "GLASS_WALL", "role": "glass-wall", "normal": [0, 0, -1], "minimumDot": -3.26},
+    {"id": "SLOPED_CEILING", "role": "sloped-ceiling", "normal": [-0.18, -0.983666, 0], "minimumDot": -4.28}
+  ],
+  "targetBounds": {
+    "min": [-6.2, 0.550542593133827, -4.33],
+    "max": [4.7299999999999995, 2.7399999999999998, 3.03]
+  },
+  "majorObstacles": [
+    {"id": "SOFA SOUTH / MAIN BODY", "min": [-6.55, 0.66, -4.05], "max": [-2.88, 1.4, -2.06]},
+    {"id": "SOFA SOUTH / CHAISE", "min": [-6.55, 0.66, -2.02], "max": [-5.68, 0.96, -1.25]},
+    {"id": "SOFA NORTH / BODY", "min": [-6.55, 0.66, 2.23], "max": [-3.42, 1.28, 3.38]},
+    {"id": "COFFEE TABLE SOUTH / LOW BODY", "min": [-4.64, 0.02, -1.99], "max": [-3.29, 0.39, -0.73]},
+    {"id": "COFFEE TABLE NORTH / LOW BODY", "min": [-6.13, 0.02, 0.92], "max": [-4.2, 0.65, 2.19]},
+    {"id": "KITCHEN ISLAND / BODY", "min": [0.61, 0.52, -4.65], "max": [1.9, 1.46, 0.6]},
+    {"id": "KITCHEN STOOLS / ROW", "min": [-0.34, 0.5, -4.15], "max": [0.34, 1.15, 0.34]}
+  ],
+  "projectionTests": [
+    {"case": "GLASS_WALL", "requested": [-2, 1.8, 4], "resolved": [-2, 1.8, 3.256], "safe": true},
+    {"case": "REAR_PROTECTION", "requested": [6, 1.8, 0], "resolved": [4.926, 1.8, 0], "safe": true},
+    {"case": "FLOOR", "requested": [-2, -0.5, 0], "resolved": [-2, 0.1445, 0], "safe": true},
+    {"case": "CEILING", "requested": [-2, 5, 0], "resolved": [-2, 3.496, 0], "safe": true},
+    {"case": "LEFT_WALL", "requested": [-8, 1.8, 0], "resolved": [-6.426, 1.8, 0], "safe": true},
+    {"case": "SIDE_WALL", "requested": [-2, 1.8, -6], "resolved": [-2, 1.8, -4.526], "safe": true},
+    {"case": "MAJOR_OBSTACLE", "requested": [-4.715, 1.03, -3.055], "resolved": [-4.715, 1.03, -4.114], "safe": true}
+  ],
+  "repeatedBoundaryTest": {
+    "boundary": "LEFT_WALL",
+    "samples": 120,
+    "resolvedX": -6.426,
+    "positionSpan": 0,
+    "jitterFree": true
+  }
+}
