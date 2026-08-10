@@ -1,0 +1,176 @@
+[
+  {
+    "averageFps": 60,
+    "averageFrameTimeMs": 16.666,
+    "blurTarget": [
+      256,
+      160
+    ],
+    "blurUpdateRateHz": 0,
+    "drawCalls": 99,
+    "durationSeconds": 10,
+    "effectiveDpr": 2,
+    "frames": 600,
+    "id": "A_MATERIAL_ONLY_STATIC",
+    "medianFps": 59.88,
+    "motion": "STATIC",
+    "onePercentLowFps": 53.76,
+    "p95FrameTimeMs": 18,
+    "renderedTriangles": 780688,
+    "sourceTarget": [
+      512,
+      320
+    ],
+    "sourceUpdateRateHz": 0,
+    "staticUpdateRateHz": 0,
+    "viewport": [
+      1280,
+      720
+    ]
+  },
+  {
+    "averageFps": 60,
+    "averageFrameTimeMs": 16.666,
+    "blurTarget": [
+      256,
+      160
+    ],
+    "blurUpdateRateHz": 0,
+    "drawCalls": 99,
+    "durationSeconds": 10.02,
+    "effectiveDpr": 2,
+    "frames": 600,
+    "id": "B_INTEGRATED_STATIC",
+    "medianFps": 59.88,
+    "motion": "STATIC",
+    "onePercentLowFps": 54.05,
+    "p95FrameTimeMs": 18,
+    "renderedTriangles": 780688,
+    "sourceTarget": [
+      512,
+      320
+    ],
+    "sourceUpdateRateHz": 0,
+    "staticUpdateRateHz": 0,
+    "viewport": [
+      1280,
+      720
+    ]
+  },
+  {
+    "averageFps": 60,
+    "averageFrameTimeMs": 16.667,
+    "blurTarget": [
+      256,
+      160
+    ],
+    "blurUpdateRateHz": 0,
+    "drawCalls": 99,
+    "durationSeconds": 10.02,
+    "effectiveDpr": 2,
+    "frames": 601,
+    "id": "C_MATERIAL_ONLY_SLOW_CAMERA",
+    "medianFps": 59.88,
+    "motion": "SLOW_CAMERA",
+    "onePercentLowFps": 53.76,
+    "p95FrameTimeMs": 18.2,
+    "renderedTriangles": 780688,
+    "sourceTarget": [
+      512,
+      320
+    ],
+    "sourceUpdateRateHz": 0,
+    "staticUpdateRateHz": null,
+    "viewport": [
+      1280,
+      720
+    ]
+  },
+  {
+    "averageFps": 60,
+    "averageFrameTimeMs": 16.667,
+    "blurTarget": [
+      256,
+      160
+    ],
+    "blurUpdateRateHz": 5.39,
+    "drawCalls": 101.2,
+    "durationSeconds": 10.02,
+    "effectiveDpr": 2,
+    "frames": 601,
+    "id": "D_INTEGRATED_SLOW_CAMERA",
+    "medianFps": 59.88,
+    "motion": "SLOW_CAMERA",
+    "onePercentLowFps": 53.76,
+    "p95FrameTimeMs": 18.2,
+    "renderedTriangles": 794747,
+    "sourceTarget": [
+      512,
+      320
+    ],
+    "sourceUpdateRateHz": 5.39,
+    "staticUpdateRateHz": null,
+    "viewport": [
+      1280,
+      720
+    ]
+  },
+  {
+    "averageFps": 60,
+    "averageFrameTimeMs": 16.666,
+    "blurTarget": [
+      256,
+      160
+    ],
+    "blurUpdateRateHz": 16.07,
+    "drawCalls": 105.5,
+    "durationSeconds": 10.02,
+    "effectiveDpr": 2,
+    "frames": 600,
+    "id": "E_INTEGRATED_FASTER_ORBIT",
+    "medianFps": 59.88,
+    "motion": "FASTER_ORBIT",
+    "onePercentLowFps": 54.05,
+    "p95FrameTimeMs": 18,
+    "renderedTriangles": 824855,
+    "sourceTarget": [
+      512,
+      320
+    ],
+    "sourceUpdateRateHz": 16.07,
+    "staticUpdateRateHz": null,
+    "viewport": [
+      1280,
+      720
+    ]
+  },
+  {
+    "averageFps": 60,
+    "averageFrameTimeMs": 16.667,
+    "blurTarget": [
+      256,
+      160
+    ],
+    "blurUpdateRateHz": 2.4,
+    "drawCalls": 100,
+    "durationSeconds": 30.02,
+    "effectiveDpr": 2,
+    "frames": 1801,
+    "id": "F_INTEGRATED_CONTINUOUS_SLOW_DRIFT",
+    "medianFps": 59.88,
+    "motion": "CONTINUOUS_SLOW_DRIFT",
+    "onePercentLowFps": 53.76,
+    "p95FrameTimeMs": 18.3,
+    "renderedTriangles": 786943,
+    "sourceTarget": [
+      512,
+      320
+    ],
+    "sourceUpdateRateHz": 2.4,
+    "staticUpdateRateHz": null,
+    "viewport": [
+      1280,
+      720
+    ]
+  }
+]

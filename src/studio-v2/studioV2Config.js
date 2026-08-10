@@ -214,11 +214,11 @@ export const STUDIO_V2_LIGHTING = {
   key: {
     ...STUDIO_V2_LIGHTING_BASELINE.key,
     color: '#fff8ef',
-    intensity: 1.6,
+    intensity: 1.44,
     position: [-2.2, 4.6, -5.6],
     target: [-2.2, 0.5, -0.3],
-    shadowIntensity: 0.56,
-    shadowRadius: 3,
+    shadowIntensity: 0.5,
+    shadowRadius: 5,
     shadowMapSize: 2048,
     shadowCamera: {
       left: -8,
@@ -239,7 +239,7 @@ export const STUDIO_V2_LIGHTING = {
   },
   windowFill: {
     color: '#fff8ef',
-    intensity: 0.32,
+    intensity: 0.42,
     position: [-0.4, 1.25, -5.25],
     target: [-3.6, 1.15, 0.8],
     width: 11,
@@ -254,6 +254,53 @@ export const STUDIO_V2_LIGHTING = {
     height: 4.5,
   },
 }
+
+export const STUDIO_V2_SHADOW_PROFILES = Object.freeze({
+  CURRENT_STAGE3_1: Object.freeze({
+    label: 'CURRENT STAGE 3.1',
+    shadowType: 'PCFShadowMap',
+    keyIntensity: 1.6,
+    windowFillIntensity: 0.32,
+    ceilingBounceIntensity: 0.08,
+    environmentIntensity: 0.55,
+    exposure: 0.76,
+    shadowIntensity: 0.56,
+    shadowRadius: 3,
+    blurSamples: 8,
+    bias: -0.00035,
+    normalBias: 0.025,
+  }),
+  IMPROVED_PCF_SOFT: Object.freeze({
+    label: 'IMPROVED PCF SOFT',
+    shadowType: 'PCFSoftShadowMap',
+    keyIntensity: 1.44,
+    windowFillIntensity: 0.42,
+    ceilingBounceIntensity: 0.08,
+    environmentIntensity: 0.55,
+    exposure: 0.76,
+    shadowIntensity: 0.5,
+    shadowRadius: 5,
+    blurSamples: 8,
+    bias: -0.00035,
+    normalBias: 0.025,
+  }),
+  VSM_SOFT: Object.freeze({
+    label: 'VSM SOFT',
+    shadowType: 'VSMShadowMap',
+    keyIntensity: 1.42,
+    windowFillIntensity: 0.42,
+    ceilingBounceIntensity: 0.08,
+    environmentIntensity: 0.55,
+    exposure: 0.76,
+    shadowIntensity: 0.5,
+    shadowRadius: 4.2,
+    blurSamples: 12,
+    bias: -0.00025,
+    normalBias: 0.018,
+  }),
+})
+
+export const STUDIO_V2_SELECTED_SHADOW_PROFILE = 'IMPROVED_PCF_SOFT'
 
 export const STUDIO_V2_RENDERING = {
   clearColor: '#151817',
@@ -486,7 +533,7 @@ export const STUDIO_V2_CAMERA_SAFETY = {
 export const STUDIO_V2_MATERIAL_TUNING = {
   'Material.005': { category: 'SOFA NORTH / BODY + CUSHIONS', color: '#878988', metalness: 0, roughness: 0.74, envMapIntensity: 0.52 },
   'Material.007': { category: 'SOFA SOUTH / BODY + CUSHIONS', color: '#878988', metalness: 0, roughness: 0.74, envMapIntensity: 0.52 },
-  'Material.002': { category: 'FLOOR', color: '#a3a3a0', metalness: 0, roughness: 0.34, envMapIntensity: 0.92, normalScale: 0.5 },
+  'Material.002': { category: 'FLOOR', color: '#a3a3a0', metalness: 0, roughness: 0.3, envMapIntensity: 1, normalScale: 0.45 },
   'Material.012': { category: 'RUG', metalness: 0, roughness: 0.96, envMapIntensity: 0.24, normalScale: 0.56 },
   StudioV2LightTimber: { category: 'LIGHT WALL / KITCHEN TIMBER', metalness: 0, roughness: 0.52, envMapIntensity: 0.78 },
   StudioV2KitchenTimber: { category: 'KITCHEN TIMBER BACKING', metalness: 0, roughness: 0.55, envMapIntensity: 0.72 },

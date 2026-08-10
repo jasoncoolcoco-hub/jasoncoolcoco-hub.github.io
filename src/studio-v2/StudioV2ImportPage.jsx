@@ -42,6 +42,7 @@ export default function StudioV2ImportPage() {
   const searchParams = new URLSearchParams(window.location.search)
   const debugEnabled = searchParams.get('debug') === '1'
   const captureEnabled = searchParams.get('capture') === '1'
+  const performanceEnabled = (debugEnabled || captureEnabled) && searchParams.get('perf') === '1'
   const initialCameraPreset = debugEnabled || captureEnabled
     ? searchParams.get('view') || undefined
     : undefined
@@ -58,13 +59,40 @@ export default function StudioV2ImportPage() {
     && Number.isFinite(requestedExposure)
     ? requestedExposure
     : undefined
-  const pixelRatioCap = debugEnabled && searchParams.get('dpr') === '1' ? 1 : undefined
+  const requestedDpr = Number(searchParams.get('dpr'))
+  const pixelRatioCap = (debugEnabled || captureEnabled) && [1, 2].includes(requestedDpr)
+    ? requestedDpr
+    : undefined
+  const initialFloorReflectionEnabled = debugEnabled || captureEnabled
+    ? searchParams.get('reflection') !== 'off'
+    : true
+  const initialFloorArchitecture = debugEnabled || captureEnabled
+    ? searchParams.get('floorArchitecture')?.toUpperCase() || undefined
+    : undefined
+  const initialReflectionDiagnosticMode = debugEnabled || captureEnabled
+    ? searchParams.get('diagnosticMode')?.toUpperCase() || undefined
+    : undefined
+  const initialShadowProfile = debugEnabled || captureEnabled
+    ? searchParams.get('shadowProfile')?.toUpperCase() || undefined
+    : undefined
+  const initialCompositeMode = debugEnabled || captureEnabled
+    ? searchParams.get('compositeMode')?.toUpperCase() || undefined
+    : undefined
   const auditViewportMatch = (debugEnabled || captureEnabled)
     ? searchParams.get('auditViewport')?.match(/^(\d{3,4})x(\d{3,4})$/)
     : null
   const forcedViewport = auditViewportMatch
     ? [Number(auditViewportMatch[1]), Number(auditViewportMatch[2])]
     : undefined
+  const performanceTest = performanceEnabled
+    ? {
+      suite: true,
+      caseId: searchParams.get('perfCase') || null,
+      staticDurationMs: 10000,
+      movementDurationMs: 10000,
+      slowDriftDurationMs: 30000,
+    }
+    : null
   const deliveryConfig = createStudioV2DeliveryConfig(
     deliveryRequestFromSearch(searchParams),
     debugEnabled || captureEnabled,
@@ -127,8 +155,14 @@ export default function StudioV2ImportPage() {
       initialLightingCandidate,
       initialToneMapping,
       initialExposure,
+      initialFloorReflectionEnabled,
+      initialFloorArchitecture,
+      initialReflectionDiagnosticMode,
+      initialShadowProfile,
+      initialCompositeMode,
       pixelRatioCap,
       forcedViewport,
+      performanceTest,
       deliveryConfig,
       entryTestConfig,
       audioController: controller,
@@ -168,7 +202,7 @@ export default function StudioV2ImportPage() {
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
-  }, [attempt, captureEnabled, debugEnabled, initialAssetMaterialMode, initialCameraPreset, initialExposure, initialLightingCandidate, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x')])
+  }, [attempt, captureEnabled, debugEnabled, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled])
 
   const enableExplore = () => {
     setExploring(true)
@@ -247,7 +281,7 @@ export default function StudioV2ImportPage() {
         />
       )}
 
-      {debugEnabled && !captureEnabled && (
+      {debugEnabled && !captureEnabled && !performanceEnabled && (
         <header className="studio-v2__header">
           <a href="/" className="studio-v2__back">BACK</a>
           <p><span>FRED STUDIO</span><small>IMPORTED LOFT / V2</small></p>
@@ -258,7 +292,7 @@ export default function StudioV2ImportPage() {
         </header>
       )}
 
-      {debugEnabled && !captureEnabled && ready && !exploring && (
+      {debugEnabled && !captureEnabled && !performanceEnabled && ready && !exploring && (
         <p className="studio-v2__hint">SELECT EXPLORE TO ORBIT THE LOFT</p>
       )}
 
@@ -268,7 +302,7 @@ export default function StudioV2ImportPage() {
         visible={loadingVisible || Boolean(error)}
         onRetry={() => setAttempt((value) => value + 1)}
       />
-      {debugEnabled && !captureEnabled && (
+      {debugEnabled && !captureEnabled && !performanceEnabled && (
         <Suspense fallback={null}>
           <StudioV2DebugPanel
             audit={audit}

@@ -5,7 +5,12 @@ import {
   STUDIO_V2_LIGHTING_CANDIDATES,
   STUDIO_V2_MODEL_TRANSFORM,
   STUDIO_V2_RENDERING,
+  STUDIO_V2_SHADOW_PROFILES,
 } from './studioV2Config'
+import {
+  STUDIO_V2_FLOOR_ARCHITECTURES,
+  STUDIO_V2_REFLECTION_DIAGNOSTIC_MODES,
+} from './studioV2FloorReflection'
 import {
   STUDIO_V2_ANCHORS,
   STUDIO_V2_ANCHOR_NAMES,
@@ -108,6 +113,7 @@ export default function StudioV2DebugPanel({
   const [helpers, setHelpers] = useState({ lights: false })
   const [assetMaterialMode, setAssetMaterialMode] = useState('refined')
   const [, setSpatialRevision] = useState(0)
+  const [, setVisualRevision] = useState(0)
   const [anchorName, setAnchorName] = useState(STUDIO_V2_ANCHOR_NAMES[0])
   const [audioState, setAudioState] = useState(() => audioController?.getState?.() ?? {})
   const [marshallInteraction, setMarshallInteraction] = useState(() => runtime?.getMarshallInteractionState?.() ?? {})
@@ -740,8 +746,60 @@ export default function StudioV2DebugPanel({
         <div className="studio-v2__debug-actions">
           <ToggleButton active={visual.ibl} onClick={() => runtime.setIbl(!visual.ibl)}>IBL {visual.ibl ? 'ON' : 'OFF'}</ToggleButton>
           <ToggleButton active={visual.shadows} onClick={() => runtime.setShadows(!visual.shadows)}>SHADOWS {visual.shadows ? 'ON' : 'OFF'}</ToggleButton>
+          <ToggleButton
+            active={Boolean(visual.floorReflection?.enabled)}
+            onClick={() => {
+              runtime.setFloorReflection(!visual.floorReflection?.enabled)
+              setVisualRevision((current) => current + 1)
+            }}
+          >
+            REFLECTION {visual.floorReflection?.enabled ? 'ON' : 'OFF'}
+          </ToggleButton>
           <ToggleButton active={false} disabled>AO OFF / N.A.</ToggleButton>
           <ToggleButton active={false} disabled>BLOOM OFF / N.A.</ToggleButton>
+        </div>
+        <div className="studio-v2__debug-actions">
+          {Object.keys(STUDIO_V2_SHADOW_PROFILES).map((profileName) => (
+            <ToggleButton
+              key={profileName}
+              active={visual.shadowProfile === profileName}
+              disabled={profileName === 'VSM_SOFT' && !visual.vsmSupported}
+              onClick={() => {
+                runtime.setShadowProfile(profileName)
+                setVisualRevision((current) => current + 1)
+              }}
+            >
+              {STUDIO_V2_SHADOW_PROFILES[profileName].label}
+            </ToggleButton>
+          ))}
+        </div>
+        <div className="studio-v2__debug-actions">
+          {Object.keys(STUDIO_V2_FLOOR_ARCHITECTURES).map((architecture) => (
+            <ToggleButton
+              key={architecture}
+              active={visual.floorReflection?.architectureCandidate === architecture}
+              onClick={() => {
+                runtime.setFloorArchitecture(architecture)
+                setVisualRevision((current) => current + 1)
+              }}
+            >
+              {STUDIO_V2_FLOOR_ARCHITECTURES[architecture].label}
+            </ToggleButton>
+          ))}
+        </div>
+        <div className="studio-v2__debug-actions">
+          {Object.keys(STUDIO_V2_REFLECTION_DIAGNOSTIC_MODES).map((mode) => (
+            <ToggleButton
+              key={mode}
+              active={visual.floorReflection?.diagnosticMode === mode}
+              onClick={() => {
+                runtime.setReflectionDiagnosticMode(mode)
+                setVisualRevision((current) => current + 1)
+              }}
+            >
+              {STUDIO_V2_REFLECTION_DIAGNOSTIC_MODES[mode]}
+            </ToggleButton>
+          ))}
         </div>
         <dl>
           <InspectorRow label="TONE MAPPING" value={visual.toneMapping ?? STUDIO_V2_RENDERING.toneMapping} />
@@ -750,10 +808,37 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="SHADOW TYPE" value={visual.shadowType ?? 'PCFShadowMap'} />
           <InspectorRow label="SHADOW CONTRIBUTION" value={Number(visual.shadowIntensity ?? STUDIO_V2_LIGHTING.key.shadowIntensity).toFixed(2)} />
           <InspectorRow label="SHADOW RADIUS" value={visual.shadowRadius ?? STUDIO_V2_LIGHTING.key.shadowRadius} />
+          <InspectorRow label="SHADOW BLUR SAMPLES" value={visual.shadowBlurSamples ?? 0} />
           <InspectorRow label="SHADOW MAP" value={`${visual.shadowMapSize ?? STUDIO_V2_LIGHTING.key.shadowMapSize}²`} />
           <InspectorRow label="BIAS" value={visual.shadowBias ?? STUDIO_V2_LIGHTING.key.shadowBias} />
           <InspectorRow label="NORMAL BIAS" value={visual.shadowNormalBias ?? STUDIO_V2_LIGHTING.key.shadowNormalBias} />
           <InspectorRow label="CASTING LIGHTS" value={visual.shadowCasters ?? 1} />
+          <InspectorRow label="FLOOR CANDIDATE" value={visual.floorReflection?.architectureLabel ?? 'N.A.'} />
+          <InspectorRow label="FLOOR ARCHITECTURE" value={visual.floorReflection?.architecture ?? 'N.A.'} />
+          <InspectorRow label="DIAGNOSTIC OUTPUT" value={visual.floorReflection?.diagnosticMode ?? 'N.A.'} />
+          <InspectorRow label="REFLECTION TARGET" value={visual.floorReflection ? `${visual.floorReflection.textureSize?.join('×')} / MSAA ${visual.floorReflection.multisample}` : 'N.A.'} />
+          <InspectorRow label="REFLECTION STRENGTH" value={visual.floorReflection?.reflectionStrength ?? 'N.A.'} />
+          <InspectorRow label="REFLECTION F0" value={visual.floorReflection?.f0 ?? 'N.A.'} />
+          <InspectorRow label="WEIGHT MODEL" value={visual.floorReflection?.weightModel ?? 'N.A.'} />
+          <InspectorRow label="BASE POLISH LOBE" value={visual.floorReflection?.basePolish ?? 'N.A.'} />
+          <InspectorRow label="LUMINANCE THRESHOLDS" value={visual.floorReflection ? `${visual.floorReflection.lowerLuminanceThreshold} — ${visual.floorReflection.upperLuminanceThreshold}` : 'N.A.'} />
+          <InspectorRow label="FINAL WEIGHT CLAMP" value={visual.floorReflection?.finalWeightClamp ?? 'N.A.'} />
+          <InspectorRow label="REFLECTION LUMINANCE" value={visual.floorReflection ? `${visual.floorReflection.lowLuminanceContribution} — ${visual.floorReflection.highLuminanceContribution}` : 'N.A.'} />
+          <InspectorRow label="FLOOR BRDF" value={visual.floorReflection ? `R ${visual.floorReflection.roughness} · CC ${visual.floorReflection.clearcoat} / ${visual.floorReflection.clearcoatRoughness} · ENV ${visual.floorReflection.envMapIntensity}` : 'N.A.'} />
+          <InspectorRow label="NORMAL DISTORTION" value={visual.floorReflection ? `${visual.floorReflection.normalDistortionTexels} TEXELS` : 'N.A.'} />
+          <InspectorRow label="PROJECTED UV" value={visual.floorReflection?.coverageAudit ? `${visual.floorReflection.coverageAudit.projectedUv.minU.toFixed(3)}, ${visual.floorReflection.coverageAudit.projectedUv.minV.toFixed(3)} — ${visual.floorReflection.coverageAudit.projectedUv.maxU.toFixed(3)}, ${visual.floorReflection.coverageAudit.projectedUv.maxV.toFixed(3)}` : 'NOT AUDITED'} />
+          <InspectorRow label="PROJECTED UV AREA" value={visual.floorReflection?.coverageAudit ? `${visual.floorReflection.coverageAudit.projectedUvAreaPercent}%` : 'N.A.'} />
+          <InspectorRow label="SAMPLED SOURCE BINS" value={visual.floorReflection?.coverageAudit ? `${visual.floorReflection.coverageAudit.sampledSourceBinsPercent}%` : 'N.A.'} />
+          <InspectorRow label="BLACK REGION IMPACT" value={visual.floorReflection?.coverageAudit?.blackRegionAffectsFinal ? 'YES / REVIEW' : 'NO'} />
+          <InspectorRow label="CLAMP TO EDGE" value={visual.floorReflection?.coverageAudit?.clampToEdge ? 'YES' : 'NO'} />
+          <InspectorRow label="BLUR TARGETS" value={visual.floorReflection?.blurTextureSize ? `2 × ${visual.floorReflection.blurTextureSize.join('×')}` : 'OFF'} />
+          <InspectorRow label="BLUR FILTER" value={visual.floorReflection?.blurPasses ? `${visual.floorReflection.blurPasses} PASSES × ${visual.floorReflection.blurSampleTapsPerPass} TAPS / OFFSET ${visual.floorReflection.blurSampleOffset}` : 'OFF'} />
+          <InspectorRow label="COLOUR PIPELINE" value={visual.floorReflection?.colourPipeline ?? 'N.A.'} />
+          <InspectorRow label="REFLECTION UPDATE" value={visual.floorReflection?.updateStrategy ?? 'N.A.'} />
+          <InspectorRow label="ACTIVE CADENCE" value={visual.floorReflection ? `${visual.floorReflection.updateCadence} / ${visual.floorReflection.updateCadenceHz} HZ` : 'N.A.'} />
+          <InspectorRow label="REFLECTION PERF" value={visual.floorReflection ? `${visual.floorReflection.updateCount} RENDERS / ${visual.floorReflection.updateRateHz} HZ` : 'N.A.'} />
+          <InspectorRow label="REFLECTION TARGETS" value={visual.floorReflection ? `${visual.floorReflection.activeTargets} ACTIVE / ${visual.floorReflection.allocatedTargets} ALLOCATED` : 'N.A.'} />
+          <InspectorRow label="BLUR PERF" value={visual.floorReflection ? `${visual.floorReflection.blurUpdateCount} RENDERS / ${visual.floorReflection.blurUpdateRateHz} HZ` : 'N.A.'} />
         </dl>
         <label className="studio-v2__debug-range">
           <span>ENV INTENSITY <output>{Number(visual.environmentIntensity ?? STUDIO_V2_RENDERING.environmentIntensity).toFixed(2)}</output></span>

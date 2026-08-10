@@ -17,6 +17,8 @@ import {
   STUDIO_V2_MODEL_TRANSFORM,
   STUDIO_V2_OFFICIAL_CONTROLS,
   STUDIO_V2_RENDERING,
+  STUDIO_V2_SELECTED_SHADOW_PROFILE,
+  STUDIO_V2_SHADOW_PROFILES,
 } from './studioV2Config'
 import { createStudioV2CameraSafety } from './studioV2CameraSafety'
 import { auditStudioV2Model } from './studioV2ModelAudit'
@@ -35,6 +37,10 @@ import { createStudioV2GltfLoader } from './studioV2GltfLoader'
 import { createStudioV2EntryGate } from './studioV2EntryGate'
 import { createStudioV2MarshallInteraction } from './createStudioV2MarshallInteraction'
 import { createStudioV2RadioPanel } from './createStudioV2RadioPanel'
+import {
+  createStudioV2FloorReflection,
+  STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
+} from './studioV2FloorReflection'
 import {
   STUDIO_V2_RADIO_PANEL_ID,
   STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
@@ -66,6 +72,21 @@ function responsiveFov(baseFov, width) {
   return width < 700 ? Math.min(74, baseFov + 22) : baseFov
 }
 
+function percentile(sortedValues, percentileValue) {
+  if (!sortedValues.length) return 0
+  const index = (sortedValues.length - 1) * percentileValue
+  const lower = Math.floor(index)
+  const upper = Math.ceil(index)
+  if (lower === upper) return sortedValues[lower]
+  return THREE.MathUtils.lerp(sortedValues[lower], sortedValues[upper], index - lower)
+}
+
+const SHADOW_MAP_TYPES = Object.freeze({
+  PCFShadowMap: THREE.PCFShadowMap,
+  PCFSoftShadowMap: THREE.PCFSoftShadowMap,
+  VSMShadowMap: THREE.VSMShadowMap,
+})
+
 export function createStudioV2Scene({
   mount,
   capture = false,
@@ -87,8 +108,14 @@ export function createStudioV2Scene({
   initialLightingCandidate,
   initialToneMapping,
   initialExposure,
+  initialFloorReflectionEnabled = true,
+  initialFloorArchitecture,
+  initialReflectionDiagnosticMode,
+  initialShadowProfile,
+  initialCompositeMode = 'FINAL_COMBINED',
   pixelRatioCap = STUDIO_V2_RENDERING.maxPixelRatio,
   forcedViewport,
+  performanceTest = null,
 }) {
   const activeDeliveryConfig = deliveryConfig ?? createStudioV2DeliveryConfig({}, false)
   const initialLighting = STUDIO_V2_LIGHTING_CANDIDATES[initialLightingCandidate]
@@ -104,6 +131,10 @@ export function createStudioV2Scene({
   const initialExposureValue = Number.isFinite(initialExposure)
     ? initialExposure
     : initialLighting.exposure
+  let activeShadowProfileName = initialShadowProfile in STUDIO_V2_SHADOW_PROFILES
+    ? initialShadowProfile
+    : STUDIO_V2_SELECTED_SHADOW_PROFILE
+  const activeShadowProfile = STUDIO_V2_SHADOW_PROFILES[activeShadowProfileName]
   const indirectLighting = STUDIO_V2_LIGHTING
   const officialPresentation = !debug && !capture
   const stableOrbitMode = !capture
@@ -115,7 +146,7 @@ export function createStudioV2Scene({
   RectAreaLightUniformsLib.init()
   const scene = new THREE.Scene()
   scene.background = new THREE.Color(STUDIO_V2_RENDERING.clearColor)
-  scene.environmentIntensity = initialLighting.environmentIntensity
+  scene.environmentIntensity = activeShadowProfile.environmentIntensity
   const entryRoot = new THREE.Group()
   entryRoot.name = 'STUDIO_V2_ENTRY_ROOT'
   entryRoot.userData.studioV2Id = 'STUDIO_V2_ENTRY_ROOT'
@@ -130,9 +161,11 @@ export function createStudioV2Scene({
   renderer.setSize(initialRenderSize.width, initialRenderSize.height)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = toneMappingModes[toneMappingName]
-  renderer.toneMappingExposure = initialExposureValue
+  renderer.toneMappingExposure = Number.isFinite(initialExposure)
+    ? initialExposureValue
+    : activeShadowProfile.exposure
   renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = THREE.PCFShadowMap
+  renderer.shadowMap.type = SHADOW_MAP_TYPES[activeShadowProfile.shadowType]
   mount.appendChild(renderer.domElement)
 
   const cameraSafety = createStudioV2CameraSafety({
@@ -266,7 +299,7 @@ export function createStudioV2Scene({
 
   const keyLight = new THREE.DirectionalLight(
     initialLighting.key.color,
-    initialLighting.key.intensity,
+    activeShadowProfile.keyIntensity,
   )
   keyLight.name = 'StudioV2KeyLight'
   keyLight.position.set(...initialLighting.key.position)
@@ -280,10 +313,11 @@ export function createStudioV2Scene({
   keyLight.shadow.camera.bottom = initialLighting.key.shadowCamera?.bottom ?? -5
   keyLight.shadow.camera.near = initialLighting.key.shadowCamera?.near ?? 0.5
   keyLight.shadow.camera.far = initialLighting.key.shadowCamera?.far ?? 28
-  keyLight.shadow.radius = initialLighting.key.shadowRadius ?? 1
-  keyLight.shadow.bias = initialLighting.key.shadowBias ?? -0.00035
-  keyLight.shadow.normalBias = initialLighting.key.shadowNormalBias ?? 0.025
-  keyLight.shadow.intensity = initialLighting.key.shadowIntensity
+  keyLight.shadow.radius = activeShadowProfile.shadowRadius
+  keyLight.shadow.blurSamples = activeShadowProfile.blurSamples
+  keyLight.shadow.bias = activeShadowProfile.bias
+  keyLight.shadow.normalBias = activeShadowProfile.normalBias
+  keyLight.shadow.intensity = activeShadowProfile.shadowIntensity
   const fillLight = new THREE.DirectionalLight(
     initialLighting.fill.color,
     initialLighting.fill.intensity,
@@ -292,7 +326,7 @@ export function createStudioV2Scene({
   fillLight.position.set(...initialLighting.fill.position)
   const windowFill = new THREE.RectAreaLight(
     indirectLighting.windowFill.color,
-    indirectLighting.windowFill.intensity,
+    activeShadowProfile.windowFillIntensity,
     indirectLighting.windowFill.width,
     indirectLighting.windowFill.height,
   )
@@ -301,7 +335,7 @@ export function createStudioV2Scene({
   windowFill.lookAt(...indirectLighting.windowFill.target)
   const ceilingBounce = new THREE.RectAreaLight(
     indirectLighting.ceilingBounce.color,
-    indirectLighting.ceilingBounce.intensity,
+    activeShadowProfile.ceilingBounceIntensity,
     indirectLighting.ceilingBounce.width,
     indirectLighting.ceilingBounce.height,
   )
@@ -323,6 +357,7 @@ export function createStudioV2Scene({
 
   let disposed = false
   let modelRoot = null
+  let floorReflection = null
   let marshallInteraction = null
   let unsubscribeAudioState = null
   let radioPanel = null
@@ -361,26 +396,99 @@ export function createStudioV2Scene({
     toneMapping: toneMappingName.toUpperCase(),
     environmentMode: 'ROOM_ENVIRONMENT_PMREM',
     lightCount: 4,
-    environmentIntensity: initialLighting.environmentIntensity,
-    exposure: initialExposureValue,
-    keyIntensity: initialLighting.key.intensity,
+    environmentIntensity: activeShadowProfile.environmentIntensity,
+    exposure: Number.isFinite(initialExposure) ? initialExposureValue : activeShadowProfile.exposure,
+    keyIntensity: activeShadowProfile.keyIntensity,
     keyPosition: [...initialLighting.key.position],
     fillIntensity: initialLighting.fill.intensity,
     fillPosition: [...initialLighting.fill.position],
-    windowFillIntensity: indirectLighting.windowFill.intensity,
+    windowFillIntensity: activeShadowProfile.windowFillIntensity,
     windowFillPosition: [...indirectLighting.windowFill.position],
     windowFillSize: [indirectLighting.windowFill.width, indirectLighting.windowFill.height],
-    ceilingBounceIntensity: indirectLighting.ceilingBounce.intensity,
+    ceilingBounceIntensity: activeShadowProfile.ceilingBounceIntensity,
     ceilingBouncePosition: [...indirectLighting.ceilingBounce.position],
     ceilingBounceSize: [indirectLighting.ceilingBounce.width, indirectLighting.ceilingBounce.height],
-    shadowIntensity: initialLighting.key.shadowIntensity,
-    shadowType: 'PCFShadowMap',
+    shadowProfile: activeShadowProfileName,
+    shadowIntensity: activeShadowProfile.shadowIntensity,
+    shadowType: activeShadowProfile.shadowType,
     shadowRadius: keyLight.shadow.radius,
+    shadowBlurSamples: keyLight.shadow.blurSamples,
     shadowMapSize,
     shadowBias: keyLight.shadow.bias,
     shadowNormalBias: keyLight.shadow.normalBias,
     shadowCasters: 1,
+    vsmSupported: THREE.VSMShadowMap !== undefined && 'blurSamples' in keyLight.shadow,
+    compositeMode: initialCompositeMode,
+    floorReflection: null,
   }
+
+  function releaseShadowTargets() {
+    keyLight.shadow.map?.dispose()
+    keyLight.shadow.mapPass?.dispose()
+    keyLight.shadow.map = null
+    keyLight.shadow.mapPass = null
+  }
+
+  function applyShadowProfile(profileName) {
+    const profile = STUDIO_V2_SHADOW_PROFILES[profileName]
+    if (!profile) return false
+    if (profile.shadowType === 'VSMShadowMap' && !visualState.vsmSupported) return false
+    const nextShadowType = SHADOW_MAP_TYPES[profile.shadowType]
+    if (renderer.shadowMap.type !== nextShadowType) releaseShadowTargets()
+    renderer.shadowMap.type = nextShadowType
+    renderer.shadowMap.needsUpdate = true
+    keyLight.intensity = profile.keyIntensity
+    keyLight.shadow.intensity = profile.shadowIntensity
+    keyLight.shadow.radius = profile.shadowRadius
+    keyLight.shadow.blurSamples = profile.blurSamples
+    keyLight.shadow.bias = profile.bias
+    keyLight.shadow.normalBias = profile.normalBias
+    keyLight.shadow.needsUpdate = true
+    windowFill.intensity = profile.windowFillIntensity
+    ceilingBounce.intensity = profile.ceilingBounceIntensity
+    scene.environmentIntensity = profile.environmentIntensity
+    renderer.toneMappingExposure = profile.exposure
+    activeShadowProfileName = profileName
+    visualState.shadowProfile = profileName
+    visualState.shadowType = profile.shadowType
+    visualState.shadowIntensity = profile.shadowIntensity
+    visualState.shadowRadius = profile.shadowRadius
+    visualState.shadowBlurSamples = profile.blurSamples
+    visualState.shadowBias = profile.bias
+    visualState.shadowNormalBias = profile.normalBias
+    visualState.keyIntensity = profile.keyIntensity
+    visualState.windowFillIntensity = profile.windowFillIntensity
+    visualState.ceilingBounceIntensity = profile.ceilingBounceIntensity
+    visualState.environmentIntensity = profile.environmentIntensity
+    visualState.exposure = profile.exposure
+    floorReflection?.markDirty()
+    return true
+  }
+
+  function applyCompositeMode(requestedMode) {
+    const compositeMode = [
+      'SHADOW_ONLY',
+      'REFLECTION_ONLY',
+      'FINAL_COMBINED',
+    ].includes(requestedMode)
+      ? requestedMode
+      : 'FINAL_COMBINED'
+    const shadowsEnabled = compositeMode !== 'REFLECTION_ONLY'
+    const reflectionEnabled = compositeMode !== 'SHADOW_ONLY'
+    renderer.shadowMap.enabled = shadowsEnabled
+    keyLight.castShadow = shadowsEnabled
+    floorReflection?.setEnabled(reflectionEnabled)
+    floorReflection?.setDiagnosticMode({
+      SHADOW_ONLY: 'SHADOW_ONLY',
+      REFLECTION_ONLY: 'REFLECTION_ONLY_TEST',
+      FINAL_COMBINED: 'FINAL_COMBINED',
+    }[compositeMode])
+    visualState.shadows = shadowsEnabled
+    visualState.floorReflection = floorReflection?.getState() ?? null
+    visualState.compositeMode = compositeMode
+    return compositeMode
+  }
+
   const loadStartedAt = performance.now()
   const parallelEntryLoading = officialPresentation
     || capture
@@ -618,6 +726,22 @@ export function createStudioV2Scene({
         STUDIO_V2_RADIO_PANEL_ID,
       ],
     })
+    floorReflection = createStudioV2FloorReflection({
+      architecture: initialFloorArchitecture,
+      debug: debug || capture,
+      diagnosticMode: initialReflectionDiagnosticMode,
+      enabled: initialFloorReflectionEnabled,
+      root: modelRoot,
+    })
+    if (initialReflectionDiagnosticMode) {
+      floorReflection?.setEnabled(initialFloorReflectionEnabled)
+      floorReflection?.setDiagnosticMode(initialReflectionDiagnosticMode)
+      visualState.compositeMode = initialReflectionDiagnosticMode
+    } else {
+      applyCompositeMode(initialFloorReflectionEnabled ? initialCompositeMode : 'SHADOW_ONLY')
+    }
+    visualState.floorReflection = floorReflection?.getState() ?? null
+    mount.dataset.floorReflectionEnabled = String(Boolean(visualState.floorReflection?.enabled))
     entryRoot.updateMatrixWorld(true)
     camera.updateMatrixWorld(true)
     entryGate.markCondition('worldMatricesReady')
@@ -667,7 +791,17 @@ export function createStudioV2Scene({
       method: typeof renderer.compileAsync === 'function' ? 'compileAsync' : 'compile',
     })
     entryGate.setPhase('warming-first-frame')
-    renderer.render(scene, camera)
+    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera)
+    else renderer.render(scene, camera)
+    if ((debug || capture) && floorReflection) {
+      const floorCoverageAudit = floorReflection.runCoverageAudit(renderer, scene, camera)
+      mount.dataset.floorCoverageAudit = JSON.stringify(floorCoverageAudit)
+    }
+    visualState.floorReflection = floorReflection?.getState() ?? null
+    mount.dataset.floorReflectionReady = String(Boolean(
+      !visualState.floorReflection?.enabled
+      || visualState.floorReflection?.initialRenderComplete,
+    ))
     await new Promise((resolve) => requestAnimationFrame(() => resolve()))
     await new Promise((resolve) => requestAnimationFrame(() => resolve()))
     if (disposed) return null
@@ -726,6 +860,7 @@ export function createStudioV2Scene({
       placedObjects: placedObjectRecords,
       cameraSafety: cameraSafety.record(),
       radioPanel: radioPanel?.getState() ?? null,
+      floorReflection: floorReflection?.getState() ?? null,
       root: {
         position: STUDIO_V2_MODEL_TRANSFORM.position,
         rotation: STUDIO_V2_MODEL_TRANSFORM.rotation,
@@ -798,6 +933,155 @@ export function createStudioV2Scene({
     if (progress >= 1) cameraTween = null
   }
 
+  const performanceCases = Object.freeze([
+    {
+      id: 'A_MATERIAL_ONLY_STATIC',
+      architecture: 'MATERIAL_ONLY',
+      motion: 'STATIC',
+      durationMs: performanceTest?.staticDurationMs ?? 10000,
+    },
+    {
+      id: 'B_INTEGRATED_STATIC',
+      architecture: STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
+      motion: 'STATIC',
+      durationMs: performanceTest?.staticDurationMs ?? 10000,
+    },
+    {
+      id: 'C_MATERIAL_ONLY_SLOW_CAMERA',
+      architecture: 'MATERIAL_ONLY',
+      motion: 'SLOW_CAMERA',
+      durationMs: performanceTest?.movementDurationMs ?? 10000,
+    },
+    {
+      id: 'D_INTEGRATED_SLOW_CAMERA',
+      architecture: STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
+      motion: 'SLOW_CAMERA',
+      durationMs: performanceTest?.movementDurationMs ?? 10000,
+    },
+    {
+      id: 'E_INTEGRATED_FASTER_ORBIT',
+      architecture: STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
+      motion: 'FASTER_ORBIT',
+      durationMs: performanceTest?.movementDurationMs ?? 10000,
+    },
+    {
+      id: 'F_INTEGRATED_CONTINUOUS_SLOW_DRIFT',
+      architecture: STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
+      motion: 'CONTINUOUS_SLOW_DRIFT',
+      durationMs: performanceTest?.slowDriftDurationMs ?? 30000,
+    },
+  ])
+  const performanceResults = []
+  let pendingPerformanceCases = []
+  let performanceSample = null
+  let performanceNextAt = Infinity
+  let performanceBaseline = null
+
+  function restorePerformanceCamera() {
+    if (!performanceBaseline) return
+    camera.position.copy(performanceBaseline.position)
+    controls.target.copy(performanceBaseline.target)
+    camera.fov = performanceBaseline.fov
+    camera.updateProjectionMatrix()
+    camera.updateMatrixWorld(true)
+    controls.update()
+  }
+
+  function beginNextPerformanceCase(time) {
+    if (!pendingPerformanceCases.length) {
+      renderer.info.autoReset = true
+      mount.dataset.performanceState = 'complete'
+      mount.dataset.performanceResults = JSON.stringify(performanceResults)
+      return
+    }
+    restorePerformanceCamera()
+    const definition = pendingPerformanceCases.shift()
+    floorReflection?.setArchitecture(definition.architecture)
+    floorReflection?.setDiagnosticMode('FINAL_COMBINED')
+    floorReflection?.markDirty()
+    performanceSample = {
+      ...definition,
+      calls: [],
+      frameTimes: [],
+      lastFrameAt: null,
+      startedAt: time + 1000,
+      triangles: [],
+      updateBaseline: null,
+    }
+    renderer.info.autoReset = false
+    performanceNextAt = Infinity
+    mount.dataset.performanceCase = definition.id
+    mount.dataset.performanceState = 'settling'
+  }
+
+  function applyPerformanceMotion(time) {
+    if (!performanceSample || time < performanceSample.startedAt || !performanceBaseline) return
+    if (!performanceSample.updateBaseline) {
+      const floorState = floorReflection?.getState()
+      performanceSample.updateBaseline = {
+        blur: floorState?.blurUpdateCount ?? 0,
+        source: floorState?.updateCount ?? 0,
+      }
+      mount.dataset.performanceState = 'measuring'
+    }
+    if (performanceSample.motion === 'STATIC') return
+    const elapsedSeconds = (time - performanceSample.startedAt) / 1000
+    const phase = performanceSample.motion === 'FASTER_ORBIT'
+      ? Math.sin(elapsedSeconds) * 0.13
+      : performanceSample.motion === 'CONTINUOUS_SLOW_DRIFT'
+        ? Math.sin(elapsedSeconds * 0.16) * 0.025
+        : Math.sin(elapsedSeconds * 0.35) * 0.025
+    const offset = performanceBaseline.position.clone().sub(performanceBaseline.target)
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), phase)
+    camera.position.copy(performanceBaseline.target).add(offset)
+    controls.target.copy(performanceBaseline.target)
+    camera.lookAt(controls.target)
+    camera.updateMatrixWorld(true)
+  }
+
+  function completePerformanceCase(time) {
+    const sample = performanceSample
+    if (!sample?.updateBaseline || time - sample.startedAt < sample.durationMs) return
+    const sortedFrameTimes = [...sample.frameTimes].sort((a, b) => a - b)
+    const elapsedSeconds = Math.max(0.001, (time - sample.startedAt) / 1000)
+    const averageFrameTimeMs = sample.frameTimes.reduce((total, value) => total + value, 0)
+      / Math.max(1, sample.frameTimes.length)
+    const averageCalls = sample.calls.reduce((total, value) => total + value, 0)
+      / Math.max(1, sample.calls.length)
+    const averageTriangles = sample.triangles.reduce((total, value) => total + value, 0)
+      / Math.max(1, sample.triangles.length)
+    const floorState = floorReflection?.getState()
+    const result = {
+      averageFps: Number((1000 / Math.max(averageFrameTimeMs, 0.001)).toFixed(2)),
+      averageFrameTimeMs: Number(averageFrameTimeMs.toFixed(3)),
+      blurTarget: floorState?.blurTextureSize ?? null,
+      blurUpdateRateHz: Number((((floorState?.blurUpdateCount ?? 0) - sample.updateBaseline.blur) / elapsedSeconds).toFixed(2)),
+      drawCalls: Number(averageCalls.toFixed(1)),
+      durationSeconds: Number(elapsedSeconds.toFixed(2)),
+      effectiveDpr: renderer.getPixelRatio(),
+      frames: sample.frameTimes.length,
+      id: sample.id,
+      medianFps: Number((1000 / Math.max(percentile(sortedFrameTimes, 0.5), 0.001)).toFixed(2)),
+      motion: sample.motion,
+      onePercentLowFps: Number((1000 / Math.max(percentile(sortedFrameTimes, 0.99), 0.001)).toFixed(2)),
+      p95FrameTimeMs: Number(percentile(sortedFrameTimes, 0.95).toFixed(3)),
+      renderedTriangles: Math.round(averageTriangles),
+      sourceTarget: floorState?.textureSize ?? null,
+      sourceUpdateRateHz: Number((((floorState?.updateCount ?? 0) - sample.updateBaseline.source) / elapsedSeconds).toFixed(2)),
+      staticUpdateRateHz: sample.motion === 'STATIC'
+        ? Number((((floorState?.updateCount ?? 0) - sample.updateBaseline.source) / elapsedSeconds).toFixed(2))
+        : null,
+      viewport: [renderSize().width, renderSize().height],
+    }
+    performanceResults.push(result)
+    mount.dataset.performanceResults = JSON.stringify(performanceResults)
+    performanceSample = null
+    restorePerformanceCamera()
+    floorReflection?.markDirty()
+    performanceNextAt = time + 750
+    mount.dataset.performanceState = pendingPerformanceCases.length ? 'between-cases' : 'complete'
+  }
+
   const diagnostics = {
     fps: 0,
     calls: 0,
@@ -810,6 +1094,7 @@ export function createStudioV2Scene({
   let frameCount = 0
   let lastSampleAt = performance.now()
   const render = (time) => {
+    if (time >= performanceNextAt && !performanceSample) beginNextPerformanceCase(time)
     updateCameraTween(time)
     // The invisible rear half-spaces are converted into OrbitControls limits
     // before it calculates a candidate, so an invalid rear view is never rendered.
@@ -818,10 +1103,31 @@ export function createStudioV2Scene({
     controls.update()
     updateRearClampState()
     acceptCameraCandidate()
+    applyPerformanceMotion(time)
     lightHelpers.forEach((helper) => helper.update())
-    renderer.render(scene, camera)
+    if (performanceSample?.updateBaseline) renderer.info.reset()
+    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera)
+    else renderer.render(scene, camera)
+    if (performanceSample?.updateBaseline) {
+      if (performanceSample.lastFrameAt !== null) {
+        performanceSample.frameTimes.push(time - performanceSample.lastFrameAt)
+        performanceSample.calls.push(renderer.info.render.calls)
+        performanceSample.triangles.push(renderer.info.render.triangles)
+      }
+      performanceSample.lastFrameAt = time
+      completePerformanceCase(time)
+    }
     frameCount += 1
     if (time - lastSampleAt >= 1000) {
+      visualState.floorReflection = floorReflection?.getState() ?? null
+      if (visualState.floorReflection) {
+        mount.dataset.floorReflectionEnabled = String(visualState.floorReflection.enabled)
+        mount.dataset.floorReflectionUpdates = String(visualState.floorReflection.updateCount)
+        mount.dataset.floorReflectionRate = String(visualState.floorReflection.updateRateHz)
+        mount.dataset.floorReflectionBlurReady = String(visualState.floorReflection.blurReady)
+        mount.dataset.floorReflectionBlurUpdates = String(visualState.floorReflection.blurUpdateCount)
+        mount.dataset.floorReflectionBlurRate = String(visualState.floorReflection.blurUpdateRateHz)
+      }
       diagnostics.fps = Math.round(frameCount * 1000 / (time - lastSampleAt))
       diagnostics.calls = renderer.info.render.calls
       diagnostics.triangles = renderer.info.render.triangles
@@ -874,6 +1180,22 @@ export function createStudioV2Scene({
     animationFrame = requestAnimationFrame(render)
   }
   animationFrame = requestAnimationFrame(render)
+
+  if ((debug || capture) && performanceTest?.suite) {
+    readyPromise.then(() => {
+      if (disposed) return
+      performanceBaseline = {
+        fov: camera.fov,
+        position: camera.position.clone(),
+        target: controls.target.clone(),
+      }
+      pendingPerformanceCases = performanceTest.caseId
+        ? performanceCases.filter(({ id }) => id === performanceTest.caseId)
+        : [...performanceCases]
+      performanceNextAt = performance.now() + 1800
+      mount.dataset.performanceState = 'scheduled'
+    })
+  }
 
   const runtime = {
     readyPromise,
@@ -978,6 +1300,53 @@ export function createStudioV2Scene({
       visualState.shadows = enabled
       renderer.shadowMap.enabled = enabled
       keyLight.castShadow = enabled
+      visualState.compositeMode = enabled
+        ? (visualState.floorReflection?.enabled ? 'FINAL_COMBINED' : 'SHADOW_ONLY')
+        : (visualState.floorReflection?.enabled ? 'REFLECTION_ONLY' : 'CUSTOM_OFF')
+      floorReflection?.markDirty()
+    },
+    setFloorReflection(enabled) {
+      const state = floorReflection?.setEnabled(enabled) ?? null
+      visualState.floorReflection = state
+      if (state) {
+        mount.dataset.floorReflectionEnabled = String(state.enabled)
+        mount.dataset.floorReflectionReady = String(
+          !state.enabled || state.initialRenderComplete,
+        )
+        visualState.compositeMode = state.enabled
+          ? (visualState.shadows ? 'FINAL_COMBINED' : 'REFLECTION_ONLY')
+          : (visualState.shadows ? 'SHADOW_ONLY' : 'CUSTOM_OFF')
+      }
+      return state
+    },
+    setFloorArchitecture(architecture) {
+      const state = floorReflection?.setArchitecture(architecture) ?? null
+      visualState.floorReflection = state
+      return state
+    },
+    setReflectionDiagnosticMode(mode) {
+      if (mode === 'SHADOW_ONLY') return applyCompositeMode('SHADOW_ONLY')
+      if (mode === 'REFLECTION_ONLY_TEST') return applyCompositeMode('REFLECTION_ONLY')
+      renderer.shadowMap.enabled = true
+      keyLight.castShadow = true
+      floorReflection?.setEnabled(true)
+      const state = floorReflection?.setDiagnosticMode(mode) ?? null
+      visualState.shadows = true
+      visualState.floorReflection = state
+      visualState.compositeMode = mode
+      return state
+    },
+    setShadowProfile(profileName) {
+      return applyShadowProfile(profileName)
+    },
+    setCompositeMode(mode) {
+      return applyCompositeMode(mode)
+    },
+    getFloorReflectionState() {
+      return floorReflection?.getState() ?? null
+    },
+    getPerformanceResults() {
+      return [...performanceResults]
     },
     setEnvironmentIntensity(value) {
       visualState.environmentIntensity = Number(value)
@@ -1156,6 +1525,7 @@ export function createStudioV2Scene({
       radioPanelSubscribers.clear()
       controls.dispose()
       placedObjectsResource?.dispose()
+      floorReflection?.dispose()
       modelResource?.release()
       roomLoaderSupport?.dispose()
       entryRoot.removeFromParent()
@@ -1180,6 +1550,14 @@ export function createStudioV2Scene({
       delete mount.dataset.renderFps
       delete mount.dataset.renderCalls
       delete mount.dataset.renderTriangles
+      delete mount.dataset.floorReflectionEnabled
+      delete mount.dataset.floorReflectionReady
+      delete mount.dataset.floorReflectionUpdates
+      delete mount.dataset.floorReflectionRate
+      delete mount.dataset.floorReflectionBlurReady
+      delete mount.dataset.floorReflectionBlurUpdates
+      delete mount.dataset.floorReflectionBlurRate
+      delete mount.dataset.floorCoverageAudit
       if (window.__FRED_STUDIO_V2_DIAGNOSTICS__ === diagnostics) {
         delete window.__FRED_STUDIO_V2_DIAGNOSTICS__
       }
