@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "environment": {
+    "viewport": [1280, 720],
+    "devicePixelRatio": 1,
+    "route": "/studio-v2-import-test?debug=1",
+    "samplingNote": "Debug diagnostics sampled after Scene Ready; accelerated rail affects time only, not camera work per frame."
+  },
+  "roomWideStart": {
+    "fps": 57,
+    "drawCalls": 99,
+    "renderedTriangles": 780688
+  },
+  "ambientDrift": {
+    "fps": 58,
+    "drawCalls": 99,
+    "renderedTriangles": 780688,
+    "reflectionCadenceClass": "FAST",
+    "reflectionTargetHz": 22,
+    "reflectionObservedHz": 20,
+    "reflectionRenders": 35,
+    "blurObservedHz": 20,
+    "blurRenders": 35
+  },
+  "userOverride": {
+    "fps": 59,
+    "drawCalls": 59,
+    "renderedTriangles": 425462
+  },
+  "returnToRail": {
+    "fps": 59,
+    "drawCalls": 59,
+    "renderedTriangles": 425462
+  },
+  "tableFreeOrbit": {
+    "fps": 55,
+    "drawCalls": 62,
+    "renderedTriangles": 415340
+  }
+}

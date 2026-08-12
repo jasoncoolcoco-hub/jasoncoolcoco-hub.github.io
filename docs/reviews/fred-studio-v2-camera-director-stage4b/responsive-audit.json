@@ -1,0 +1,74 @@
+[
+  {
+    "case": "1280x720-dpr1",
+    "view": "opening",
+    "state": "AMBIENT_DRIFT",
+    "progress": "0"
+  },
+  {
+    "case": "1280x720-dpr1",
+    "view": "table",
+    "state": "TABLE_OVERVIEW",
+    "progress": "1"
+  },
+  {
+    "case": "1440x900-dpr1",
+    "view": "opening",
+    "state": "AMBIENT_DRIFT",
+    "progress": "0"
+  },
+  {
+    "case": "1440x900-dpr1",
+    "view": "table",
+    "state": "TABLE_OVERVIEW",
+    "progress": "1"
+  },
+  {
+    "case": "1280x800-dpr1",
+    "view": "opening",
+    "state": "AMBIENT_DRIFT",
+    "progress": "0"
+  },
+  {
+    "case": "1280x800-dpr1",
+    "view": "table",
+    "state": "TABLE_OVERVIEW",
+    "progress": "1"
+  },
+  {
+    "case": "1024x768-dpr1",
+    "view": "opening",
+    "state": "AMBIENT_DRIFT",
+    "progress": "0"
+  },
+  {
+    "case": "1024x768-dpr1",
+    "view": "table",
+    "state": "TABLE_OVERVIEW",
+    "progress": "1"
+  },
+  {
+    "case": "1600x900-dpr1",
+    "view": "opening",
+    "state": "AMBIENT_DRIFT",
+    "progress": "0"
+  },
+  {
+    "case": "1600x900-dpr1",
+    "view": "table",
+    "state": "TABLE_OVERVIEW",
+    "progress": "1"
+  },
+  {
+    "case": "1440x900-dpr2",
+    "view": "opening",
+    "state": "AMBIENT_DRIFT",
+    "progress": "0"
+  },
+  {
+    "case": "1440x900-dpr2",
+    "view": "table",
+    "state": "TABLE_OVERVIEW",
+    "progress": "1"
+  }
+]

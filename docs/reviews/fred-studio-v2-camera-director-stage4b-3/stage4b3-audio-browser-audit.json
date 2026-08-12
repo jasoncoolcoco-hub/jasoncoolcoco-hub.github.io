@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "architecture": {
+    "htmlAudioElementCount": 1,
+    "preload": "auto",
+    "entryVolume": 0,
+    "targetVolume": 0.08,
+    "fadeDurationMs": 4500,
+    "autoplayWorkaroundAdded": false,
+    "fallbackListeners": ["pointerdown", "touchstart", "keydown"],
+    "doubleToggleGuardMs": 300
+  },
+  "inAppBrowser": {
+    "directLoad": { "status": "ready", "entryStatus": "waiting-for-gesture", "autoplayPolicy": "blocked", "errorCode": "AUTOPLAY_POLICY_BLOCKED", "paused": true, "currentTime": 0, "volume": 0, "fallbackArmed": true },
+    "trustedPointer": { "status": "error", "errorCode": "AUDIO_PLAYBACK_FAILED", "paused": true, "currentTime": 0, "volume": 0, "fallbackArmedAfterAttempt": false, "unhandledPromiseRejectionObserved": false },
+    "classification": "Autoplay policy block followed by a media/playback-environment failure; not treated as an application crash."
+  },
+  "chrome": {
+    "directLoad": { "status": "ready", "entryStatus": "waiting-for-gesture", "autoplayPolicy": "blocked", "errorCode": "AUTOPLAY_POLICY_BLOCKED", "paused": true, "currentTime": 0, "volume": 0, "fallbackArmed": true, "fallbackUsed": false },
+    "trustedPointer": {
+      "early": { "status": "playing", "entryStatus": "playing-after-gesture", "autoplayPolicy": "blocked-then-recovered", "paused": false, "currentTime": 0.931, "volume": 0.043205, "rampOwnerCount": 1, "fallbackArmed": false, "fallbackUsed": true },
+      "afterTwoSeconds": { "status": "playing", "currentTime": 3.324, "volume": 0.078962, "rampOwnerCount": 1, "fallbackArmed": false, "fallbackUsed": true },
+      "afterFade": { "status": "playing", "currentTime": 5.451, "volume": 0.08, "rampOwnerCount": 0, "fallbackArmed": false, "fallbackUsed": true }
+    },
+    "marshallFirstGesture": { "automatedTargetTest": "NOT_COMPLETED_AFTER_BROWSER_CONTROL_INTERRUPTION", "sourceAudit": "Shared capture-phase fallback is consumed before Marshall toggle; the <300 ms guard suppresses immediate double-toggle.", "humanReviewRequired": true },
+    "radioFirstGesture": { "automatedTargetTest": "NOT_COMPLETED_AFTER_BROWSER_CONTROL_INTERRUPTION", "sourceAudit": "Radio uses the same controller and single audio element; compact blocked label is conditional on waiting-for-gesture.", "humanReviewRequired": true }
+  },
+  "audibleListeningClaim": false,
+  "limitation": "AUTOMATED AUDIO DEVICE / HUMAN AUDIBILITY NOT VERIFIED — HUMAN LISTENING REVIEW REQUIRED",
+  "cameraIndependence": { "autoplayBlockedCameraContinued": true, "mediaFailureCameraContinued": true, "trustedFallbackDidNotResetRail": true }
+}

@@ -1,0 +1,39 @@
+{
+  "singleAudioElement": true,
+  "preload": "auto",
+  "autoplay": false,
+  "entryAttempt": "best-effort audible play at volume 0",
+  "fade": {
+    "from": 0,
+    "to": 0.08,
+    "durationMs": 4500
+  },
+  "browserResult": {
+    "policy": "blocked",
+    "sceneUnaffected": true,
+    "largeErrorPanel": false
+  },
+  "deterministicControllerTest": {
+    "allowed": {
+      "status": "playing",
+      "policy": "allowed",
+      "finalVolume": 0.08
+    },
+    "blocked": {
+      "status": "ready",
+      "entryStatus": "waiting-for-gesture",
+      "fallbackArmed": true,
+      "errorCode": "AUTOPLAY_POLICY_BLOCKED"
+    },
+    "recovered": {
+      "status": "playing",
+      "entryStatus": "playing-after-gesture",
+      "autoplayPolicy": "blocked-then-recovered",
+      "firstGestureFallbackUsed": true,
+      "doubleToggleSuppressed": true
+    }
+  },
+  "manualIntentPriority": true,
+  "doubleToggleGuardMs": 300,
+  "internalNavigationGestureBridge": "none exists in current route wiring"
+}

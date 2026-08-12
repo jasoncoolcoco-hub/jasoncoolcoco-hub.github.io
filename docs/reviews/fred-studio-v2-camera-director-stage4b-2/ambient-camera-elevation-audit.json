@@ -1,0 +1,50 @@
+{
+  "selected": "B",
+  "reason": "highest natural safe path without an overhead surveillance feel",
+  "candidates": {
+    "A": {
+      "heightOffsetM": [
+        0.18,
+        0.22
+      ],
+      "endpointY": 2.06
+    },
+    "B": {
+      "heightOffsetM": [
+        0.25,
+        0.32
+      ],
+      "endpointY": 2.12
+    },
+    "C": {
+      "heightOffsetM": [
+        0.34,
+        0.42
+      ],
+      "endpointY": 2.2
+    }
+  },
+  "selectedControlPointY": [
+    2.18,
+    2.22,
+    2.27,
+    2.28,
+    2.24,
+    2.18,
+    2.12
+  ],
+  "samples": 521,
+  "corrections": 0,
+  "pathSafety": {
+    "correctionSamples": 0,
+    "invalid": [],
+    "invalidSamples": 0,
+    "maximumLookRadius": 4.62035,
+    "minimumBoundaryClearance": 0.05,
+    "minimumLookRadius": 0.85936,
+    "minimumObstacleClearance": 0.61392,
+    "minimumTargetClearance": 0.94946,
+    "sampleCount": 521,
+    "valid": true
+  }
+}

@@ -1,0 +1,3174 @@
+{
+  "frames": [
+    {
+      "state": "AMBIENT_USER_OVERRIDE",
+      "pose": {
+        "position": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "target": [
+          -0.9098,
+          1.0513,
+          -0.8687
+        ],
+        "quaternion": [
+          -0.114179,
+          -0.554144,
+          -0.077072,
+          0.820943
+        ],
+        "fov": 53,
+        "baseFov": 53,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.2,
+      "orbitEnabled": false,
+      "inputOwner": "DEBUG_HEAD_LOOK",
+      "inputType": "DEBUG_OVERRIDE",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5754950664808711,
+        "minimumObstacleClearance": 1.3960639087361493,
+        "minimumTargetClearance": 0.5007227948391
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "lastValidTarget": [
+          -0.9098,
+          1.0513,
+          -0.8687
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10110,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.5,
+        "driftElapsedMs": 47750,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.6174,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": 0.5,
+        "yawOffsetDegrees": 18,
+        "pitchOffsetDegrees": 8,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.765022,
+          1.924505,
+          0.282624
+        ],
+        "baseTarget": [
+          -0.418422,
+          1.462824,
+          0.050921
+        ],
+        "displayedTarget": [
+          -0.909849,
+          1.051265,
+          -0.868655
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_USER_OVERRIDE",
+      "pose": {
+        "position": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "target": [
+          -0.9098,
+          1.0513,
+          -0.8687
+        ],
+        "quaternion": [
+          -0.114179,
+          -0.554144,
+          -0.077072,
+          0.820943
+        ],
+        "fov": 53,
+        "baseFov": 53,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.2,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "OVERRIDE_IDLE",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5754950664808711,
+        "minimumObstacleClearance": 1.3960639087361493,
+        "minimumTargetClearance": 0.5007227948391
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "lastValidTarget": [
+          -0.9098,
+          1.0513,
+          -0.8687
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10228,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.5,
+        "driftElapsedMs": 47750,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.6174,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": 0.5,
+        "yawOffsetDegrees": 18,
+        "pitchOffsetDegrees": 8,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": 520.6,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.765022,
+          1.924505,
+          0.282624
+        ],
+        "baseTarget": [
+          -0.418422,
+          1.462824,
+          0.050921
+        ],
+        "displayedTarget": [
+          -0.909849,
+          1.051265,
+          -0.868655
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_USER_OVERRIDE",
+      "pose": {
+        "position": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "target": [
+          -0.6553,
+          1.3606,
+          -0.2192
+        ],
+        "quaternion": [
+          -0.067351,
+          -0.645795,
+          -0.057353,
+          0.758369
+        ],
+        "fov": 53,
+        "baseFov": 53,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.2,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RETURN_TO_RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5754950664808711,
+        "minimumObstacleClearance": 1.3960639087361493,
+        "minimumTargetClearance": 0.8100246931919657
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "lastValidTarget": [
+          -0.6553,
+          1.3606,
+          -0.2192
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10287,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.5,
+        "driftElapsedMs": 47750,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.6174,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": 0.5,
+        "yawOffsetDegrees": 5.21,
+        "pitchOffsetDegrees": 2.31,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": 0.5834,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.765022,
+          1.924505,
+          0.282624
+        ],
+        "baseTarget": [
+          -0.418422,
+          1.462824,
+          0.050921
+        ],
+        "displayedTarget": [
+          -0.655338,
+          1.360567,
+          -0.219216
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_USER_OVERRIDE",
+      "pose": {
+        "position": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "target": [
+          -0.6553,
+          1.3606,
+          -0.2192
+        ],
+        "quaternion": [
+          -0.067351,
+          -0.645795,
+          -0.057353,
+          0.758369
+        ],
+        "fov": 53,
+        "baseFov": 53,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.2,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RETURN_TO_RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5754950664808711,
+        "minimumObstacleClearance": 1.3960639087361493,
+        "minimumTargetClearance": 0.8100246931919657
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "lastValidTarget": [
+          -0.6553,
+          1.3606,
+          -0.2192
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10287,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.5,
+        "driftElapsedMs": 47750,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.6174,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": 0.5,
+        "yawOffsetDegrees": 5.21,
+        "pitchOffsetDegrees": 2.31,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": 0.5834,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.765022,
+          1.924505,
+          0.282624
+        ],
+        "baseTarget": [
+          -0.418422,
+          1.462824,
+          0.050921
+        ],
+        "displayedTarget": [
+          -0.655338,
+          1.360567,
+          -0.219216
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_DRIFT",
+      "pose": {
+        "position": [
+          -3.7274,
+          1.923,
+          0.2817
+        ],
+        "target": [
+          -0.3986,
+          1.4617,
+          0.0495
+        ],
+        "quaternion": [
+          -0.050196,
+          -0.680447,
+          -0.046816,
+          0.729576
+        ],
+        "fov": 52.935,
+        "baseFov": 52.935,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.3687,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.576971373380512,
+        "minimumObstacleClearance": 1.4057212017713894,
+        "minimumTargetClearance": 0.9111354938063656
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.7274,
+          1.923,
+          0.2817
+        ],
+        "lastValidTarget": [
+          -0.3986,
+          1.4617,
+          0.0495
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10347,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.507194,
+        "driftElapsedMs": 48415.4,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.655,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": null,
+        "yawOffsetDegrees": 0,
+        "pitchOffsetDegrees": 0,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.727405,
+          1.923029,
+          0.281745
+        ],
+        "baseTarget": [
+          -0.398586,
+          1.461678,
+          0.049491
+        ],
+        "displayedTarget": [
+          -0.398586,
+          1.461678,
+          0.049491
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_DRIFT",
+      "pose": {
+        "position": [
+          -3.7274,
+          1.923,
+          0.2817
+        ],
+        "target": [
+          -0.3986,
+          1.4617,
+          0.0495
+        ],
+        "quaternion": [
+          -0.050196,
+          -0.680447,
+          -0.046816,
+          0.729576
+        ],
+        "fov": 52.935,
+        "baseFov": 52.935,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.3687,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.576971373380512,
+        "minimumObstacleClearance": 1.4057212017713894,
+        "minimumTargetClearance": 0.9111354938063656
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.7274,
+          1.923,
+          0.2817
+        ],
+        "lastValidTarget": [
+          -0.3986,
+          1.4617,
+          0.0495
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10347,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.507194,
+        "driftElapsedMs": 48415.4,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.655,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": null,
+        "yawOffsetDegrees": 0,
+        "pitchOffsetDegrees": 0,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.727405,
+          1.923029,
+          0.281745
+        ],
+        "baseTarget": [
+          -0.398586,
+          1.461678,
+          0.049491
+        ],
+        "displayedTarget": [
+          -0.398586,
+          1.461678,
+          0.049491
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_DRIFT",
+      "pose": {
+        "position": [
+          -3.7274,
+          1.923,
+          0.2817
+        ],
+        "target": [
+          -0.3986,
+          1.4617,
+          0.0495
+        ],
+        "quaternion": [
+          -0.050196,
+          -0.680447,
+          -0.046816,
+          0.729576
+        ],
+        "fov": 52.935,
+        "baseFov": 52.935,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.3687,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.576971373380512,
+        "minimumObstacleClearance": 1.4057212017713894,
+        "minimumTargetClearance": 0.9111354938063656
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.7274,
+          1.923,
+          0.2817
+        ],
+        "lastValidTarget": [
+          -0.3986,
+          1.4617,
+          0.0495
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10347,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.507194,
+        "driftElapsedMs": 48415.4,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.655,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": null,
+        "yawOffsetDegrees": 0,
+        "pitchOffsetDegrees": 0,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.727405,
+          1.923029,
+          0.281745
+        ],
+        "baseTarget": [
+          -0.398586,
+          1.461678,
+          0.049491
+        ],
+        "displayedTarget": [
+          -0.398586,
+          1.461678,
+          0.049491
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_DRIFT",
+      "pose": {
+        "position": [
+          -3.6708,
+          1.9208,
+          0.2805
+        ],
+        "target": [
+          -0.3687,
+          1.4599,
+          0.0473
+        ],
+        "quaternion": [
+          -0.050563,
+          -0.680121,
+          -0.047119,
+          0.729835
+        ],
+        "fov": 52.838,
+        "baseFov": 52.838,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.3422,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5791874131495875,
+        "minimumObstacleClearance": 1.4219962240577448,
+        "minimumTargetClearance": 0.9093868003100272
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.6708,
+          1.9208,
+          0.2805
+        ],
+        "lastValidTarget": [
+          -0.3687,
+          1.4599,
+          0.0473
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10406,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.518016,
+        "driftElapsedMs": 49416.5,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.7117,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": null,
+        "yawOffsetDegrees": 0,
+        "pitchOffsetDegrees": 0,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.670809,
+          1.920813,
+          0.28046
+        ],
+        "baseTarget": [
+          -0.368746,
+          1.459929,
+          0.047314
+        ],
+        "displayedTarget": [
+          -0.368746,
+          1.459929,
+          0.047314
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    {
+      "state": "AMBIENT_DRIFT",
+      "pose": {
+        "position": [
+          -3.6708,
+          1.9208,
+          0.2805
+        ],
+        "target": [
+          -0.3687,
+          1.4599,
+          0.0473
+        ],
+        "quaternion": [
+          -0.050563,
+          -0.680121,
+          -0.047119,
+          0.729835
+        ],
+        "fov": 52.838,
+        "baseFov": 52.838,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.3422,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5791874131495875,
+        "minimumObstacleClearance": 1.4219962240577448,
+        "minimumTargetClearance": 0.9093868003100272
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.6708,
+          1.9208,
+          0.2805
+        ],
+        "lastValidTarget": [
+          -0.3687,
+          1.4599,
+          0.0473
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 10406,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.518016,
+        "driftElapsedMs": 49416.5,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.7117,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": null,
+        "yawOffsetDegrees": 0,
+        "pitchOffsetDegrees": 0,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.670809,
+          1.920813,
+          0.28046
+        ],
+        "baseTarget": [
+          -0.368746,
+          1.459929,
+          0.047314
+        ],
+        "displayedTarget": [
+          -0.368746,
+          1.459929,
+          0.047314
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    }
+  ],
+  "reinterrupt": {
+    "before": {
+      "state": "AMBIENT_USER_OVERRIDE",
+      "pose": {
+        "position": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "target": [
+          -0.9098,
+          1.0513,
+          -0.8686
+        ],
+        "quaternion": [
+          -0.114177,
+          -0.554149,
+          -0.077071,
+          0.82094
+        ],
+        "fov": 53,
+        "baseFov": 53,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.2,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RETURN_TO_RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5754950664808711,
+        "minimumObstacleClearance": 1.3960639087361493,
+        "minimumTargetClearance": 0.5007384354216233
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.765,
+          1.9245,
+          0.2826
+        ],
+        "lastValidTarget": [
+          -0.9098,
+          1.0513,
+          -0.8686
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 12863,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.5,
+        "driftElapsedMs": 47750,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.6174,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": 0.5,
+        "yawOffsetDegrees": 18,
+        "pitchOffsetDegrees": 8,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": 0.0209,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.765022,
+          1.924505,
+          0.282624
+        ],
+        "baseTarget": [
+          -0.418422,
+          1.462824,
+          0.050921
+        ],
+        "displayedTarget": [
+          -0.909832,
+          1.051281,
+          -0.868624
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    },
+    "after": {
+      "state": "AMBIENT_DRIFT",
+      "pose": {
+        "position": [
+          -3.6945,
+          1.9217,
+          0.281
+        ],
+        "target": [
+          -0.3812,
+          1.4607,
+          0.0482
+        ],
+        "quaternion": [
+          -0.050408,
+          -0.680259,
+          -0.046991,
+          0.729725
+        ],
+        "fov": 52.879,
+        "baseFov": 52.879,
+        "near": 0.05,
+        "far": 160
+      },
+      "orbitRadius": 3.3533,
+      "orbitEnabled": false,
+      "inputOwner": "CAMERA_DIRECTOR",
+      "inputType": "RAIL",
+      "transition": null,
+      "lastCancellation": "NONE",
+      "safetyClampActive": false,
+      "volumeSafe": true,
+      "volumeInspection": {
+        "safe": true,
+        "reasons": [],
+        "violatedBoundaries": [],
+        "intersectedObstacles": [],
+        "targetSafe": true,
+        "minimumBoundaryClearance": 1.5782621790840003,
+        "minimumObstacleClearance": 1.4149425686908894,
+        "minimumTargetClearance": 0.9101211394323563
+      },
+      "safety": {
+        "cameraRadius": 0.12,
+        "clampActive": false,
+        "correctionCount": 0,
+        "lastViolatedBoundary": "NONE",
+        "representation": "CONVEX_HALF_SPACES_WITH_SLOPED_CEILING",
+        "boundaries": [
+          {
+            "id": "FLOOR",
+            "role": "floor",
+            "normal": [
+              0,
+              1,
+              0
+            ],
+            "minimumDot": 0.140542593133827
+          },
+          {
+            "id": "CEILING",
+            "role": "ceiling",
+            "normal": [
+              0,
+              -1,
+              0
+            ],
+            "minimumDot": -3.5
+          },
+          {
+            "id": "LEFT_WALL",
+            "role": "side-wall",
+            "normal": [
+              1,
+              0,
+              0
+            ],
+            "minimumDot": -6.43
+          },
+          {
+            "id": "REAR_PROTECTION",
+            "role": "rear-virtual-protection",
+            "normal": [
+              -1,
+              0,
+              0
+            ],
+            "minimumDot": -4.93
+          },
+          {
+            "id": "SIDE_WALL",
+            "role": "side-wall",
+            "normal": [
+              0,
+              0,
+              1
+            ],
+            "minimumDot": -4.53
+          },
+          {
+            "id": "GLASS_WALL",
+            "role": "glass-wall",
+            "normal": [
+              0,
+              0,
+              -1
+            ],
+            "minimumDot": -3.26
+          },
+          {
+            "id": "SLOPED_CEILING",
+            "role": "sloped-ceiling",
+            "normal": [
+              -0.18,
+              -0.983666,
+              0
+            ],
+            "minimumDot": -4.28
+          }
+        ],
+        "targetBounds": {
+          "min": [
+            -6.2,
+            0.550542593133827,
+            -4.33
+          ],
+          "max": [
+            4.7299999999999995,
+            2.7399999999999998,
+            3.03
+          ]
+        },
+        "majorObstacles": [
+          "SOFA SOUTH / MAIN BODY",
+          "SOFA SOUTH / CHAISE",
+          "SOFA NORTH / BODY",
+          "COFFEE TABLE SOUTH / LOW BODY",
+          "COFFEE TABLE NORTH / LOW BODY",
+          "KITCHEN ISLAND / BODY",
+          "KITCHEN STOOLS / ROW"
+        ],
+        "lastValidPosition": [
+          -3.6945,
+          1.9217,
+          0.281
+        ],
+        "lastValidTarget": [
+          -0.3812,
+          1.4607,
+          0.0482
+        ],
+        "safeVolumeVisible": false,
+        "obstaclesVisible": false
+      },
+      "baseline": {
+        "activeState": "ROOM_ORBIT",
+        "defaultPose": "REFERENCE",
+        "openingPose": {
+          "id": "CURRENT_OPENING",
+          "state": "ROOM_ORBIT",
+          "position": [
+            -6.42,
+            1.92,
+            0.3
+          ],
+          "target": [
+            -6.001382586904363,
+            1.8891436796244,
+            0.2856003838247201
+          ],
+          "fov": 50,
+          "near": 0.05,
+          "far": 160
+        },
+        "orbit": {
+          "damping": true,
+          "dampingFactor": 0.14,
+          "enablePan": false,
+          "enableRotate": true,
+          "enableZoom": true,
+          "minDistance": 0.4,
+          "maxDistance": 0.44,
+          "minPolarAngle": 1.3,
+          "maxPolarAngle": 1.7,
+          "minAzimuthAngle": -2.443460952792061,
+          "maxAzimuthAngle": -1.117010721276371,
+          "rotateSpeed": 0.42,
+          "zoomSpeed": 0.62,
+          "panSpeed": 0.42
+        }
+      },
+      "registeredStates": [
+        "ROOM_ORBIT",
+        "ROOM_WIDE_START",
+        "AMBIENT_DRIFT",
+        "AMBIENT_USER_OVERRIDE",
+        "TABLE_OVERVIEW",
+        "TABLE_FREE_ORBIT",
+        "MACBOOK_FOCUS",
+        "FOLDER_FOCUS",
+        "POLAROID_FOCUS",
+        "OTHER_OBJECT_FOCUS"
+      ],
+      "updateCount": 12982,
+      "ambient": {
+        "experienceStarted": true,
+        "automaticDriftArmed": false,
+        "railProgress": 0.513493,
+        "driftElapsedMs": 48998.1,
+        "driftDurationMs": 96000,
+        "currentPathDistance": 2.688,
+        "totalPathDistance": 5.23471,
+        "frozenProgress": null,
+        "yawOffsetDegrees": 0,
+        "pitchOffsetDegrees": 0,
+        "startDelayRemainingMs": 1800,
+        "overrideIdleRemainingMs": null,
+        "returnProgress": null,
+        "speedMultiplier": 1,
+        "pauseReasons": [],
+        "paused": false,
+        "visibilityPauseState": "VISIBLE",
+        "reducedMotionMedia": false,
+        "reducedMotionOverride": "AUTO",
+        "reducedMotionActive": false,
+        "railCompleted": false,
+        "endpointPhase": "DEBUG_HEAD_LOOK",
+        "endpointSnapshots": {},
+        "endpointDifferences": {
+          "finalToOverview": null,
+          "overviewToFree": null
+        },
+        "basePosition": [
+          -3.694463,
+          1.921738,
+          0.280992
+        ],
+        "baseTarget": [
+          -0.381217,
+          1.460664,
+          0.048228
+        ],
+        "displayedTarget": [
+          -0.381217,
+          1.460664,
+          0.048228
+        ],
+        "durationAudit": {
+          "driftWallStartedAt": null,
+          "driftWallCompletedAt": null,
+          "pausedFrameMs": 0,
+          "activeWallDurationMs": null
+        },
+        "pathSafety": {
+          "sampleCount": 321,
+          "invalidSamples": 0,
+          "correctionSamples": 0,
+          "minimumBoundaryClearance": 0.05,
+          "minimumObstacleClearance": 0.96675,
+          "minimumTargetClearance": 0.82946,
+          "minimumLookRadius": 2.17617,
+          "maximumLookRadius": 4.60734,
+          "valid": true,
+          "invalid": []
+        },
+        "tableOrbitSafety": {
+          "totalSamples": 3240,
+          "radii": [
+            1.85,
+            2.05,
+            2.25
+          ],
+          "polarAngles": [
+            1.28,
+            1.37,
+            1.46
+          ],
+          "invalidSamples": 0,
+          "safe": true,
+          "primarySafeCoverageDegrees": 360,
+          "unsafeAzimuthDegrees": [],
+          "minimumBoundaryClearance": 1.0738,
+          "minimumObstacleClearance": 0.06455
+        },
+        "pathVisible": false,
+        "controlPointsVisible": false
+      }
+    }
+  }
+}

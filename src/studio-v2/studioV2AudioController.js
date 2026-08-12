@@ -10,12 +10,22 @@ const INITIAL_STATE = Object.freeze({
   currentTime: 0,
   duration: null,
   volume: 1,
+  paused: true,
+  rampOwnerCount: 0,
   loop: false,
   error: null,
   errorCode: null,
   tracks: [],
   audioElementCount: 1,
   debugFixtureCount: null,
+  entryStatus: 'idle',
+  entryStartedAt: null,
+  entryPlaybackStartedAt: null,
+  entryFadeDurationMs: 4500,
+  entryTargetVolume: 0.08,
+  autoplayPolicy: 'untested',
+  fallbackArmed: false,
+  firstGestureFallbackUsed: false,
 })
 
 function errorMessage(error, fallback) {
@@ -91,7 +101,7 @@ export function createStudioV2AudioController({
 } = {}) {
   const audio = createAudioElement()
   audio.autoplay = false
-  audio.preload = 'none'
+  audio.preload = 'auto'
 
   const listeners = new Set()
   let catalogue = null
@@ -100,6 +110,10 @@ export function createStudioV2AudioController({
   let selectedTrack = null
   let togglePromise = null
   let destroyed = false
+  let fadeFrame = null
+  let fallbackArmed = false
+  let lastFallbackGestureAt = -Infinity
+  let manualIntentRevision = 0
   let state = {
     ...INITIAL_STATE,
     catalogueUrl,
@@ -133,13 +147,14 @@ export function createStudioV2AudioController({
     duration: Number.isFinite(audio.duration) ? audio.duration : null,
     status: state.status === 'track-loading' ? 'ready' : state.status,
   })
-  const handlePlaying = () => publish({ status: 'playing', error: null, errorCode: null })
+  const handlePlaying = () => publish({ status: 'playing', paused: false, error: null, errorCode: null })
   const handlePause = () => {
     if (!selectedTrack || state.status === 'ready' || state.status === 'error') return
-    publish({ status: 'paused', currentTime: audio.currentTime })
+    publish({ status: 'paused', paused: true, currentTime: audio.currentTime })
   }
   const handleEnded = () => publish({
     status: 'ready',
+    paused: true,
     currentTime: Number.isFinite(audio.duration) ? audio.duration : audio.currentTime,
   })
   const handleAudioError = () => setError(new Error(mediaErrorMessage(audio.error)))
@@ -267,7 +282,7 @@ export function createStudioV2AudioController({
     selectedTrack = nextTrack
     audio.src = nextTrack.file
     audio.loop = nextTrack.loop
-    audio.volume = nextTrack.volume
+    audio.volume = 0
     audio.currentTime = 0
     publish({
       status: 'track-loading',
@@ -275,7 +290,8 @@ export function createStudioV2AudioController({
       trackTitle: nextTrack.title,
       currentTime: 0,
       duration: null,
-      volume: nextTrack.volume,
+      volume: 0,
+      paused: true,
       loop: nextTrack.loop,
       error: null,
       errorCode: null,
@@ -340,12 +356,15 @@ export function createStudioV2AudioController({
   }
 
   async function play() {
+    manualIntentRevision += 1
+    disarmFallback()
     if (destroyed) return snapshot()
     if (!selectedTrack) await loadDefaultTrack()
     if (!selectedTrack || state.status === 'error') return snapshot()
     try {
       await audio.play()
-      return publish({ status: 'playing', error: null, errorCode: null })
+      if (audio.volume === 0) audio.volume = Math.min(0.08, selectedTrack?.volume ?? 0.08)
+      return publish({ status: 'playing', paused: false, error: null, errorCode: null })
     } catch (error) {
       return setError(error, 'Audio playback was rejected.')
     }
@@ -353,28 +372,34 @@ export function createStudioV2AudioController({
 
   function pause() {
     if (destroyed || !selectedTrack) return snapshot()
+    manualIntentRevision += 1
+    disarmFallback()
     audio.pause()
     return publish({
       status: 'paused',
+      paused: true,
       currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
     })
   }
 
   function stop() {
     if (destroyed || !selectedTrack) return snapshot()
+    manualIntentRevision += 1
+    disarmFallback()
     audio.pause()
     try {
       audio.currentTime = 0
     } catch {
       // Some browsers reject currentTime changes before metadata exists.
     }
-    return publish({ status: 'ready', currentTime: 0 })
+    return publish({ status: 'ready', paused: true, currentTime: 0 })
   }
 
   function toggle() {
     if (destroyed) return Promise.resolve(snapshot())
     if (togglePromise) return togglePromise
     togglePromise = (async () => {
+      if (performance.now() - lastFallbackGestureAt < 300) return snapshot()
       if (state.status === 'playing' || !audio.paused) return pause()
       return play()
     })().finally(() => {
@@ -397,6 +422,8 @@ export function createStudioV2AudioController({
   function destroy() {
     if (destroyed) return
     audio.pause()
+    if (fadeFrame !== null) cancelAnimationFrame(fadeFrame)
+    disarmFallback()
     destroyed = true
     catalogueAbortController?.abort()
     Object.entries(audioEvents).forEach(([eventName, listener]) => {
@@ -409,11 +436,117 @@ export function createStudioV2AudioController({
     selectedTrack = null
   }
 
+  function fadeToEntryVolume(startedAt, durationMs = 4500) {
+    if (fadeFrame !== null) {
+      cancelAnimationFrame(fadeFrame)
+      fadeFrame = null
+    }
+    const targetVolume = Math.min(0.08, selectedTrack?.volume ?? 0.08)
+    const tick = (now) => {
+      if (destroyed || audio.paused) {
+        fadeFrame = null
+        publish({ rampOwnerCount: 0 })
+        return
+      }
+      const progress = Math.min(1, Math.max(0, (now - startedAt) / durationMs))
+      const eased = 1 - (1 - progress) ** 3
+      audio.volume = targetVolume * eased
+      publish({ volume: audio.volume, rampOwnerCount: progress < 1 ? 1 : 0 })
+      if (progress < 1) fadeFrame = requestAnimationFrame(tick)
+      else fadeFrame = null
+    }
+    fadeFrame = requestAnimationFrame(tick)
+    publish({ rampOwnerCount: 1 })
+  }
+
+  function disarmFallback() {
+    if (!fallbackArmed) return
+    fallbackArmed = false
+    window.removeEventListener('pointerdown', handleFirstGesture, true)
+    window.removeEventListener('touchstart', handleFirstGesture, true)
+    window.removeEventListener('keydown', handleFirstGesture, true)
+    publish({ fallbackArmed: false })
+  }
+
+  async function handleFirstGesture() {
+    if (!fallbackArmed || destroyed) return
+    disarmFallback()
+    lastFallbackGestureAt = performance.now()
+    try {
+      await audio.play()
+      const playbackStartedAt = performance.now()
+      fadeToEntryVolume(playbackStartedAt)
+      publish({
+        status: 'playing', paused: false, entryStatus: 'playing-after-gesture',
+        entryPlaybackStartedAt: playbackStartedAt, firstGestureFallbackUsed: true,
+        autoplayPolicy: 'blocked-then-recovered', error: null, errorCode: null,
+      })
+    } catch (error) {
+      setError(error, 'Audio playback failed after user interaction.', 'AUDIO_PLAYBACK_FAILED')
+    }
+  }
+
+  function armFallback() {
+    if (fallbackArmed || destroyed) return
+    fallbackArmed = true
+    window.addEventListener('pointerdown', handleFirstGesture, true)
+    window.addEventListener('touchstart', handleFirstGesture, true)
+    window.addEventListener('keydown', handleFirstGesture, true)
+    publish({ fallbackArmed: true })
+  }
+
+  async function prepareEntry() {
+    await loadCatalogue()
+    if (!catalogue?.defaultTrackId) return snapshot()
+    await loadDefaultTrack()
+    audio.preload = 'auto'
+    audio.volume = 0
+    audio.load()
+    return publish({ entryStatus: 'prepared', volume: 0 })
+  }
+
+  async function startEntryExperience({ timestamp = performance.now(), forcePolicyBlocked = false } = {}) {
+    const startingManualIntentRevision = manualIntentRevision
+    publish({ entryStatus: 'attempting', entryStartedAt: timestamp, volume: 0 })
+    if (!selectedTrack) await prepareEntry()
+    if (!selectedTrack) return snapshot()
+    audio.volume = 0
+    try {
+      if (forcePolicyBlocked) {
+        const error = new Error('Autoplay blocked by debug fixture.')
+        error.name = 'NotAllowedError'
+        throw error
+      }
+      await audio.play()
+      if (manualIntentRevision !== startingManualIntentRevision) {
+        audio.pause()
+        return publish({ entryStatus: 'superseded-by-manual-intent' })
+      }
+      const playbackStartedAt = performance.now()
+      fadeToEntryVolume(playbackStartedAt)
+      return publish({
+        status: 'playing', paused: false, entryStatus: 'playing', entryPlaybackStartedAt: playbackStartedAt,
+        autoplayPolicy: 'allowed', error: null, errorCode: null,
+      })
+    } catch (error) {
+      if (error?.name === 'NotAllowedError') {
+        armFallback()
+        return publish({
+          status: 'ready', paused: true, entryStatus: 'waiting-for-gesture', autoplayPolicy: 'blocked',
+          error: null, errorCode: 'AUTOPLAY_POLICY_BLOCKED',
+        })
+      }
+      return setError(error, 'Audio playback failed.', 'AUDIO_PLAYBACK_FAILED')
+    }
+  }
+
   return Object.freeze({
     destroy,
     getState: snapshot,
     loadCatalogue,
     loadDefaultTrack,
+    prepareEntry,
+    startEntryExperience,
     next: () => moveTrack(1),
     pause,
     play,

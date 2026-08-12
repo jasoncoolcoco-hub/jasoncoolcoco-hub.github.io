@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "route": "/studio-v2-import-test",
+  "speedMultiplier": 1,
+  "debugScrub": false,
+  "sceneReadyMsFromLoadStart": 744.8,
+  "entryStartedAt": 1177.8,
+  "firstCameraMotionAt": 1193.4,
+  "firstCameraMotionDelayMs": 15.6,
+  "activeDriftStartedAt": 1177.8,
+  "stoolPlaneCrossedAt": 86826.2,
+  "stoolPlaneCrossingElapsedMs": 85649.4,
+  "finalSettleStartedAt": 93192.7,
+  "finalSettleElapsedMs": 92015.9,
+  "finalAmbientCompletedAt": 97192.7,
+  "tableOverviewHandoff": "next rendered frame; endpoint snapshot captured",
+  "tableFreeOrbitHandoff": "following rendered frame; endpoint snapshot captured",
+  "pausedFrameMs": 0,
+  "activeUnpausedDurationMs": 96014.9,
+  "requiredDurationMs": 96000,
+  "toleranceMs": 500,
+  "durationDifferenceMs": 14.9,
+  "endpointDifferences": {
+    "finalAmbientToTableOverview": { "position": 0, "target": 0, "fov": 0, "quaternionAngularRadians": 0, "projectionMatrix": 0 },
+    "tableOverviewToTableFreeOrbit": { "position": 0, "target": 0, "fov": 0, "quaternionAngularRadians": 0, "projectionMatrix": 0 }
+  },
+  "result": "PASS"
+}

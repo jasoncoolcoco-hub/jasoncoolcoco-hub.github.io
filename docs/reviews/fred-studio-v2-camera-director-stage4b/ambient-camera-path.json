@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "curveType": "CENTRIPETAL_CATMULL_ROM_ARC_LENGTH",
+  "durationMs": 96000,
+  "startDelayMs": 1800,
+  "startEaseMs": 3000,
+  "endEaseMs": 4000,
+  "totalDistanceMetres": 5.23471,
+  "fov": {
+    "startDegrees": 56,
+    "endDegrees": 50,
+    "interpolation": "smoothstep"
+  },
+  "positionControlPoints": [
+    [-6.38, 1.96, 0.36],
+    [-5.7, 1.98, 0.34],
+    [-4.75, 1.96, 0.31],
+    [-3.65, 1.92, 0.28],
+    [-2.45, 1.87, 0.26],
+    [-1.15, 1.82, 0.25]
+  ],
+  "targetControlPoints": [
+    [-1.8, 1.52, 0.12],
+    [-1.25, 1.5, 0.1],
+    [-0.55, 1.47, 0.06],
+    [0.12, 1.43, 0.01],
+    [0.66, 1.4, -0.03],
+    [0.96, 1.38, -0.05]
+  ],
+  "safety": {
+    "sampleCount": 321,
+    "invalidSamples": 0,
+    "correctionSamples": 0,
+    "minimumBoundaryClearanceMetres": 0.05,
+    "minimumObstacleClearanceMetres": 0.96675,
+    "minimumTargetClearanceMetres": 0.82946,
+    "exteriorLeak": false
+  }
+}

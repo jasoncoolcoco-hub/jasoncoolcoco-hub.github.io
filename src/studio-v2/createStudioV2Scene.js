@@ -42,7 +42,11 @@ import {
   STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
 } from './studioV2FloorReflection'
 import { createStudioV2CameraDirector } from './studioV2CameraDirector'
-import { STUDIO_V2_ACCEPTED_OPENING_POSE } from './studioV2CameraPoses'
+import { STUDIO_V2_MAJOR_CAMERA_OBSTACLES } from './studioV2CameraSafetyVolume'
+import {
+  STUDIO_V2_ROOM_WIDE_START_POSE,
+  STUDIO_V2_TABLE_OVERVIEW_CANDIDATES,
+} from './studioV2CameraPoses'
 import {
   STUDIO_V2_RADIO_PANEL_ID,
   STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
@@ -53,7 +57,80 @@ function roundedVector(vector) {
 }
 
 function cameraConfigForPreset(presetName) {
-  return STUDIO_V2_CAMERA_PRESETS[presetName] ?? STUDIO_V2_CAMERA_PRESETS[STUDIO_V2_DEFAULT_CAMERA]
+  return STUDIO_V2_TABLE_OVERVIEW_CANDIDATES[presetName]
+    ?? STUDIO_V2_CAMERA_PRESETS[presetName]
+    ?? STUDIO_V2_CAMERA_PRESETS[STUDIO_V2_DEFAULT_CAMERA]
+}
+
+function projectBoundsRecord(boundsRecord, camera, viewport) {
+  if (!boundsRecord?.min || !boundsRecord?.max) return null
+  const [minX, minY, minZ] = boundsRecord.min
+  const [maxX, maxY, maxZ] = boundsRecord.max
+  const points = []
+  for (const x of [minX, maxX]) for (const y of [minY, maxY]) for (const z of [minZ, maxZ]) {
+    const point = new THREE.Vector3(x, y, z).project(camera)
+    points.push({ x: (point.x * 0.5 + 0.5) * viewport.width, y: (-point.y * 0.5 + 0.5) * viewport.height, z: point.z })
+  }
+  const visiblePoints = points.filter(({ z }) => z >= -1 && z <= 1)
+  if (!visiblePoints.length) return { visible: false, points }
+  const left = Math.min(...visiblePoints.map(({ x }) => x))
+  const right = Math.max(...visiblePoints.map(({ x }) => x))
+  const top = Math.min(...visiblePoints.map(({ y }) => y))
+  const bottom = Math.max(...visiblePoints.map(({ y }) => y))
+  const width = right - left
+  const height = bottom - top
+  const visibleLeft = THREE.MathUtils.clamp(left, 0, viewport.width)
+  const visibleRight = THREE.MathUtils.clamp(right, 0, viewport.width)
+  const visibleTop = THREE.MathUtils.clamp(top, 0, viewport.height)
+  const visibleBottom = THREE.MathUtils.clamp(bottom, 0, viewport.height)
+  const visibleWidth = Math.max(0, visibleRight - visibleLeft)
+  const visibleHeight = Math.max(0, visibleBottom - visibleTop)
+  return {
+    visible: right > 0 && left < viewport.width && bottom > 0 && top < viewport.height,
+    left: Number(left.toFixed(3)), right: Number(right.toFixed(3)),
+    top: Number(top.toFixed(3)), bottom: Number(bottom.toFixed(3)),
+    width: Number(width.toFixed(3)), height: Number(height.toFixed(3)),
+    viewportWidthPercent: Number((width / viewport.width * 100).toFixed(3)),
+    viewportHeightPercent: Number((height / viewport.height * 100).toFixed(3)),
+    viewportAreaPercent: Number((width * height / (viewport.width * viewport.height) * 100).toFixed(3)),
+    visibleViewportWidthPercent: Number((visibleWidth / viewport.width * 100).toFixed(3)),
+    visibleViewportHeightPercent: Number((visibleHeight / viewport.height * 100).toFixed(3)),
+    visibleViewportAreaPercent: Number((visibleWidth * visibleHeight / (viewport.width * viewport.height) * 100).toFixed(3)),
+    points,
+  }
+}
+
+function tableOverviewCompositionRecord({ camera, controls, placedObjectRecords, viewport, safetyInspection }) {
+  const macbook = placedObjectRecords.find(({ anchorName }) => anchorName === 'MACBOOK_ISLAND_01')
+  const kitchenIsland = STUDIO_V2_MAJOR_CAMERA_OBSTACLES.find(({ id }) => id === 'KITCHEN ISLAND / BODY')
+  const stoolRow = STUDIO_V2_MAJOR_CAMERA_OBSTACLES.find(({ id }) => id === 'KITCHEN STOOLS / ROW')
+  const stoolSeatSlab = stoolRow ? {
+    min: [stoolRow.min[0], 1.03, stoolRow.min[2]],
+    max: [stoolRow.max[0], stoolRow.max[1], stoolRow.max[2]],
+  } : null
+  const kitchenCabinetProxy = {
+    min: [1.9, 0.5, -4.65],
+    max: [4.85, 2.82, 0.72],
+  }
+  const direction = controls.target.clone().sub(camera.position)
+  const lookRadius = direction.length()
+  const downwardAngleDegrees = THREE.MathUtils.radToDeg(Math.asin(Math.abs(direction.y) / lookRadius))
+  return {
+    poseId: camera.userData.studioV2PoseId ?? null,
+    position: camera.position.toArray(),
+    target: controls.target.toArray(),
+    quaternion: camera.quaternion.toArray(),
+    fov: camera.fov,
+    lookRadius: Number(lookRadius.toFixed(6)),
+    downwardAngleDegrees: Number(downwardAngleDegrees.toFixed(4)),
+    signedDistancePastStoolPlaneM: Number(camera.position.x.toFixed(4)),
+    macbookProjectedBounds: projectBoundsRecord(macbook?.worldBounds, camera, viewport),
+    islandProjectedBounds: projectBoundsRecord(kitchenIsland, camera, viewport),
+    stoolSeatProjectedBounds: projectBoundsRecord(stoolSeatSlab, camera, viewport),
+    kitchenCabinetProxyProjectedBounds: projectBoundsRecord(kitchenCabinetProxy, camera, viewport),
+    safety: safetyInspection,
+    viewport,
+  }
 }
 
 function responsiveFov(baseFov, width) {
@@ -92,6 +169,9 @@ export function createStudioV2Scene({
   deliveryConfig,
   entryTestConfig,
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
+  initialAmbientProgress,
+  initialAmbientCandidate = 'B',
+  forceAutoplayBlocked = false,
   initialAssetMaterialMode = 'refined',
   initialLightingCandidate,
   initialToneMapping,
@@ -160,7 +240,10 @@ export function createStudioV2Scene({
     safeOrbit: stableOrbitMode,
     furnitureCollisionExperimental: false,
   })
-  const initialPreset = cameraSafety.clampConfig(cameraConfigForPreset(initialCameraPreset))
+  const requestedInitialPreset = cameraConfigForPreset(initialCameraPreset)
+  const initialPreset = capture && STUDIO_V2_TABLE_OVERVIEW_CANDIDATES[initialCameraPreset]
+    ? requestedInitialPreset
+    : cameraSafety.clampConfig(requestedInitialPreset)
   const initialResponsivePreset = {
     ...initialPreset,
     fov: responsiveFov(initialPreset.fov, initialRenderSize.width),
@@ -171,6 +254,7 @@ export function createStudioV2Scene({
     initialPreset.near,
     initialPreset.far,
   )
+  camera.userData.studioV2PoseId = initialPreset.id ?? initialCameraPreset
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.dampingFactor = stableOrbitMode
@@ -197,6 +281,20 @@ export function createStudioV2Scene({
   controls.zoomSpeed = STUDIO_V2_CONTROLS.zoomSpeed
   controls.panSpeed = STUDIO_V2_CONTROLS.panSpeed
   controls.enabled = false
+  const cameraInteractionRaycaster = new THREE.Raycaster()
+  const cameraInteractionPointer = new THREE.Vector2()
+  const cameraInteractionTargets = []
+
+  function isInteractiveCameraPointer(event) {
+    if (!cameraInteractionTargets.length) return false
+    const rect = renderer.domElement.getBoundingClientRect()
+    cameraInteractionPointer.set(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
+    )
+    cameraInteractionRaycaster.setFromCamera(cameraInteractionPointer, camera)
+    return cameraInteractionRaycaster.intersectObjects(cameraInteractionTargets, true).length > 0
+  }
   let orbitStabilizations = 0
   let rearWallPreviewEnabled = false
   let rearClampState = 'CLEAR'
@@ -282,18 +380,23 @@ export function createStudioV2Scene({
   }
 
   const cameraDirector = createStudioV2CameraDirector({
+    ambientPathCandidate: initialAmbientCandidate,
     camera,
     cameraSafety,
     controls,
-    debug,
+    debug: debug || capture,
     domElement: renderer.domElement,
-    initialPose: initialPreset,
+    initialPose: capture ? initialPreset : STUDIO_V2_ROOM_WIDE_START_POSE,
+    isInteractivePointer: isInteractiveCameraPointer,
     prepareOrbitLimits: applyRearWallLimits,
     readRearBoundary: updateRearClampState,
     responsiveFov,
     resolveLegacyCandidate: acceptCameraCandidate,
     scene,
   })
+  if (capture && Number.isFinite(initialAmbientProgress)) {
+    cameraDirector.scrubAmbientProgress(initialAmbientProgress)
+  }
 
   const keyLight = new THREE.DirectionalLight(
     initialLighting.key.color,
@@ -380,6 +483,9 @@ export function createStudioV2Scene({
   const radioPanelSubscribers = new Set()
   const publishRadioPanelState = (nextState) => {
     radioPanelState = nextState
+    cameraDirector.setPauseReason('RADIO_PANEL', Boolean(nextState?.screenPlayerOpen), {
+      resumeDelayMs: 2000,
+    })
     radioPanelSubscribers.forEach((listener) => listener(nextState))
   }
   const visualState = {
@@ -668,6 +774,7 @@ export function createStudioV2Scene({
         startedAt: loadStartedAt,
       })
       panel.setCamera(camera)
+      cameraInteractionTargets.push(panel.group)
       unsubscribeRadioPanel = panel.subscribe(publishRadioPanelState)
       radioPanelReadyMs = Number((performance.now() - loadStartedAt).toFixed(1))
       await waitForEntryAsset(STUDIO_V2_RADIO_PANEL_ID, Promise.resolve(panel))
@@ -710,6 +817,7 @@ export function createStudioV2Scene({
 
     const { environment, firstRoomFrameMs, gltf, tuned } = roomPreparation
     placedObjectsResource.setMaterialMode(initialAssetMaterialMode)
+    cameraInteractionTargets.push(placedObjectsResource.group)
     placedObjectRecords = placedObjectsResource.records
     entryGate.markCondition('texturesReady', {
       formats: [...new Set([...roomTextureFormats, ...placedObjectsResource.textureFormats])],
@@ -792,7 +900,7 @@ export function createStudioV2Scene({
       method: typeof renderer.compileAsync === 'function' ? 'compileAsync' : 'compile',
     })
     entryGate.setPhase('warming-first-frame')
-    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera)
+    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
     else renderer.render(scene, camera)
     if ((debug || capture) && floorReflection) {
       const floorCoverageAudit = floorReflection.runCoverageAudit(renderer, scene, camera)
@@ -809,6 +917,19 @@ export function createStudioV2Scene({
     entryGate.markCondition('warmupReady', { hiddenFrames: 2, warmupRender: true })
     const entry = entryGate.markSceneReady()
     cameraDirector.setOrbitEnabled(exploreEnabled)
+    if (!capture) {
+      const entryStartedAt = performance.now()
+      cameraDirector.startAmbientExperience({
+        automatic: officialPresentation,
+        immediate: true,
+        startedAt: entryStartedAt,
+      })
+      audioController?.startEntryExperience({
+        timestamp: entryStartedAt,
+        forcePolicyBlocked: forceAutoplayBlocked,
+      })
+      mount.dataset.entryExperienceStartedAt = entryStartedAt.toFixed(3)
+    }
     mount.dataset.interactionsEnabled = String(cameraDirector.isOrbitEnabled())
     if (audioController) {
       marshallInteraction = createStudioV2MarshallInteraction({
@@ -825,6 +946,14 @@ export function createStudioV2Scene({
         mount.dataset.audioState = audioState.status
         mount.dataset.audioCurrentTime = Number(audioState.currentTime ?? 0).toFixed(3)
         mount.dataset.audioTrackId = audioState.trackId ?? ''
+        mount.dataset.audioEntryStatus = audioState.entryStatus ?? ''
+        mount.dataset.audioAutoplayPolicy = audioState.autoplayPolicy ?? ''
+        mount.dataset.audioVolume = Number(audioState.volume ?? 0).toFixed(6)
+        mount.dataset.audioPaused = String(audioState.paused ?? true)
+        mount.dataset.audioRampOwnerCount = String(audioState.rampOwnerCount ?? 0)
+        mount.dataset.audioFallbackArmed = String(audioState.fallbackArmed ?? false)
+        mount.dataset.audioFallbackUsed = String(audioState.firstGestureFallbackUsed ?? false)
+        mount.dataset.audioErrorCode = audioState.errorCode ?? ''
       })
     }
 
@@ -832,6 +961,15 @@ export function createStudioV2Scene({
     mount.dataset.completeReadyMs = loadTimeMs.toFixed(1)
     mount.dataset.firstVisibleFrameMs = loadTimeMs.toFixed(1)
     mount.dataset.criticalRequests = String(entry.requests.length)
+    if (capture || debug) {
+      mount.dataset.tableOverviewCompositionAudit = JSON.stringify(tableOverviewCompositionRecord({
+        camera,
+        controls,
+        placedObjectRecords,
+        viewport: renderSize(),
+        safetyInspection: cameraDirector.getDebugSnapshot().volumeInspection,
+      }))
+    }
     const audit = {
       ...modelAudit,
       animations: gltf.animations.length,
@@ -1062,9 +1200,12 @@ export function createStudioV2Scene({
     // Camera Director owns transition, controls, safety resolution and final pose
     // within one update cycle, so no invalid candidate reaches the renderer.
     cameraDirector.update(time)
+    mount.dataset.cameraDirectorState = cameraDirector.getCurrentState()
+    mount.dataset.cameraEndpointPhase = cameraDirector.getEndpointPhase()
+    mount.dataset.cameraRailProgress = String(cameraDirector.getRailProgress())
     lightHelpers.forEach((helper) => helper.update())
     if (performanceSample?.updateBaseline) renderer.info.reset()
-    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera)
+    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
     else renderer.render(scene, camera)
     if (performanceSample?.updateBaseline) {
       if (performanceSample.lastFrameAt !== null) {
@@ -1092,21 +1233,25 @@ export function createStudioV2Scene({
       diagnostics.geometries = renderer.info.memory.geometries
       diagnostics.textures = renderer.info.memory.textures
       const cameraDirectorState = cameraDirector.getDebugSnapshot()
+      mount.dataset.cameraDirectorAudit = JSON.stringify(cameraDirectorState)
+      mount.dataset.floorReflectionAudit = JSON.stringify(visualState.floorReflection)
       mount.dataset.renderFps = String(diagnostics.fps)
       mount.dataset.renderCalls = String(diagnostics.calls)
       mount.dataset.renderTriangles = String(diagnostics.triangles)
       mount.dataset.cameraDirectorState = cameraDirectorState.state
       mount.dataset.cameraTransition = cameraDirectorState.transition?.id ?? 'NONE'
       mount.dataset.cameraSafetyClamp = String(cameraDirectorState.safetyClampActive)
+      mount.dataset.cameraRailProgress = String(cameraDirectorState.ambient?.railProgress ?? 0)
+      mount.dataset.cameraPaused = String(cameraDirectorState.ambient?.paused ?? false)
       onDiagnostics?.({
         ...diagnostics,
         camera: {
           position: roundedVector(camera.position),
           target: roundedVector(controls.target),
           fov: Number(camera.fov.toFixed(1)),
-          safe: cameraSafety.isCameraSafe(camera.position),
+          safe: cameraDirectorState.volumeSafe,
         },
-        cameraDirector: cameraDirector.getDebugSnapshot(),
+        cameraDirector: cameraDirectorState,
         orbit: {
           enabled: controls.enabled,
           pan: controls.enablePan,
@@ -1164,13 +1309,7 @@ export function createStudioV2Scene({
     readyPromise,
     sceneReadyPromise: readyPromise,
     resetCamera({ smooth = true } = {}) {
-      if (smooth && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return cameraDirector.transitionTo(STUDIO_V2_ACCEPTED_OPENING_POSE, {
-          allowOfficial: true,
-          duration: 900,
-        })
-      }
-      return cameraDirector.resetToAcceptedOpening()
+      return cameraDirector.resetToRoomWideStart({ automatic: officialPresentation && smooth })
     },
     setCameraPreset(presetName, { smooth = false } = {}) {
       const pose = cameraConfigForPreset(presetName)
@@ -1186,10 +1325,6 @@ export function createStudioV2Scene({
     },
     setExplore(enabled) {
       exploreEnabled = enabled
-      applyRearWallLimits()
-      controls.enableRotate = true
-      controls.enablePan = false
-      controls.enableZoom = stableOrbitMode ? OFFICIAL_CAMERA_SAFE_VOLUME.zoom : true
       cameraDirector.setOrbitEnabled(
         entryGate.snapshot().sceneReady && Boolean(modelRoot) && enabled,
       )
@@ -1370,6 +1505,65 @@ export function createStudioV2Scene({
     getCameraDirectorState() {
       return cameraDirector.getDebugSnapshot()
     },
+    getAmbientCameraReport() {
+      return cameraDirector.getAmbientReport()
+    },
+    startAmbientCamera({ immediate = true } = {}) {
+      if (!debug) return false
+      return cameraDirector.startAmbientExperience({ automatic: true, immediate })
+    },
+    setAmbientCameraSpeed(multiplier) {
+      if (!debug) return false
+      return cameraDirector.setAmbientSpeedMultiplier(multiplier)
+    },
+    scrubAmbientCamera(progress) {
+      if (!debug) return false
+      return cameraDirector.scrubAmbientProgress(progress)
+    },
+    setDebugHeadLook(options) {
+      if (!debug) return false
+      return cameraDirector.setDebugHeadLook(options)
+    },
+    releaseDebugHeadLook() {
+      if (!debug) return false
+      return cameraDirector.releaseDebugHeadLook()
+    },
+    setDebugHeadLookReturnProgress(progress) {
+      if (!debug) return false
+      return cameraDirector.setDebugReturnProgress(progress)
+    },
+    setDebugTableOrbitPose(options) {
+      if (!debug) return false
+      return cameraDirector.setDebugTableOrbitPose(options)
+    },
+    interruptDebugHeadLookReturn(options) {
+      if (!debug) return false
+      return cameraDirector.interruptDebugReturn(options)
+    },
+    resetAmbientCamera() {
+      if (!debug) return false
+      return cameraDirector.resetToRoomWideStart({ automatic: false })
+    },
+    jumpCameraToTableOverview() {
+      if (!debug) return false
+      return cameraDirector.jumpToTableOverview()
+    },
+    enterTableFreeOrbit() {
+      if (!debug) return false
+      return cameraDirector.enterTableFreeOrbit()
+    },
+    setAmbientPathVisible(visible) {
+      if (!debug) return false
+      return cameraDirector.setPathVisible(visible)
+    },
+    setAmbientControlPointsVisible(visible) {
+      if (!debug) return false
+      return cameraDirector.setControlPointsVisible(visible)
+    },
+    setAmbientReducedMotionOverride(mode) {
+      if (!debug) return false
+      return cameraDirector.setReducedMotionOverride(mode)
+    },
     transitionCameraTo(poseOrState, options) {
       if (!debug) return false
       return cameraDirector.transitionTo(poseOrState, options)
@@ -1547,8 +1741,13 @@ export function createStudioV2Scene({
       delete mount.dataset.renderCalls
       delete mount.dataset.renderTriangles
       delete mount.dataset.cameraDirectorState
+      delete mount.dataset.cameraEndpointPhase
+      delete mount.dataset.cameraDirectorAudit
+      delete mount.dataset.floorReflectionAudit
       delete mount.dataset.cameraTransition
       delete mount.dataset.cameraSafetyClamp
+      delete mount.dataset.cameraRailProgress
+      delete mount.dataset.cameraPaused
       delete mount.dataset.floorReflectionEnabled
       delete mount.dataset.floorReflectionReady
       delete mount.dataset.floorReflectionUpdates

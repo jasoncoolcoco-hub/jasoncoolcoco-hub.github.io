@@ -1,0 +1,14 @@
+{
+  "viewport": [
+    1280,
+    720
+  ],
+  "fps": 60,
+  "drawCalls": 99,
+  "renderedTriangles": 780688,
+  "railDurationMs": 96000,
+  "pathSamples": 521,
+  "tableOrbitSamples": 6480,
+  "build": "PASS",
+  "chunkWarning": "unchanged generic >500 kB warning"
+}

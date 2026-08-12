@@ -148,6 +148,55 @@ export function createStudioV2CameraVolumeSafety({ scene, debug = false } = {}) 
       && !obstacleRecords.some(({ box }) => box.containsPoint(position))
   }
 
+  function boxInteriorClearance(box, point) {
+    if (!box.containsPoint(point)) return -box.distanceToPoint(point)
+    return Math.min(
+      point.x - box.min.x,
+      box.max.x - point.x,
+      point.y - box.min.y,
+      box.max.y - point.y,
+      point.z - box.min.z,
+      box.max.z - point.z,
+    )
+  }
+
+  function inspect(position, target) {
+    const boundaryDistances = planes.map(({ id, plane }) => ({
+      id,
+      distance: plane.distanceToPoint(position),
+    }))
+    const targetClearance = boxInteriorClearance(targetBounds, target)
+    const obstacleDistances = obstacleRecords.map(({ id, box }) => ({
+      id,
+      distance: box.distanceToPoint(position),
+      inside: box.containsPoint(position),
+    }))
+    const violatedBoundaries = boundaryDistances
+      .filter(({ distance }) => distance < -0.00001)
+      .map(({ id }) => id)
+    const intersectedObstacles = obstacleDistances
+      .filter(({ inside }) => inside)
+      .map(({ id }) => id)
+    const targetSafe = targetBounds.containsPoint(target)
+    const reasons = [
+      ...violatedBoundaries,
+      ...intersectedObstacles.map((id) => `OBSTACLE:${id}`),
+      ...(!targetSafe ? ['TARGET_BOUNDS'] : []),
+    ]
+    return {
+      safe: reasons.length === 0,
+      reasons,
+      boundaryDistances,
+      obstacleDistances,
+      violatedBoundaries,
+      intersectedObstacles,
+      targetSafe,
+      minimumBoundaryClearance: Math.min(...boundaryDistances.map(({ distance }) => distance)),
+      minimumObstacleClearance: Math.min(...obstacleDistances.map(({ distance }) => distance)),
+      minimumTargetClearance: targetClearance,
+    }
+  }
+
   function resolve(position, target, { includeObstacles = true } = {}) {
     scratchPosition.copy(position)
     scratchTarget.copy(target).clamp(targetBounds.min, targetBounds.max)
@@ -203,6 +252,7 @@ export function createStudioV2CameraVolumeSafety({ scene, debug = false } = {}) 
         obstaclesVisible: Boolean(obstacleHelpers?.visible),
       }
     },
+    inspect,
     resolve,
     setMajorObstaclesVisible(visible) {
       if (obstacleHelpers) obstacleHelpers.visible = Boolean(visible)

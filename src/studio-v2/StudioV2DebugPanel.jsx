@@ -121,6 +121,8 @@ export default function StudioV2DebugPanel({
   const visual = diagnostics?.visual ?? runtime?.getVisualConfig?.() ?? {}
   const safety = diagnostics?.safety ?? runtime?.getCameraSafety?.() ?? {}
   const cameraDirector = diagnostics?.cameraDirector ?? runtime?.getCameraDirectorState?.() ?? {}
+  const ambient = cameraDirector.ambient ?? {}
+  const ambientReport = runtime?.getAmbientCameraReport?.() ?? {}
   const delivery = runtime?.getAssetDeliveryConfig?.() ?? audit?.delivery ?? {}
   const entry = entryState
     ?? diagnostics?.entry
@@ -303,6 +305,10 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="TRACK ID" value={audioState.trackId} />
           <InspectorRow label="TRACK TITLE" value={audioState.trackTitle} />
           <InspectorRow label="AUDIO STATE" value={audioState.status?.toUpperCase?.()} />
+          <InspectorRow label="ENTRY AUDIO" value={audioState.entryStatus?.toUpperCase?.()} />
+          <InspectorRow label="AUTOPLAY POLICY" value={audioState.autoplayPolicy?.toUpperCase?.()} />
+          <InspectorRow label="FALLBACK ARMED" value={audioState.fallbackArmed ? 'YES' : 'NO'} />
+          <InspectorRow label="FIRST GESTURE FALLBACK" value={audioState.firstGestureFallbackUsed ? 'USED' : 'NO'} />
           <InspectorRow label="CURRENT TIME" value={Number(audioState.currentTime ?? 0).toFixed(2)} />
           <InspectorRow label="DURATION" value={Number.isFinite(audioState.duration) ? Number(audioState.duration).toFixed(2) : '—'} />
           <InspectorRow label="VOLUME" value={Number(audioState.volume ?? 0).toFixed(2)} />
@@ -614,6 +620,32 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="DIRECTOR INPUT TYPE" value={cameraDirector.inputType} />
           <InspectorRow label="DIRECTOR TRANSITION" value={cameraDirector.transition?.id ?? 'NONE'} />
           <InspectorRow label="TRANSITION PROGRESS" value={cameraDirector.transition ? cameraDirector.transition.progress : 'N.A.'} />
+          <InspectorRow label="AMBIENT PROGRESS" value={ambient.railProgress} />
+          <InspectorRow label="AMBIENT TIME" value={`${ambient.driftElapsedMs ?? '—'} / ${ambient.driftDurationMs ?? '—'} MS`} />
+          <InspectorRow label="OFFICIAL RAIL" value={ambient.officialLockedRail ? 'LOCKED' : 'DEBUG / MANUAL'} />
+          <InspectorRow label="ENTRY START" value={ambient.entryStartedAt == null ? 'N.A.' : `${ambient.entryStartedAt} MS`} />
+          <InspectorRow label="PATH CANDIDATE" value={ambientReport.rail?.selectedCandidate || 'N.A.'} />
+          <InspectorRow label="PATH DISTANCE" value={`${ambient.currentPathDistance ?? '—'} / ${ambient.totalPathDistance ?? '—'} M`} />
+          <InspectorRow label="FROZEN PROGRESS" value={ambient.frozenProgress ?? 'NO'} />
+          <InspectorRow label="ENDPOINT PHASE" value={ambient.endpointPhase ?? 'NONE'} />
+          <InspectorRow label="BASE POSITION" value={vectorText(ambient.basePosition)} />
+          <InspectorRow label="BASE TARGET" value={vectorText(ambient.baseTarget)} />
+          <InspectorRow label="DISPLAYED TARGET" value={vectorText(ambient.displayedTarget)} />
+          <InspectorRow label="HEAD LOOK YAW" value={`${ambient.yawOffsetDegrees ?? '—'}°`} />
+          <InspectorRow label="HEAD LOOK PITCH" value={`${ambient.pitchOffsetDegrees ?? '—'}°`} />
+          <InspectorRow label="OVERRIDE IDLE" value={ambient.overrideIdleRemainingMs == null ? 'N.A.' : `${ambient.overrideIdleRemainingMs} MS`} />
+          <InspectorRow label="RETURN PROGRESS" value={ambient.returnProgress ?? 'N.A.'} />
+          <InspectorRow label="AMBIENT SPEED" value={`${ambient.speedMultiplier ?? 1}×`} />
+          <InspectorRow label="AMBIENT PAUSE" value={ambient.paused ? (ambient.pauseReasons?.join(', ') || 'RESUME DELAY') : 'RUNNING'} />
+          <InspectorRow label="VISIBILITY" value={ambient.visibilityPauseState} />
+          <InspectorRow label="REDUCED MOTION" value={ambient.reducedMotionActive ? `ON (${ambient.reducedMotionOverride})` : `OFF (${ambient.reducedMotionOverride ?? 'AUTO'})`} />
+          <InspectorRow label="RAIL PATH SAFETY" value={ambient.pathSafety?.valid ? `${ambient.pathSafety.sampleCount}/${ambient.pathSafety.sampleCount} SAFE` : `${ambient.pathSafety?.invalidSamples ?? '—'} UNSAFE`} />
+          <InspectorRow label="RAIL BOUNDARY CLEARANCE" value={ambient.pathSafety?.minimumBoundaryClearance} />
+          <InspectorRow label="RAIL OBSTACLE CLEARANCE" value={ambient.pathSafety?.minimumObstacleClearance} />
+          <InspectorRow label="RAIL TARGET CLEARANCE" value={ambient.pathSafety?.minimumTargetClearance} />
+          <InspectorRow label="TABLE 360 SAFETY" value={ambient.tableOrbitSafety?.safe ? `${ambient.tableOrbitSafety.totalSamples}/${ambient.tableOrbitSafety.totalSamples} SAFE` : `${ambient.tableOrbitSafety?.invalidSamples ?? '—'} / ${ambient.tableOrbitSafety?.totalSamples ?? '—'} UNSAFE`} />
+          <InspectorRow label="TABLE BOUNDARY CLEARANCE" value={ambient.tableOrbitSafety?.minimumBoundaryClearance} />
+          <InspectorRow label="TABLE OBSTACLE CLEARANCE" value={ambient.tableOrbitSafety?.minimumObstacleClearance} />
           <InspectorRow label="ORBIT RADIUS" value={cameraDirector.orbitRadius} />
           <InspectorRow label="SAFETY CLAMP" value={cameraDirector.safetyClampActive ? 'ACTIVE' : 'CLEAR'} />
           <InspectorRow label="LAST VOLUME BOUNDARY" value={cameraDirector.safety?.lastViolatedBoundary} />
@@ -697,6 +729,129 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="STABILIZATIONS" value={safety.stabilizations} />
           <InspectorRow label="LAST CLAMP" value={safety.lastCorrection} />
         </dl>
+        <label className="studio-v2__debug-number">
+          <span>AMBIENT SCRUB</span>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.001"
+            value={ambient.railProgress ?? 0}
+            onChange={(event) => runtime.scrubAmbientCamera(Number(event.currentTarget.value))}
+          />
+        </label>
+        <div className="studio-v2__debug-actions">
+          <button type="button" onClick={() => runtime.startAmbientCamera({ immediate: true })}>
+            START AMBIENT
+          </button>
+          <button type="button" onClick={() => runtime.resetAmbientCamera()}>
+            RESET ROOM WIDE
+          </button>
+          <button type="button" onClick={() => runtime.jumpCameraToTableOverview()}>
+            JUMP TABLE OVERVIEW
+          </button>
+          <button type="button" onClick={() => runtime.enterTableFreeOrbit()}>
+            ENTER TABLE FREE ORBIT
+          </button>
+        </div>
+        <div className="studio-v2__debug-actions">
+          <button type="button" onClick={() => runtime.scrubAmbientCamera(0.999)}>
+            SCRUB 99.9% RAIL
+          </button>
+          <button type="button" onClick={() => runtime.scrubAmbientCamera(1)}>
+            SCRUB 100% OVERVIEW
+          </button>
+        </div>
+        <div className="studio-v2__debug-actions">
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.5, yawDegrees: 0, pitchDegrees: 0 })}>
+            OVERRIDE BASE 50%
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.5, yawDegrees: -20, pitchDegrees: 0 })}>
+            YAW −20°
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.5, yawDegrees: 20, pitchDegrees: 0 })}>
+            YAW +20°
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.5, yawDegrees: 0, pitchDegrees: -8 })}>
+            PITCH −8°
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.5, yawDegrees: 0, pitchDegrees: 10 })}>
+            PITCH +10°
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.5, yawDegrees: 18, pitchDegrees: 8 })}>
+            COMBINED +18° / +8°
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.2, yawDegrees: 12, pitchDegrees: 5 })}>
+            COMBINED 20% SMALL
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLook({ progress: 0.8, yawDegrees: 12, pitchDegrees: 5 })}>
+            COMBINED 80% SMALL
+          </button>
+          <button type="button" onClick={() => runtime.releaseDebugHeadLook()}>
+            RELEASE / IDLE RETURN
+          </button>
+          <button type="button" onClick={() => runtime.setDebugHeadLookReturnProgress(0.5)}>
+            SET RETURN 50%
+          </button>
+          <button type="button" onClick={() => runtime.interruptDebugHeadLookReturn({ yawDegrees: -8, pitchDegrees: 3 })}>
+            RE-INTERRUPT RETURN
+          </button>
+        </div>
+        <div className="studio-v2__debug-actions">
+          {[1, 5, 10, 20].map((multiplier) => (
+            <ToggleButton
+              key={multiplier}
+              active={ambient.speedMultiplier === multiplier}
+              onClick={() => runtime.setAmbientCameraSpeed(multiplier)}
+            >
+              {multiplier}× SPEED
+            </ToggleButton>
+          ))}
+        </div>
+        <div className="studio-v2__debug-actions">
+          {[0.82, 1.05, 1.28].flatMap((radius) => [-180, -90, 0, 90, 180].map((azimuth) => (
+            <button
+              key={`${radius}-${azimuth}`}
+              type="button"
+              onClick={() => runtime.setDebugTableOrbitPose({ radius, azimuthDegrees: azimuth, polarRadians: 1.37 })}
+            >
+              ORBIT R{radius.toFixed(2)} A{azimuth}
+            </button>
+          )))}
+        </div>
+        <div className="studio-v2__debug-actions">
+          <ToggleButton
+            active={Boolean(helpers.ambientPath)}
+            onClick={() => {
+              const visible = !helpers.ambientPath
+              runtime.setAmbientPathVisible(visible)
+              setHelpers((current) => ({ ...current, ambientPath: visible }))
+            }}
+          >
+            AMBIENT PATH {helpers.ambientPath ? 'ON' : 'OFF'}
+          </ToggleButton>
+          <ToggleButton
+            active={Boolean(helpers.ambientControlPoints)}
+            onClick={() => {
+              const visible = !helpers.ambientControlPoints
+              runtime.setAmbientControlPointsVisible(visible)
+              setHelpers((current) => ({ ...current, ambientControlPoints: visible }))
+            }}
+          >
+            CONTROL POINTS {helpers.ambientControlPoints ? 'ON' : 'OFF'}
+          </ToggleButton>
+        </div>
+        <div className="studio-v2__debug-actions">
+          {['AUTO', 'REDUCE', 'ALLOW'].map((mode) => (
+            <ToggleButton
+              key={mode}
+              active={ambient.reducedMotionOverride === mode}
+              onClick={() => runtime.setAmbientReducedMotionOverride(mode)}
+            >
+              MOTION {mode}
+            </ToggleButton>
+          ))}
+        </div>
         <div className="studio-v2__debug-actions">
           <button type="button" onClick={() => runtime.transitionCameraTo('ROOM_WIDE_START_CANDIDATE', { duration: 1200 })}>
             TRANSITION WIDE

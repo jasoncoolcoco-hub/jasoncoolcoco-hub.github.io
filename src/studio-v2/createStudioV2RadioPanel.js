@@ -81,8 +81,13 @@ function drawCompactSurface(surface, audioState) {
 
   const track = currentTrack(audioState)
   const metadataUnavailable = ['error', 'empty'].includes(audioState?.catalogueStatus)
+  const policyBlocked = audioState?.entryStatus === 'waiting-for-gesture'
   const title = metadataUnavailable ? 'Audio unavailable' : track?.title ?? 'Radio ready'
-  const artist = metadataUnavailable ? '' : track?.artist ?? ''
+  const artist = metadataUnavailable
+    ? ''
+    : policyBlocked
+      ? 'TAP TO START AUDIO'
+      : track?.artist ?? ''
   const icon = audioState?.status === 'playing' ? 'Ⅱ' : '▶'
   const pad = 88
 

@@ -1,0 +1,262 @@
+{
+  "sequence": [
+    {
+      "radiusRequested": 1.85,
+      "azimuthDegrees": -180,
+      "position": [
+        0.96,
+        1.749,
+        -1.8628
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 1.85,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 1.85,
+      "azimuthDegrees": -90,
+      "position": [
+        -0.8528,
+        1.749,
+        -0.05
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 1.85,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 1.85,
+      "azimuthDegrees": 0,
+      "position": [
+        0.96,
+        1.749,
+        1.7628
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 1.85,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 1.85,
+      "azimuthDegrees": 90,
+      "position": [
+        2.7728,
+        1.749,
+        -0.05
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 1.85,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 1.85,
+      "azimuthDegrees": 180,
+      "position": [
+        0.96,
+        1.749,
+        -1.8628
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 1.85,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.05,
+      "azimuthDegrees": 180,
+      "position": [
+        0.96,
+        1.7889,
+        -2.0588
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.05,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.05,
+      "azimuthDegrees": 90,
+      "position": [
+        2.9688,
+        1.7889,
+        -0.05
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.05,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.05,
+      "azimuthDegrees": 0,
+      "position": [
+        0.96,
+        1.7889,
+        1.9588
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.05,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.05,
+      "azimuthDegrees": -90,
+      "position": [
+        -1.0488,
+        1.7889,
+        -0.05
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.05,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.05,
+      "azimuthDegrees": -180,
+      "position": [
+        0.96,
+        1.7889,
+        -2.0588
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.05,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.25,
+      "azimuthDegrees": -180,
+      "position": [
+        0.96,
+        1.8288,
+        -2.2548
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.25,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.25,
+      "azimuthDegrees": 90,
+      "position": [
+        3.1648,
+        1.8288,
+        -0.05
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.25,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.25,
+      "azimuthDegrees": 0,
+      "position": [
+        0.96,
+        1.8288,
+        2.1548
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.25,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.25,
+      "azimuthDegrees": -90,
+      "position": [
+        -1.2448,
+        1.8288,
+        -0.05
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.25,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    },
+    {
+      "radiusRequested": 2.25,
+      "azimuthDegrees": 180,
+      "position": [
+        0.96,
+        1.8288,
+        -2.2548
+      ],
+      "target": [
+        0.96,
+        1.38,
+        -0.05
+      ],
+      "radius": 2.25,
+      "volumeSafe": true,
+      "minimumObstacleClearance": 0.06455
+    }
+  ],
+  "allSafe": true,
+  "bothDirections": true,
+  "zoomWhileRotate": true
+}

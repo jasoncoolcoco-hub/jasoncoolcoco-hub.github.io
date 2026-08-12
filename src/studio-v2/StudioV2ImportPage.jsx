@@ -46,6 +46,19 @@ export default function StudioV2ImportPage() {
   const initialCameraPreset = debugEnabled || captureEnabled
     ? searchParams.get('view') || undefined
     : undefined
+  const requestedCameraProgress = Number(searchParams.get('cameraProgress'))
+  const initialAmbientProgress = captureEnabled
+    && searchParams.has('cameraProgress')
+    && Number.isFinite(requestedCameraProgress)
+    ? Math.min(1, Math.max(0, requestedCameraProgress))
+    : undefined
+  const initialAmbientCandidate = debugEnabled || captureEnabled
+    ? ['A', 'B', 'C'].includes(searchParams.get('railCandidate'))
+      ? searchParams.get('railCandidate')
+      : 'B'
+    : 'B'
+  const forceAutoplayBlocked = (debugEnabled || captureEnabled)
+    && searchParams.get('autoplay') === 'blocked'
   const initialAssetMaterialMode = debugEnabled || captureEnabled
     ? searchParams.get('materials') || undefined
     : undefined
@@ -132,6 +145,7 @@ export default function StudioV2ImportPage() {
       catalogueUrl: catalogueSource.url,
     })
     const unsubscribeAudio = controller.subscribe(setAudioState)
+    controller.prepareEntry()
     setAudioController(controller)
     const scene = createStudioV2Scene({
       mount: mountRef.current,
@@ -151,6 +165,9 @@ export default function StudioV2ImportPage() {
       },
       onRadioPanelCloseRequest: (options) => radioCloseRef.current?.(options),
       initialCameraPreset,
+      initialAmbientProgress,
+      initialAmbientCandidate,
+      forceAutoplayBlocked,
       initialAssetMaterialMode,
       initialLightingCandidate,
       initialToneMapping,
@@ -202,7 +219,7 @@ export default function StudioV2ImportPage() {
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
-  }, [attempt, captureEnabled, debugEnabled, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled])
+  }, [attempt, captureEnabled, debugEnabled, forceAutoplayBlocked, initialAmbientCandidate, initialAmbientProgress, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled])
 
   const enableExplore = () => {
     setExploring(true)

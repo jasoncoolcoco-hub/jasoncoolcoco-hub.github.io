@@ -1,0 +1,19 @@
+{
+  "invalidSamples": 0,
+  "minimumBoundaryClearance": 1.18445,
+  "minimumObstacleClearance": 0.29236,
+  "polarAngles": [
+    0.88,
+    1.03,
+    1.18
+  ],
+  "primarySafeCoverageDegrees": 720,
+  "radii": [
+    0.82,
+    1.05,
+    1.28
+  ],
+  "safe": true,
+  "totalSamples": 6480,
+  "unsafeAzimuthDegrees": []
+}

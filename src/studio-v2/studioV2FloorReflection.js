@@ -6,7 +6,8 @@ const REFLECTION_TEXTURE_SIZE = Object.freeze([512, 320])
 const BLUR_TEXTURE_SIZE = Object.freeze([256, 160])
 const REFLECTION_UPDATE_RATES = Object.freeze({
   SLOW: 12,
-  ORBIT: 20,
+  HEAD_LOOK: 15,
+  ORBIT: 18,
   FAST: 22,
 })
 const BLUR_SAMPLE_OFFSET = 6
@@ -518,6 +519,7 @@ export function createStudioV2FloorReflection({
   const lastProjectionMatrix = new THREE.Matrix4()
   const updateTimes = []
   const blurUpdateTimes = []
+  const updateIntervals = []
   let hasRendered = false
   let blurReady = false
   let dirty = true
@@ -528,6 +530,7 @@ export function createStudioV2FloorReflection({
   let reflectionEnabled = Boolean(enabled)
   let activeCadence = 'STATIC'
   let activeCadenceHz = 0
+  let intervalCadence = 'STATIC'
   let coverageAudit = null
   let activeArchitecture = debug && architecture in STUDIO_V2_FLOOR_ARCHITECTURES
     ? architecture
@@ -622,16 +625,18 @@ export function createStudioV2FloorReflection({
     }
   }
 
-  function updateReflection(activeRenderer, activeScene, activeCamera) {
+  function updateReflection(activeRenderer, activeScene, activeCamera, cadenceHint = 'AUTO') {
     const cameraMatrixDelta = hasRendered
       ? matrixDelta(activeCamera.matrixWorld, lastCameraMatrix)
       : Infinity
     const projectionMatrixDelta = hasRendered
       ? matrixDelta(activeCamera.projectionMatrix, lastProjectionMatrix)
       : Infinity
+    const stateDirectedCadence = cadenceHint in REFLECTION_UPDATE_RATES
+    const motionThreshold = stateDirectedCadence ? 0.00000001 : 0.001
     const cameraChanged = !hasRendered
-      || cameraMatrixDelta > 0.001
-      || projectionMatrixDelta > 0.001
+      || cameraMatrixDelta > motionThreshold
+      || projectionMatrixDelta > motionThreshold
     if (!dirty && !cameraChanged) {
       activeCadence = 'STATIC'
       activeCadenceHz = 0
@@ -640,13 +645,17 @@ export function createStudioV2FloorReflection({
     }
 
     const now = performance.now()
-    const requestedCadence = projectionMatrixDelta > 0.001 || cameraMatrixDelta > 0.008
-      ? 'FAST'
-      : cameraMatrixDelta > 0.0015
-        ? 'ORBIT'
-        : 'SLOW'
+    const requestedCadence = cadenceHint in REFLECTION_UPDATE_RATES
+      ? cadenceHint
+      : projectionMatrixDelta > 0.001 || cameraMatrixDelta > 0.008
+        ? 'FAST'
+        : cameraMatrixDelta > 0.0015
+          ? 'ORBIT'
+          : 'SLOW'
     const requestedCadenceHz = REFLECTION_UPDATE_RATES[requestedCadence]
     if (hasRendered && !dirty && now - lastUpdateAt < 1000 / requestedCadenceHz) {
+      activeCadence = requestedCadence
+      activeCadenceHz = requestedCadenceHz
       skippedUpdateCount += 1
       return false
     }
@@ -674,6 +683,15 @@ export function createStudioV2FloorReflection({
     renderBlur(activeRenderer)
     lastCameraMatrix.copy(activeCamera.matrixWorld)
     lastProjectionMatrix.copy(activeCamera.projectionMatrix)
+    const cadenceChanged = intervalCadence !== requestedCadence
+    if (cadenceChanged) {
+      updateIntervals.length = 0
+      intervalCadence = requestedCadence
+    }
+    if (!cadenceChanged && Number.isFinite(lastUpdateAt)) {
+      updateIntervals.push(now - lastUpdateAt)
+      if (updateIntervals.length > 240) updateIntervals.shift()
+    }
     lastUpdateAt = now
     updateCount += 1
     updateTimes.push(now)
@@ -913,6 +931,20 @@ export function createStudioV2FloorReflection({
     return windowMs > 0 ? (times.length - 1) * 1000 / windowMs : 0
   }
 
+  function intervalSummary() {
+    if (!updateIntervals.length) return { average: 0, median: 0, maximum: 0 }
+    const sorted = [...updateIntervals].sort((a, b) => a - b)
+    const middle = Math.floor(sorted.length / 2)
+    const median = sorted.length % 2
+      ? sorted[middle]
+      : (sorted[middle - 1] + sorted[middle]) / 2
+    return {
+      average: updateIntervals.reduce((sum, value) => sum + value, 0) / updateIntervals.length,
+      median,
+      maximum: sorted[sorted.length - 1],
+    }
+  }
+
   applyArchitecture(activeArchitecture)
   reflector.onBeforeRender = function onBeforeRender(
     activeRenderer,
@@ -940,6 +972,7 @@ export function createStudioV2FloorReflection({
     },
     getState() {
       const profile = STUDIO_V2_FLOOR_ARCHITECTURES[activeArchitecture]
+      const intervals = intervalSummary()
       return {
         activeTargets: sourceIsActive() ? 3 : 0,
         allocatedTargets: 3,
@@ -989,8 +1022,11 @@ export function createStudioV2FloorReflection({
         updateCadence: activeCadence,
         updateCadenceHz: activeCadenceHz,
         updateCount,
+        updateIntervalAverageMs: Number(intervals.average.toFixed(2)),
+        updateIntervalMedianMs: Number(intervals.median.toFixed(2)),
+        updateIntervalMaximumMs: Number(intervals.maximum.toFixed(2)),
         updateRateHz: Number(rateFor(updateTimes).toFixed(1)),
-        updateStrategy: 'CAMERA_DELTA_ADAPTIVE__SOURCE_AND_BLUR_PAIRED__STATIC_ZERO',
+        updateStrategy: 'CAMERA_STATE_AWARE__SOURCE_AND_BLUR_PAIRED__STATIC_ZERO',
         upperLuminanceThreshold: profile.upperLuminanceThreshold ?? 0,
         weightModel: profile.weightModel ?? 'NONE',
       }
@@ -1002,9 +1038,9 @@ export function createStudioV2FloorReflection({
     runCoverageAudit(activeRenderer, activeScene, activeCamera) {
       return runCoverageAudit(activeRenderer, activeScene, activeCamera)
     },
-    renderFrame(activeRenderer, activeScene, activeCamera) {
+    renderFrame(activeRenderer, activeScene, activeCamera, cadenceHint = 'AUTO') {
       if (sourceIsActive() && activeDiagnosticMode !== 'FINAL_COMBINED') {
-        updateReflection(activeRenderer, activeScene, activeCamera)
+        updateReflection(activeRenderer, activeScene, activeCamera, cadenceHint)
       }
 
       if (activeDiagnosticMode === 'RAW_SOURCE') {
@@ -1036,7 +1072,7 @@ export function createStudioV2FloorReflection({
       }
 
       if (architectureUsesIntegrated() && reflectionEnabled) {
-        updateReflection(activeRenderer, activeScene, activeCamera)
+        updateReflection(activeRenderer, activeScene, activeCamera, cadenceHint)
       }
       activeRenderer.render(activeScene, activeCamera)
       return true

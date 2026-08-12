@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "sampleCount": 641,
+  "invalidSamples": 0,
+  "correctionSamples": 0,
+  "valid": true,
+  "exteriorVisible": false,
+  "minimumBoundaryClearanceM": 0.05,
+  "minimumBoundaryLocation": { "id": "LEFT_WALL", "progress": 0, "position": [-6.38,2.18,0.36], "note": "Accepted ROOM_WIDE_START boundary only; not on the elevated route or ceiling." },
+  "boundaryMinimums": {
+    "FLOOR": { "distanceM": 2.01946, "progress": 1, "position": [0.48,2.16,1.12] },
+    "CEILING": { "distanceM": 1.21796, "progress": 0.420312, "position": [-3.39942,2.282035,0.288346] },
+    "LEFT_WALL": { "distanceM": 0.05, "progress": 0, "position": [-6.38,2.18,0.36] },
+    "REAR_PROTECTION": { "distanceM": 4.45, "progress": 1, "position": [0.48,2.16,1.12] },
+    "SIDE_WALL": { "distanceM": 4.75928, "progress": 0.626563, "position": [-1.937182,2.252101,0.229275] },
+    "GLASS_WALL": { "distanceM": 2.14, "progress": 1, "position": [0.48,2.16,1.12] },
+    "SLOPED_CEILING": { "distanceM": 2.06888, "progress": 1, "position": [0.48,2.16,1.12] }
+  },
+  "minimumObstacleClearanceM": 0.76108,
+  "stoolClearanceM": 1.00575,
+  "islandClearanceM": 0.76108,
+  "minimumTargetClearanceM": 0.87946,
+  "minimumLookRadiusM": 1.48325,
+  "maximumLookRadiusM": 4.62035,
+  "minimumNearPlaneClearanceM": 1.43325
+}

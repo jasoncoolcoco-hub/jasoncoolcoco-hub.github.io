@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "currentStage4b3LiveSample": {
+    "route": "/studio-v2-import-test",
+    "viewport": [1280,720],
+    "devicePixelRatio": 1,
+    "phase": "real 1x ambient drift near midpoint",
+    "fps": 60,
+    "drawCalls": 61,
+    "renderedTriangles": 425476,
+    "reflectionSourceObservedHz": 10.6,
+    "reflectionBlurObservedHz": 10.7,
+    "reflectionCadenceClass": "SLOW",
+    "audioRampOwnerCountAtPolicyBlock": 0,
+    "audioRampOwnerCountDuringFade": 1,
+    "audioRampOwnerCountAfterFade": 0
+  },
+  "acceptedRenderingBaselineReference": {
+    "source": "docs/reviews/fred-studio-v2-floor-reflection-stage3-4/performance-1280x720-dpr1.json",
+    "reason": "The Stage 4B.3 task preserves the accepted lighting/reflection pipeline. Stream recovery retained the current live sample; percentile values are referenced from the accepted same-pipeline measurement rather than invented.",
+    "slowCamera": { "averageFps": 60.01, "medianFps": 59.88, "onePercentLowFps": 53.76, "p95FrameTimeMs": 18.2 },
+    "fasterOrbit": { "averageFps": 60, "medianFps": 59.88, "onePercentLowFps": 54.05, "p95FrameTimeMs": 18.11 }
+  },
+  "cadenceContract": { "ambientDriftTargetHz": 12, "staticTargetHz": 0, "tableFreeOrbitTargetHz": 18 },
+  "duplicateAudioRafObserved": false,
+  "duplicateCameraLoopObserved": false,
+  "newReflectionLoopAdded": false,
+  "result": "NEAR_60_FPS; CURRENT LIVE SAMPLE PASS"
+}

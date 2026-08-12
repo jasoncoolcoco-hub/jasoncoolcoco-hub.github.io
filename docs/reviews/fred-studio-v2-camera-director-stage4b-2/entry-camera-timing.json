@@ -1,0 +1,67 @@
+{
+  "sharedEntryStartedAt": "1116.800",
+  "startDelayMs": 0,
+  "durationMs": 96000,
+  "initialSpeedFactor": 0.35,
+  "rampMs": 900,
+  "firstMotionSamples": {
+    "250": {
+      "elapsedMs": 250.2,
+      "position": [
+        -6.372008,
+        2.18041,
+        0.359795
+      ],
+      "railProgress": 0.00117574,
+      "target": [
+        -1.796745,
+        1.6199,
+        0.1199
+      ]
+    },
+    "500": {
+      "elapsedMs": 500,
+      "position": [
+        -6.360757,
+        2.180989,
+        0.359506
+      ],
+      "railProgress": 0.00283091,
+      "target": [
+        -1.792164,
+        1.619759,
+        0.119759
+      ]
+    },
+    "1000": {
+      "elapsedMs": 1000.3,
+      "position": [
+        -6.328658,
+        2.18265,
+        0.358682
+      ],
+      "railProgress": 0.00755329,
+      "target": [
+        -1.779092,
+        1.619355,
+        0.11936
+      ]
+    },
+    "2000": {
+      "elapsedMs": 2000.3,
+      "position": [
+        -6.256123,
+        2.186443,
+        0.356818
+      ],
+      "railProgress": 0.0182248,
+      "target": [
+        -1.749552,
+        1.61844,
+        0.118465
+      ]
+    }
+  },
+  "lockedRail": true,
+  "inputType": "LOCKED_RAIL"
+}

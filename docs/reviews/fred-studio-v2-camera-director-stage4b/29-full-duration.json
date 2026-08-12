@@ -1,0 +1,174 @@
+{
+  "configuredDurationMs": 96000,
+  "observed": {
+    "driftWallStartedAt": 2906.8,
+    "driftWallCompletedAt": 98922.6,
+    "pausedFrameMs": 0,
+    "activeWallDurationMs": 96015.8
+  },
+  "endpointSnapshots": {
+    "FINAL_AMBIENT_DRIFT": {
+      "label": "FINAL_AMBIENT_DRIFT",
+      "state": "AMBIENT_DRIFT",
+      "time": 98922.6,
+      "position": [
+        -1.15,
+        1.8199999999999998,
+        0.24999999999999997
+      ],
+      "target": [
+        0.96,
+        1.3800000000000006,
+        -0.05000000000000002
+      ],
+      "quaternion": [
+        -0.07674811015146615,
+        -0.6520591795279448,
+        -0.06660791369090507,
+        0.75132678630225
+      ],
+      "fov": 50,
+      "radius": 2.1761663539352867,
+      "projectionMatrix": [
+        1.2062851427866268,
+        0,
+        0,
+        0,
+        0,
+        2.1445069205095586,
+        0,
+        0,
+        0,
+        0,
+        -1.0006251953735543,
+        -1,
+        0,
+        0,
+        -0.10003125976867772,
+        0
+      ]
+    },
+    "TABLE_OVERVIEW": {
+      "label": "TABLE_OVERVIEW",
+      "state": "TABLE_OVERVIEW",
+      "time": 98938.2,
+      "position": [
+        -1.15,
+        1.8199999999999998,
+        0.24999999999999997
+      ],
+      "target": [
+        0.96,
+        1.3800000000000006,
+        -0.05000000000000002
+      ],
+      "quaternion": [
+        -0.07674811015146615,
+        -0.6520591795279448,
+        -0.06660791369090507,
+        0.75132678630225
+      ],
+      "fov": 50,
+      "radius": 2.1761663539352867,
+      "projectionMatrix": [
+        1.2062851427866268,
+        0,
+        0,
+        0,
+        0,
+        2.1445069205095586,
+        0,
+        0,
+        0,
+        0,
+        -1.0006251953735543,
+        -1,
+        0,
+        0,
+        -0.10003125976867772,
+        0
+      ]
+    },
+    "TABLE_FREE_ORBIT": {
+      "label": "TABLE_FREE_ORBIT",
+      "state": "TABLE_FREE_ORBIT",
+      "time": 98956,
+      "position": [
+        -1.15,
+        1.8199999999999998,
+        0.24999999999999997
+      ],
+      "target": [
+        0.96,
+        1.3800000000000006,
+        -0.05000000000000002
+      ],
+      "quaternion": [
+        -0.07674811015146615,
+        -0.6520591795279448,
+        -0.06660791369090507,
+        0.75132678630225
+      ],
+      "fov": 50,
+      "radius": 2.1761663539352867,
+      "projectionMatrix": [
+        1.2062851427866268,
+        0,
+        0,
+        0,
+        0,
+        2.1445069205095586,
+        0,
+        0,
+        0,
+        0,
+        -1.0006251953735543,
+        -1,
+        0,
+        0,
+        -0.10003125976867772,
+        0
+      ]
+    }
+  },
+  "endpointDifferences": {
+    "finalToOverview": {
+      "position": 0,
+      "target": 0,
+      "quaternionAngularRadians": 0,
+      "fov": 0,
+      "radius": 0,
+      "projectionMatrix": 0
+    },
+    "overviewToFree": {
+      "position": 0,
+      "target": 0,
+      "quaternionAngularRadians": 0,
+      "fov": 0,
+      "radius": 0,
+      "projectionMatrix": 0
+    }
+  },
+  "captureMarks": {
+    "official-path-95": {
+      "progress": 1,
+      "wall": 1786365369205
+    },
+    "handoff-t-minus-2s": {
+      "progress": 1,
+      "wall": 1786365369252
+    },
+    "handoff-t-minus-1s": {
+      "progress": 1,
+      "wall": 1786365369281
+    },
+    "handoff-t-minus-0_25s": {
+      "progress": 1,
+      "wall": 1786365369321
+    },
+    "TABLE_FREE_ORBIT": {
+      "progress": 1,
+      "wall": 1786365369357
+    }
+  }
+}

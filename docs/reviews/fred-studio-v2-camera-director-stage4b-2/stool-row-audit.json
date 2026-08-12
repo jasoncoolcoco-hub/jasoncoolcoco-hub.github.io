@@ -1,0 +1,32 @@
+{
+  "units": "metres",
+  "stoolPlane": {
+    "axis": "X",
+    "coordinate": 0,
+    "normal": "+X"
+  },
+  "expandedCollider": {
+    "min": [
+      -0.4,
+      0.44,
+      -4.21
+    ],
+    "max": [
+      0.4,
+      1.21,
+      0.4
+    ]
+  },
+  "selectedEndpoint": [
+    0.42,
+    2.12,
+    0.2
+  ],
+  "signedDistancePastSeatCentrePlaneM": 0.42,
+  "requiredRangeM": [
+    0.3,
+    0.5
+  ],
+  "verticalClearanceAboveExpandedColliderM": 0.91,
+  "passes": true
+}

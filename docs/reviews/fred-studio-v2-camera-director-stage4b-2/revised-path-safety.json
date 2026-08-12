@@ -1,0 +1,12 @@
+{
+  "correctionSamples": 0,
+  "invalid": [],
+  "invalidSamples": 0,
+  "maximumLookRadius": 4.62035,
+  "minimumBoundaryClearance": 0.05,
+  "minimumLookRadius": 0.85936,
+  "minimumObstacleClearance": 0.61392,
+  "minimumTargetClearance": 0.94946,
+  "sampleCount": 521,
+  "valid": true
+}

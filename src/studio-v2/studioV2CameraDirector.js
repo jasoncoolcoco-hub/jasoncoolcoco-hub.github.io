@@ -1,12 +1,21 @@
 import * as THREE from 'three'
 import {
+  getStudioV2CanonicalCameraPose,
   STUDIO_V2_ACCEPTED_OPENING_POSE,
   STUDIO_V2_CAMERA_BASELINE,
   STUDIO_V2_CAMERA_POSES,
   STUDIO_V2_CAMERA_STATES,
+  STUDIO_V2_ROOM_WIDE_START_POSE,
+  STUDIO_V2_TABLE_OVERVIEW_POSE,
   studioV2CameraPose,
 } from './studioV2CameraPoses'
 import { createStudioV2CameraVolumeSafety } from './studioV2CameraSafetyVolume'
+import {
+  createStudioV2AmbientCameraRail,
+  STUDIO_V2_AMBIENT_CAMERA_CONFIG,
+  STUDIO_V2_ROOM_WIDE_MANUAL_PROFILE,
+  STUDIO_V2_TABLE_ORBIT_PROFILE,
+} from './studioV2AmbientCamera'
 
 function easeInOutCubic(value) {
   return value < 0.5 ? 4 * value ** 3 : 1 - ((-2 * value + 2) ** 3) / 2
@@ -14,6 +23,10 @@ function easeInOutCubic(value) {
 
 function roundedVector(vector, digits = 4) {
   return vector.toArray().map((value) => Number(value.toFixed(digits)))
+}
+
+function rounded(value, digits = 4) {
+  return Number(value.toFixed(digits))
 }
 
 function poseFromCamera(camera, controls) {
@@ -27,13 +40,47 @@ function poseFromCamera(camera, controls) {
   }
 }
 
+function travelProgress(elapsedMs) {
+  const duration = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
+  const time = THREE.MathUtils.clamp(elapsedMs / duration, 0, 1)
+  const start = STUDIO_V2_AMBIENT_CAMERA_CONFIG.startEaseMs / duration
+  const end = STUDIO_V2_AMBIENT_CAMERA_CONFIG.endEaseMs / duration
+  const initial = STUDIO_V2_AMBIENT_CAMERA_CONFIG.initialSpeedFactor
+  const startDistance = start * (initial + (1 - initial) / 2)
+  const normaliser = startDistance + (1 - end - start) + end / 2
+  let distance
+  if (time < start) {
+    distance = initial * time + ((1 - initial) * time * time) / (2 * start)
+  } else if (time <= 1 - end) {
+    distance = startDistance + (time - start)
+  } else {
+    const tail = time - (1 - end)
+    distance = startDistance + (1 - end - start) + tail - (tail * tail) / (2 * end)
+  }
+  return THREE.MathUtils.clamp(distance / normaliser, 0, 1)
+}
+
+function elapsedForTravelProgress(progress) {
+  const target = THREE.MathUtils.clamp(progress, 0, 1)
+  let low = 0
+  let high = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
+  for (let index = 0; index < 32; index += 1) {
+    const middle = (low + high) / 2
+    if (travelProgress(middle) < target) low = middle
+    else high = middle
+  }
+  return (low + high) / 2
+}
+
 export function createStudioV2CameraDirector({
   camera,
   cameraSafety,
   controls,
   debug = false,
   domElement,
+  ambientPathCandidate = 'B',
   initialPose = STUDIO_V2_ACCEPTED_OPENING_POSE,
+  isInteractivePointer = () => false,
   prepareOrbitLimits = () => {},
   readRearBoundary = () => {},
   responsiveFov = (fov) => fov,
@@ -41,13 +88,27 @@ export function createStudioV2CameraDirector({
   scene,
 }) {
   const volumeSafety = createStudioV2CameraVolumeSafety({ scene, debug })
+  const ambientRail = createStudioV2AmbientCameraRail({
+    candidate: ambientPathCandidate,
+    debug,
+    inspectPose: volumeSafety.inspect,
+    scene,
+  })
   const transitionFromPosition = new THREE.Vector3()
   const transitionFromTarget = new THREE.Vector3()
   const transitionToPosition = new THREE.Vector3()
   const transitionToTarget = new THREE.Vector3()
   const resolvedPosition = new THREE.Vector3()
   const resolvedTarget = new THREE.Vector3()
-  let state = STUDIO_V2_CAMERA_STATES.ROOM_ORBIT
+  const baseRailPosition = new THREE.Vector3()
+  const baseRailTarget = new THREE.Vector3()
+  const headLookDirection = new THREE.Vector3()
+  const headLookTarget = new THREE.Vector3()
+  const headLookSpherical = new THREE.Spherical()
+  const debugOrbitOffset = new THREE.Vector3()
+  const pauseReasons = new Set()
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  let state = initialPose.state ?? STUDIO_V2_CAMERA_STATES.ROOM_ORBIT
   let transition = null
   let inputOwner = 'NONE'
   let inputType = 'NONE'
@@ -58,6 +119,86 @@ export function createStudioV2CameraDirector({
   let lastCancellation = 'NONE'
   let safetyClampActive = false
   let updateCount = 0
+  let lastUpdateTime = null
+  let experienceStarted = false
+  let automaticDriftArmed = false
+  let startDelayRemainingMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.startDelayMs
+  let driftElapsedMs = 0
+  let railProgress = 0
+  let frozenProgress = null
+  let currentPathDistance = 0
+  let baseRailFov = STUDIO_V2_ROOM_WIDE_START_POSE.fov
+  let speedMultiplier = 1
+  let debugScrubFrozen = false
+  let yawOffset = 0
+  let pitchOffset = 0
+  let pointerCandidate = null
+  let overrideIdleDeadline = null
+  let returnTransition = null
+  let resumeNotBefore = 0
+  let reducedMotionOverride = 'AUTO'
+  let endpointPhase = 'NONE'
+  let finalDriftFramePending = false
+  let tableArrivalPending = false
+  let railCompleted = false
+  let driftWallStartedAt = null
+  let driftWallCompletedAt = null
+  let driftPausedFrameMs = 0
+  let entryStartedAt = null
+  let firstCameraMotionAt = null
+  let stoolPlaneCrossedAt = null
+  let stoolPlaneCrossingElapsedMs = null
+  let finalSettleStartedAt = null
+  let finalSettleElapsedMs = null
+  const firstMotionSamples = {}
+  const endpointSnapshots = {}
+  let visibilityPauseState = document.hidden ? 'HIDDEN' : 'VISIBLE'
+
+  function captureEndpointSnapshot(label, time = performance.now()) {
+    const snapshot = {
+      label,
+      state,
+      time: rounded(time, 3),
+      position: camera.position.toArray(),
+      target: controls.target.toArray(),
+      quaternion: camera.quaternion.toArray(),
+      fov: camera.fov,
+      radius: camera.position.distanceTo(controls.target),
+      projectionMatrix: camera.projectionMatrix.toArray(),
+    }
+    endpointSnapshots[label] = snapshot
+    return snapshot
+  }
+
+  function endpointDifference(from, to) {
+    if (!from || !to) return null
+    const maximumDifference = (a, b) => Math.max(...a.map((value, index) => Math.abs(value - b[index])))
+    const quaternionDot = Math.abs(from.quaternion.reduce(
+      (sum, value, index) => sum + value * to.quaternion[index],
+      0,
+    ))
+    return {
+      position: maximumDifference(from.position, to.position),
+      target: maximumDifference(from.target, to.target),
+      quaternionAngularRadians: 2 * Math.acos(THREE.MathUtils.clamp(quaternionDot, -1, 1)),
+      fov: Math.abs(from.fov - to.fov),
+      radius: Math.abs(from.radius - to.radius),
+      projectionMatrix: maximumDifference(from.projectionMatrix, to.projectionMatrix),
+    }
+  }
+
+  function clearEndpointAudit() {
+    Object.keys(endpointSnapshots).forEach((key) => delete endpointSnapshots[key])
+    endpointPhase = 'NONE'
+    finalDriftFramePending = false
+    tableArrivalPending = false
+  }
+
+  function effectiveReducedMotion() {
+    if (reducedMotionOverride === 'REDUCE') return true
+    if (reducedMotionOverride === 'ALLOW') return false
+    return reducedMotionQuery.matches
+  }
 
   function clearOrbitMomentum() {
     controls._sphericalDelta?.set(0, 0, 0)
@@ -67,15 +208,60 @@ export function createStudioV2CameraDirector({
     controls._performCursorZoom = false
   }
 
-  function applyResolvedPose(pose, { updateControls = true } = {}) {
-    const clamped = cameraSafety.clampConfig({
-      ...pose,
-      position: [...pose.position],
-      target: [...pose.target],
-    })
+  function updateControlsWithoutMomentum() {
+    clearOrbitMomentum()
+    if (!controls.enabled) {
+      camera.lookAt(controls.target)
+      return
+    }
+    const damping = controls.enableDamping
+    controls.enableDamping = false
+    controls.update()
+    controls.enableDamping = damping
+  }
+
+  function applyControlsProfile(profile) {
+    controls.enablePan = profile.enablePan
+    controls.enableZoom = profile.enableZoom
+    controls.enableRotate = true
+    controls.minDistance = profile.minDistance
+    controls.maxDistance = profile.maxDistance
+    controls.minPolarAngle = profile.minPolarAngle
+    controls.maxPolarAngle = profile.maxPolarAngle
+    controls.minAzimuthAngle = profile.minAzimuthAngle
+    controls.maxAzimuthAngle = profile.maxAzimuthAngle
+    controls.rotateSpeed = profile.rotateSpeed
+    controls.zoomSpeed = profile.zoomSpeed
+    controls.dampingFactor = profile.dampingFactor
+  }
+
+  function currentManualProfile() {
+    if (state === STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT) return STUDIO_V2_TABLE_ORBIT_PROFILE
+    if (state === STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START && effectiveReducedMotion()) {
+      return STUDIO_V2_ROOM_WIDE_MANUAL_PROFILE
+    }
+    return null
+  }
+
+  function updateOrbitAvailability() {
+    const manualProfile = currentManualProfile()
+    const roomOrbit = state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT
+    controls.enabled = Boolean(orbitRequested && !transition && (roomOrbit || manualProfile))
+    if (!controls.enabled) clearOrbitMomentum()
+    return controls.enabled
+  }
+
+  function applyResolvedPose(pose, { legacy = pose.state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT } = {}) {
+    const candidate = legacy
+      ? cameraSafety.clampConfig({
+        ...pose,
+        position: [...pose.position],
+        target: [...pose.target],
+      })
+      : pose
     const volumeResult = volumeSafety.resolve(
-      resolvedPosition.fromArray(clamped.position),
-      resolvedTarget.fromArray(clamped.target),
+      resolvedPosition.fromArray(candidate.position),
+      resolvedTarget.fromArray(candidate.target),
     )
     camera.position.copy(volumeResult.position)
     controls.target.copy(volumeResult.target)
@@ -84,11 +270,50 @@ export function createStudioV2CameraDirector({
     camera.near = pose.near ?? camera.near
     camera.far = pose.far ?? camera.far
     camera.updateProjectionMatrix()
+    updateControlsWithoutMomentum()
     camera.updateMatrixWorld(true)
-    if (updateControls) controls.update()
-    resolveLegacyCandidate()
+    if (legacy) resolveLegacyCandidate()
     safetyClampActive = volumeResult.corrected
     return getCurrentPose()
+  }
+
+  function applyDirectCamera(position, target, fov) {
+    const volumeResult = volumeSafety.resolve(position, target)
+    camera.position.copy(volumeResult.position)
+    controls.target.copy(volumeResult.target)
+    activeBaseFov = fov
+    camera.fov = responsiveFov(fov, viewportWidth)
+    camera.updateProjectionMatrix()
+    updateControlsWithoutMomentum()
+    camera.updateMatrixWorld(true)
+    safetyClampActive = volumeResult.corrected
+    return volumeResult
+  }
+
+  function applyRailPose(progress) {
+    const point = ambientRail.getPoint(progress, ambientRail.scratch)
+    baseRailPosition.copy(point.position)
+    baseRailTarget.copy(point.target)
+    baseRailFov = point.fov
+    currentPathDistance = ambientRail.totalDistance * progress
+    return applyDirectCamera(baseRailPosition, baseRailTarget, baseRailFov)
+  }
+
+  function applyHeadLook() {
+    headLookDirection.copy(baseRailTarget).sub(baseRailPosition).normalize()
+    headLookSpherical.setFromVector3(headLookDirection)
+    headLookSpherical.theta += yawOffset
+    headLookSpherical.phi = THREE.MathUtils.clamp(
+      headLookSpherical.phi + pitchOffset,
+      0.15,
+      Math.PI - 0.15,
+    )
+    headLookDirection.setFromSpherical(headLookSpherical).normalize()
+    headLookTarget.copy(baseRailPosition).addScaledVector(
+      headLookDirection,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.headLookDistance,
+    )
+    return applyDirectCamera(baseRailPosition, headLookTarget, baseRailFov)
   }
 
   function cancelTransition(reason = 'CANCELLED') {
@@ -96,7 +321,14 @@ export function createStudioV2CameraDirector({
     transition = null
     lastCancellation = reason
     clearOrbitMomentum()
-    controls.enabled = orbitRequested
+    updateOrbitAvailability()
+    return true
+  }
+
+  function cancelReturn() {
+    if (!returnTransition) return false
+    returnTransition = null
+    overrideIdleDeadline = null
     return true
   }
 
@@ -113,30 +345,121 @@ export function createStudioV2CameraDirector({
     }
   }
 
-  function handlePointerDown(event) {
-    beginUserInput(event.pointerType?.toUpperCase() || 'POINTER')
+  function ambientInputAvailable() {
+    return state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+      || state === STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE
   }
 
-  function handlePointerUp() {
+  function handlePointerDown(event) {
+    if (event.button !== 0) return
+    if (ambientInputAvailable() && !isInteractivePointer(event)) {
+      cancelReturn()
+      pointerCandidate = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        yaw: yawOffset,
+        pitch: pitchOffset,
+        active: false,
+      }
+      return
+    }
+    if (!ambientInputAvailable()) beginUserInput(event.pointerType?.toUpperCase() || 'POINTER')
+  }
+
+  function handlePointerMove(event) {
+    if (!pointerCandidate || pointerCandidate.id !== event.pointerId) return
+    const dx = event.clientX - pointerCandidate.x
+    const dy = event.clientY - pointerCandidate.y
+    if (!pointerCandidate.active && Math.hypot(dx, dy) < STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideDragThresholdPx) return
+    if (!pointerCandidate.active) {
+      pointerCandidate.active = true
+      frozenProgress = railProgress
+      state = STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE
+      inputOwner = 'USER_HEAD_LOOK'
+      inputType = event.pointerType?.toUpperCase() || 'POINTER'
+      overrideIdleDeadline = null
+    }
+    yawOffset = THREE.MathUtils.clamp(
+      pointerCandidate.yaw - dx * STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideRadiansPerPixel,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideYawMin,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideYawMax,
+    )
+    pitchOffset = THREE.MathUtils.clamp(
+      pointerCandidate.pitch + dy * STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideRadiansPerPixel,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overridePitchMin,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overridePitchMax,
+    )
+    event.preventDefault()
+  }
+
+  function handlePointerUp(event) {
+    if (pointerCandidate?.id === event.pointerId) {
+      const active = pointerCandidate.active
+      pointerCandidate = null
+      if (active) {
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'OVERRIDE_IDLE'
+        overrideIdleDeadline = performance.now() + STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideIdleMs
+      }
+      return
+    }
     endUserInput('ANY')
   }
 
-  function handleWheel() {
+  function handleWheel(event) {
+    if (ambientInputAvailable()) {
+      event.preventDefault()
+      return
+    }
     beginUserInput('WHEEL')
     queueMicrotask(() => endUserInput('WHEEL'))
   }
 
   function handleKeyDown(event) {
     if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', '+', '-', '='].includes(event.key)) return
+    if (ambientInputAvailable()) return
     beginUserInput('KEYBOARD')
     queueMicrotask(() => endUserInput('KEYBOARD'))
   }
 
-  domElement?.addEventListener('pointerdown', handlePointerDown, true)
-  window.addEventListener('pointerup', handlePointerUp, true)
-  window.addEventListener('pointercancel', handlePointerUp, true)
-  domElement?.addEventListener('wheel', handleWheel, { capture: true, passive: true })
-  window.addEventListener('keydown', handleKeyDown, true)
+  function handleVisibilityChange() {
+    visibilityPauseState = document.hidden ? 'HIDDEN' : 'VISIBLE'
+    setPauseReason('DOCUMENT_HIDDEN', document.hidden, {
+      resumeDelayMs: STUDIO_V2_AMBIENT_CAMERA_CONFIG.visibilityResumeDelayMs,
+    })
+  }
+
+  function handleWindowBlur() {
+    visibilityPauseState = 'WINDOW_BLURRED'
+    setPauseReason('WINDOW_BLUR', true)
+  }
+
+  function handleWindowFocus() {
+    visibilityPauseState = document.hidden ? 'HIDDEN' : 'VISIBLE'
+    setPauseReason('WINDOW_BLUR', false, {
+      resumeDelayMs: STUDIO_V2_AMBIENT_CAMERA_CONFIG.visibilityResumeDelayMs,
+    })
+  }
+
+  function handleReducedMotionChange() {
+    if (reducedMotionOverride !== 'AUTO') return
+    if (effectiveReducedMotion()) resetToRoomWideStart({ automatic: false })
+    else if (experienceStarted && !railCompleted) armAmbientDrift()
+  }
+
+  if (debug) {
+    domElement?.addEventListener('pointerdown', handlePointerDown, true)
+    domElement?.addEventListener('pointermove', handlePointerMove, true)
+    window.addEventListener('pointerup', handlePointerUp, true)
+    window.addEventListener('pointercancel', handlePointerUp, true)
+    domElement?.addEventListener('wheel', handleWheel, { capture: true, passive: false })
+    window.addEventListener('keydown', handleKeyDown, true)
+  }
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('blur', handleWindowBlur)
+  window.addEventListener('focus', handleWindowFocus)
+  reducedMotionQuery.addEventListener?.('change', handleReducedMotionChange)
 
   function getCurrentPose() {
     return {
@@ -153,14 +476,16 @@ export function createStudioV2CameraDirector({
   function setState(nextState, options = {}) {
     if (!Object.values(STUDIO_V2_CAMERA_STATES).includes(nextState)) return false
     state = nextState
-    if (options.pose) applyResolvedPose(options.pose)
+    if (options.pose) applyResolvedPose(options.pose, { legacy: nextState === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT })
+    updateOrbitAvailability()
     return true
   }
 
   function transitionTo(poseOrState, options = {}) {
     if (!debug && !options.allowOfficial) return false
     const pose = studioV2CameraPose(poseOrState)
-    const safePose = cameraSafety.clampConfig(pose)
+    const legacy = pose.state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT
+    const safePose = legacy ? cameraSafety.clampConfig(pose) : pose
     transitionFromPosition.copy(camera.position)
     transitionFromTarget.copy(controls.target)
     transitionToPosition.fromArray(safePose.position)
@@ -183,98 +508,514 @@ export function createStudioV2CameraDirector({
     return true
   }
 
-  function update(time) {
-    if (disposed) return false
-    if (transition) {
+  function updateTransition(time) {
+    if (!transition) return false
+    const progress = THREE.MathUtils.clamp(
+      (time - transition.startedAt) / transition.duration,
+      0,
+      1,
+    )
+    transition.progress = progress
+    const eased = easeInOutCubic(progress)
+    camera.position.lerpVectors(transitionFromPosition, transitionToPosition, eased)
+    controls.target.lerpVectors(transitionFromTarget, transitionToTarget, eased)
+    camera.fov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, eased)
+    camera.near = transition.near
+    camera.far = transition.far
+    camera.updateProjectionMatrix()
+    updateControlsWithoutMomentum()
+    camera.updateMatrixWorld(true)
+    if (progress >= 1) {
+      activeBaseFov = transition.baseFov
+      state = transition.targetState
+      transition = null
+      inputOwner = 'NONE'
+      inputType = 'NONE'
+      updateOrbitAvailability()
+    }
+    return true
+  }
+
+  function startOverrideReturn(time) {
+    returnTransition = {
+      startedAt: time,
+      duration: STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideReturnMs,
+      fromYaw: yawOffset,
+      fromPitch: pitchOffset,
+      progress: 0,
+    }
+    overrideIdleDeadline = null
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'RETURN_TO_RAIL'
+  }
+
+  function updateOverride(time) {
+    if (pointerCandidate?.active) {
+      applyHeadLook()
+      return
+    }
+    if (overrideIdleDeadline && time >= overrideIdleDeadline && !returnTransition) {
+      startOverrideReturn(time)
+    }
+    if (returnTransition) {
       const progress = THREE.MathUtils.clamp(
-        (time - transition.startedAt) / transition.duration,
+        (time - returnTransition.startedAt) / returnTransition.duration,
         0,
         1,
       )
-      transition.progress = progress
+      returnTransition.progress = progress
       const eased = easeInOutCubic(progress)
-      camera.position.lerpVectors(transitionFromPosition, transitionToPosition, eased)
-      controls.target.lerpVectors(transitionFromTarget, transitionToTarget, eased)
-      camera.fov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, eased)
-      camera.near = transition.near
-      camera.far = transition.far
-      camera.updateProjectionMatrix()
-      camera.updateMatrixWorld(true)
+      yawOffset = THREE.MathUtils.lerp(returnTransition.fromYaw, 0, eased)
+      pitchOffset = THREE.MathUtils.lerp(returnTransition.fromPitch, 0, eased)
+      applyHeadLook()
       if (progress >= 1) {
-        activeBaseFov = transition.baseFov
-        state = transition.targetState
-        transition = null
-        inputOwner = 'NONE'
-        inputType = 'NONE'
-        controls.enabled = orbitRequested
+        yawOffset = 0
+        pitchOffset = 0
+        returnTransition = null
+        frozenProgress = null
+        debugScrubFrozen = false
+        state = STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'RAIL'
+        applyRailPose(railProgress)
       }
+      return
     }
+    applyHeadLook()
+  }
 
-    prepareOrbitLimits()
-    cameraSafety.prepareControls(camera, controls)
+  function isPaused(time) {
+    return pauseReasons.size > 0 || time < resumeNotBefore
+  }
+
+  function completeRail(time) {
+    railProgress = 1
+    driftElapsedMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
+    applyRailPose(1)
+    endpointPhase = 'FINAL_AMBIENT_DRIFT'
+    captureEndpointSnapshot(endpointPhase, time)
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'FINAL_RAIL_FRAME'
+    railCompleted = true
+    automaticDriftArmed = false
+    driftWallCompletedAt = time
+    finalDriftFramePending = true
+    controls.enabled = false
+  }
+
+  function updateAmbient(time, deltaMs) {
+    if (!experienceStarted || transition) return false
+    if (debugScrubFrozen && state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT) return false
+    if (finalDriftFramePending) {
+      finalDriftFramePending = false
+      state = STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW
+      endpointPhase = 'TABLE_OVERVIEW'
+      inputType = 'TABLE_ARRIVAL'
+      captureEndpointSnapshot(endpointPhase, time)
+      tableArrivalPending = true
+      return true
+    }
+    if (tableArrivalPending) {
+      tableArrivalPending = false
+      enterTableFreeOrbit({ preservePose: true })
+      endpointPhase = 'TABLE_FREE_ORBIT'
+      captureEndpointSnapshot(endpointPhase, time)
+      return true
+    }
+    if (state === STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START) {
+      if (!automaticDriftArmed || effectiveReducedMotion() || isPaused(time)) return false
+      startDelayRemainingMs = Math.max(0, startDelayRemainingMs - deltaMs * speedMultiplier)
+      if (startDelayRemainingMs === 0) {
+        state = STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'RAIL'
+        driftWallStartedAt = time
+      }
+      return false
+    }
+    if (state === STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) {
+      if (isPaused(time)) {
+        applyHeadLook()
+        return true
+      }
+      updateOverride(time)
+      return true
+    }
+    if (state !== STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT) return false
+    if (isPaused(time)) {
+      driftPausedFrameMs += deltaMs
+      return false
+    }
+    driftElapsedMs = Math.min(
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs,
+      driftElapsedMs + deltaMs * speedMultiplier,
+    )
+    railProgress = travelProgress(driftElapsedMs)
+    applyRailPose(railProgress)
+    if (firstCameraMotionAt == null && railProgress > 0) firstCameraMotionAt = time
+    if (stoolPlaneCrossedAt == null && baseRailPosition.x >= 0) {
+      stoolPlaneCrossedAt = time
+      stoolPlaneCrossingElapsedMs = driftElapsedMs
+    }
+    const finalSettleThresholdMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
+      - STUDIO_V2_AMBIENT_CAMERA_CONFIG.endEaseMs
+    if (finalSettleStartedAt == null && driftElapsedMs >= finalSettleThresholdMs) {
+      finalSettleStartedAt = time
+      finalSettleElapsedMs = driftElapsedMs
+    }
+    ;[250, 500, 1000, 2000].forEach((sampleMs) => {
+      if (!firstMotionSamples[sampleMs] && driftElapsedMs >= sampleMs) {
+        firstMotionSamples[sampleMs] = {
+          elapsedMs: rounded(driftElapsedMs, 2),
+          wallTimestamp: rounded(time, 3),
+          railProgress: rounded(railProgress, 8),
+          position: roundedVector(camera.position, 6),
+          target: roundedVector(controls.target, 6),
+        }
+      }
+    })
+    if (driftElapsedMs >= STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs) completeRail(time)
+    return true
+  }
+
+  function resolveManualCamera() {
+    if (state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT) {
+      prepareOrbitLimits()
+      cameraSafety.prepareControls(camera, controls)
+      controls.update()
+      readRearBoundary()
+      resolveLegacyCandidate()
+      return false
+    }
+    const profile = currentManualProfile()
+    if (!profile) return false
+    applyControlsProfile(profile)
     controls.update()
-    readRearBoundary()
-    resolveLegacyCandidate()
     const volumeResult = volumeSafety.resolve(camera.position, controls.target)
     safetyClampActive = volumeResult.corrected
     if (volumeResult.corrected) {
       camera.position.copy(volumeResult.position)
       controls.target.copy(volumeResult.target)
-      clearOrbitMomentum()
-      const damping = controls.enableDamping
-      controls.enableDamping = false
-      controls.update()
-      controls.enableDamping = damping
+      updateControlsWithoutMomentum()
       camera.updateMatrixWorld(true)
     }
+    return volumeResult.corrected
+  }
+
+  function update(time) {
+    if (disposed) return false
+    const deltaMs = lastUpdateTime == null
+      ? 0
+      : Math.min(50, Math.max(0, time - lastUpdateTime))
+    lastUpdateTime = time
+    const transitionActive = updateTransition(time)
+    const ambientActive = updateAmbient(time, deltaMs)
+    let corrected = false
+    if (!transitionActive && !ambientActive) corrected = resolveManualCamera()
+    if (ambientActive && state !== STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT) {
+      controls.enabled = false
+    } else {
+      updateOrbitAvailability()
+    }
     updateCount += 1
-    return Boolean(transition || volumeResult.corrected)
+    return Boolean(transitionActive || ambientActive || corrected)
   }
 
   function setOrbitEnabled(enabled, { owner = 'SCENE' } = {}) {
     orbitRequested = Boolean(enabled)
-    controls.enabled = orbitRequested && !transition
-    if (!controls.enabled && owner !== 'SCENE') inputOwner = owner
+    updateOrbitAvailability()
+    if (!controls.enabled && owner !== 'SCENE' && !ambientInputAvailable()) inputOwner = owner
     if (controls.enabled && inputOwner === owner) inputOwner = 'NONE'
     return controls.enabled
   }
 
-  applyResolvedPose(initialPose)
+  function setPauseReason(reason, paused, { resumeDelayMs = 0 } = {}) {
+    const wasPaused = pauseReasons.has(reason)
+    if (paused) pauseReasons.add(reason)
+    else {
+      pauseReasons.delete(reason)
+      if (wasPaused && !pauseReasons.size && resumeDelayMs > 0) {
+        resumeNotBefore = performance.now() + resumeDelayMs
+      }
+    }
+    return pauseReasons.size > 0
+  }
+
+  function armAmbientDrift({ immediate = false } = {}) {
+    if (railCompleted || effectiveReducedMotion()) return false
+    automaticDriftArmed = true
+    startDelayRemainingMs = immediate ? 0 : STUDIO_V2_AMBIENT_CAMERA_CONFIG.startDelayMs
+    return true
+  }
+
+  function startAmbientExperience({ automatic = true, immediate = false, startedAt = performance.now() } = {}) {
+    experienceStarted = true
+    railCompleted = false
+    clearEndpointAudit()
+    driftElapsedMs = 0
+    debugScrubFrozen = false
+    driftWallStartedAt = null
+    entryStartedAt = startedAt
+    firstCameraMotionAt = null
+    stoolPlaneCrossedAt = null
+    stoolPlaneCrossingElapsedMs = null
+    finalSettleStartedAt = null
+    finalSettleElapsedMs = null
+    Object.keys(firstMotionSamples).forEach((key) => delete firstMotionSamples[key])
+    driftWallCompletedAt = null
+    driftPausedFrameMs = 0
+    railProgress = 0
+    frozenProgress = null
+    yawOffset = 0
+    pitchOffset = 0
+    returnTransition = null
+    overrideIdleDeadline = null
+    state = STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'START_HOLD'
+    applyResolvedPose(STUDIO_V2_ROOM_WIDE_START_POSE, { legacy: false })
+    automaticDriftArmed = false
+    if (automatic && !effectiveReducedMotion()) {
+      armAmbientDrift({ immediate })
+      if (immediate) {
+        state = STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'LOCKED_RAIL'
+        driftWallStartedAt = startedAt
+      }
+    }
+    else inputOwner = 'NONE'
+    updateOrbitAvailability()
+    return true
+  }
+
+  function resetToRoomWideStart({ automatic = false } = {}) {
+    return startAmbientExperience({ automatic, immediate: false })
+  }
+
+  function scrubAmbientProgress(progress) {
+    if (!debug) return false
+    experienceStarted = true
+    railCompleted = false
+    clearEndpointAudit()
+    railProgress = THREE.MathUtils.clamp(progress, 0, 1)
+    driftElapsedMs = elapsedForTravelProgress(railProgress)
+    frozenProgress = null
+    yawOffset = 0
+    pitchOffset = 0
+    returnTransition = null
+    overrideIdleDeadline = null
+    automaticDriftArmed = false
+    debugScrubFrozen = true
+    state = railProgress >= 1
+      ? STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW
+      : STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+    endpointPhase = railProgress >= 1 ? 'TABLE_OVERVIEW' : 'DEBUG_RAIL_SCRUB'
+    inputOwner = 'NONE'
+    inputType = 'DEBUG_SCRUB'
+    if (railProgress >= 1) applyResolvedPose(STUDIO_V2_TABLE_OVERVIEW_POSE, { legacy: false })
+    else applyRailPose(railProgress)
+    controls.enabled = false
+    return true
+  }
+
+  function jumpToTableOverview() {
+    experienceStarted = true
+    railProgress = 1
+    driftElapsedMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
+    currentPathDistance = ambientRail.totalDistance
+    railCompleted = true
+    debugScrubFrozen = false
+    clearEndpointAudit()
+    endpointPhase = 'TABLE_OVERVIEW'
+    state = STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW
+    inputOwner = 'NONE'
+    inputType = 'NONE'
+    applyResolvedPose(STUDIO_V2_TABLE_OVERVIEW_POSE, { legacy: false })
+    updateOrbitAvailability()
+    return true
+  }
+
+  function enterTableFreeOrbit({ preservePose = false } = {}) {
+    debugScrubFrozen = false
+    if (!preservePose) applyResolvedPose(STUDIO_V2_TABLE_OVERVIEW_POSE, { legacy: false })
+    state = STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT
+    endpointPhase = 'TABLE_FREE_ORBIT'
+    orbitRequested = true
+    inputOwner = 'NONE'
+    inputType = 'NONE'
+    applyControlsProfile(STUDIO_V2_TABLE_ORBIT_PROFILE)
+    updateControlsWithoutMomentum()
+    updateOrbitAvailability()
+    return true
+  }
+
+  function setDebugTableOrbitPose({ radius = 2.05, azimuthDegrees = 0, polarRadians = 1.37 } = {}) {
+    if (!debug) return false
+    enterTableFreeOrbit()
+    const safeRadius = THREE.MathUtils.clamp(
+      radius,
+      STUDIO_V2_TABLE_ORBIT_PROFILE.minDistance,
+      STUDIO_V2_TABLE_ORBIT_PROFILE.maxDistance,
+    )
+    const safePolar = THREE.MathUtils.clamp(
+      polarRadians,
+      STUDIO_V2_TABLE_ORBIT_PROFILE.minPolarAngle,
+      STUDIO_V2_TABLE_ORBIT_PROFILE.maxPolarAngle,
+    )
+    controls.target.fromArray(STUDIO_V2_TABLE_OVERVIEW_POSE.target)
+    debugOrbitOffset.setFromSphericalCoords(
+      safeRadius,
+      safePolar,
+      THREE.MathUtils.degToRad(azimuthDegrees),
+    )
+    applyDirectCamera(
+      resolvedPosition.copy(controls.target).add(debugOrbitOffset),
+      controls.target,
+      STUDIO_V2_TABLE_OVERVIEW_POSE.fov,
+    )
+    return {
+      ...getCurrentPose(),
+      radius: camera.position.distanceTo(controls.target),
+      azimuthDegrees,
+      polarRadians: safePolar,
+      volume: volumeSafety.inspect(camera.position, controls.target),
+    }
+  }
+
+  function setDebugHeadLook({ progress = 0.5, yawDegrees = 0, pitchDegrees = 0 } = {}) {
+    if (!debug) return false
+    scrubAmbientProgress(THREE.MathUtils.clamp(progress, 0, 0.999))
+    frozenProgress = railProgress
+    yawOffset = THREE.MathUtils.clamp(
+      THREE.MathUtils.degToRad(yawDegrees),
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideYawMin,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideYawMax,
+    )
+    pitchOffset = THREE.MathUtils.clamp(
+      THREE.MathUtils.degToRad(pitchDegrees),
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overridePitchMin,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overridePitchMax,
+    )
+    state = STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE
+    endpointPhase = 'DEBUG_HEAD_LOOK'
+    inputOwner = 'DEBUG_HEAD_LOOK'
+    inputType = 'DEBUG_OVERRIDE'
+    overrideIdleDeadline = null
+    returnTransition = null
+    applyHeadLook()
+    controls.enabled = false
+    return true
+  }
+
+  function releaseDebugHeadLook() {
+    if (!debug || state !== STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) return false
+    pointerCandidate = null
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'OVERRIDE_IDLE'
+    overrideIdleDeadline = performance.now() + STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideIdleMs
+    return true
+  }
+
+  function setDebugReturnProgress(progress = 0.5) {
+    if (!debug || state !== STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) return false
+    const now = performance.now()
+    startOverrideReturn(now)
+    returnTransition.startedAt = now - THREE.MathUtils.clamp(progress, 0, 0.99)
+      * STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideReturnMs
+    updateOverride(now)
+    return true
+  }
+
+  function interruptDebugReturn({ yawDegrees = 4, pitchDegrees = 2 } = {}) {
+    if (!debug || state !== STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) return false
+    cancelReturn()
+    yawOffset = THREE.MathUtils.clamp(
+      yawOffset + THREE.MathUtils.degToRad(yawDegrees),
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideYawMin,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overrideYawMax,
+    )
+    pitchOffset = THREE.MathUtils.clamp(
+      pitchOffset + THREE.MathUtils.degToRad(pitchDegrees),
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overridePitchMin,
+      STUDIO_V2_AMBIENT_CAMERA_CONFIG.overridePitchMax,
+    )
+    inputOwner = 'DEBUG_HEAD_LOOK'
+    inputType = 'DEBUG_REINTERRUPT'
+    applyHeadLook()
+    return true
+  }
+
+  applyResolvedPose(initialPose, {
+    legacy: initialPose.state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT,
+  })
+  ambientRail.getPoint(0, { position: baseRailPosition, target: baseRailTarget })
 
   return Object.freeze({
     applyPose(pose) {
       cancelTransition('POSE_REPLACED')
-      return applyResolvedPose(pose)
+      state = pose.state ?? state
+      return applyResolvedPose(pose, { legacy: state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT })
     },
+    armAmbientDrift,
     beginUserInput,
     cancelTransition,
     captureCurrentPose() {
-      return JSON.stringify({
-        id: 'CAPTURED_CAMERA_POSE',
-        state,
-        ...poseFromCamera(camera, controls),
-      }, null, 2)
+      return JSON.stringify({ id: 'CAPTURED_CAMERA_POSE', state, ...poseFromCamera(camera, controls) }, null, 2)
     },
     dispose() {
       if (disposed) return
-      disposed = true
       cancelTransition('ROUTE_DISPOSE')
+      disposed = true
       domElement?.removeEventListener('pointerdown', handlePointerDown, true)
+      domElement?.removeEventListener('pointermove', handlePointerMove, true)
       window.removeEventListener('pointerup', handlePointerUp, true)
       window.removeEventListener('pointercancel', handlePointerUp, true)
       domElement?.removeEventListener('wheel', handleWheel, true)
       window.removeEventListener('keydown', handleKeyDown, true)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('focus', handleWindowFocus)
+      reducedMotionQuery.removeEventListener?.('change', handleReducedMotionChange)
+      ambientRail.dispose()
       volumeSafety.dispose()
+      pauseReasons.clear()
       inputOwner = 'NONE'
       inputType = 'NONE'
     },
     endUserInput,
+    enterTableFreeOrbit,
+    getAmbientReport() {
+      return {
+        config: STUDIO_V2_AMBIENT_CAMERA_CONFIG,
+        rail: ambientRail.getSnapshot(),
+        roomWideStart: STUDIO_V2_ROOM_WIDE_START_POSE,
+        tableOverview: STUDIO_V2_TABLE_OVERVIEW_POSE,
+        tableOrbitProfile: STUDIO_V2_TABLE_ORBIT_PROFILE,
+      }
+    },
+    getCanonicalPose: getStudioV2CanonicalCameraPose,
     getCurrentPose,
     getCurrentState() {
       return state
     },
+    getEndpointPhase() {
+      return endpointPhase
+    },
+    getRailProgress() {
+      return railProgress
+    },
+    getReflectionCadence() {
+      if (transition) return 'FAST'
+      if (state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT) return 'SLOW'
+      if (state === STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) return 'HEAD_LOOK'
+      if (state === STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT) return 'ORBIT'
+      return 'AUTO'
+    },
     getDebugSnapshot() {
       const radius = camera.position.distanceTo(controls.target)
+      const railSnapshot = ambientRail.getSnapshot()
+      const volumeInspection = volumeSafety.inspect(camera.position, controls.target)
       return {
         state,
         pose: getCurrentPose(),
@@ -289,23 +1030,116 @@ export function createStudioV2CameraDirector({
         } : null,
         lastCancellation,
         safetyClampActive,
+        volumeSafe: volumeInspection.safe,
+        volumeInspection,
         safety: volumeSafety.getSnapshot(),
         baseline: STUDIO_V2_CAMERA_BASELINE,
         registeredStates: Object.values(STUDIO_V2_CAMERA_STATES),
         updateCount,
+        ambient: {
+          experienceStarted,
+          automaticDriftArmed,
+          officialLockedRail: !debug && state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+          entryStartedAt: entryStartedAt == null ? null : rounded(entryStartedAt, 3),
+          firstMotionSamples: { ...firstMotionSamples },
+          railProgress: rounded(railProgress, 6),
+          driftElapsedMs: rounded(driftElapsedMs, 1),
+          driftDurationMs: STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs,
+          currentPathDistance: rounded(currentPathDistance),
+          totalPathDistance: railSnapshot.totalDistance,
+          frozenProgress: frozenProgress == null ? null : rounded(frozenProgress, 6),
+          yawOffsetDegrees: rounded(THREE.MathUtils.radToDeg(yawOffset), 2),
+          pitchOffsetDegrees: rounded(THREE.MathUtils.radToDeg(pitchOffset), 2),
+          startDelayRemainingMs: rounded(startDelayRemainingMs, 1),
+          overrideIdleRemainingMs: overrideIdleDeadline == null
+            ? null
+            : rounded(Math.max(0, overrideIdleDeadline - performance.now()), 1),
+          returnProgress: returnTransition ? rounded(returnTransition.progress, 4) : null,
+          speedMultiplier,
+          debugScrubFrozen,
+          pauseReasons: [...pauseReasons],
+          paused: pauseReasons.size > 0 || performance.now() < resumeNotBefore,
+          visibilityPauseState,
+          reducedMotionMedia: reducedMotionQuery.matches,
+          reducedMotionOverride,
+          reducedMotionActive: effectiveReducedMotion(),
+          railCompleted,
+          endpointPhase,
+          endpointSnapshots: { ...endpointSnapshots },
+          endpointDifferences: {
+            finalToOverview: endpointDifference(
+              endpointSnapshots.FINAL_AMBIENT_DRIFT,
+              endpointSnapshots.TABLE_OVERVIEW,
+            ),
+            overviewToFree: endpointDifference(
+              endpointSnapshots.TABLE_OVERVIEW,
+              endpointSnapshots.TABLE_FREE_ORBIT,
+            ),
+          },
+          basePosition: roundedVector(baseRailPosition, 6),
+          baseTarget: roundedVector(baseRailTarget, 6),
+          displayedTarget: roundedVector(controls.target, 6),
+          durationAudit: {
+            entryStartedAt: entryStartedAt == null ? null : rounded(entryStartedAt, 3),
+            firstCameraMotionAt: firstCameraMotionAt == null ? null : rounded(firstCameraMotionAt, 3),
+            driftWallStartedAt: driftWallStartedAt == null ? null : rounded(driftWallStartedAt, 3),
+            driftWallCompletedAt: driftWallCompletedAt == null ? null : rounded(driftWallCompletedAt, 3),
+            stoolPlaneCrossedAt: stoolPlaneCrossedAt == null ? null : rounded(stoolPlaneCrossedAt, 3),
+            stoolPlaneCrossingElapsedMs: stoolPlaneCrossingElapsedMs == null
+              ? null
+              : rounded(stoolPlaneCrossingElapsedMs, 3),
+            finalSettleStartedAt: finalSettleStartedAt == null ? null : rounded(finalSettleStartedAt, 3),
+            finalSettleElapsedMs: finalSettleElapsedMs == null ? null : rounded(finalSettleElapsedMs, 3),
+            pausedFrameMs: rounded(driftPausedFrameMs, 3),
+            activeWallDurationMs: driftWallStartedAt == null || driftWallCompletedAt == null
+              ? null
+              : rounded(driftWallCompletedAt - driftWallStartedAt - driftPausedFrameMs, 3),
+          },
+          pathSafety: railSnapshot.pathSafety,
+          tableOrbitSafety: railSnapshot.tableOrbitSafety,
+          pathVisible: railSnapshot.pathVisible,
+          controlPointsVisible: railSnapshot.controlPointsVisible,
+        },
       }
     },
     isOrbitEnabled() {
       return controls.enabled
     },
+    jumpToTableOverview,
+    interruptDebugReturn,
+    releaseDebugHeadLook,
     resetToAcceptedOpening(options = {}) {
+      experienceStarted = false
+      automaticDriftArmed = false
+      railCompleted = false
       state = STUDIO_V2_CAMERA_STATES.ROOM_ORBIT
       if (options.smooth && debug) return transitionTo(STUDIO_V2_CAMERA_POSES.CURRENT_OPENING, { duration: 900 })
       cancelTransition('RESET_OPENING')
-      return applyResolvedPose(STUDIO_V2_ACCEPTED_OPENING_POSE)
+      return applyResolvedPose(STUDIO_V2_ACCEPTED_OPENING_POSE, { legacy: true })
     },
+    resetToRoomWideStart,
+    scrubAmbientProgress,
+    setDebugHeadLook,
+    setDebugReturnProgress,
+    setDebugTableOrbitPose,
+    setAmbientSpeedMultiplier(multiplier) {
+      if (!debug || !STUDIO_V2_AMBIENT_CAMERA_CONFIG.speedMultipliers.includes(Number(multiplier))) return false
+      speedMultiplier = Number(multiplier)
+      return speedMultiplier
+    },
+    setControlPointsVisible: ambientRail.setControlPointsVisible,
     setMajorObstaclesVisible: volumeSafety.setMajorObstaclesVisible,
     setOrbitEnabled,
+    setPathVisible: ambientRail.setPathVisible,
+    setPauseReason,
+    setReducedMotionOverride(mode) {
+      if (!debug || !['AUTO', 'REDUCE', 'ALLOW'].includes(mode)) return false
+      reducedMotionOverride = mode
+      if (effectiveReducedMotion()) resetToRoomWideStart({ automatic: false })
+      else if (experienceStarted && !railCompleted) armAmbientDrift()
+      updateOrbitAvailability()
+      return reducedMotionOverride
+    },
     setSafeVolumeVisible: volumeSafety.setSafeVolumeVisible,
     setState,
     setViewport(width) {
@@ -316,6 +1150,7 @@ export function createStudioV2CameraDirector({
       }
       return camera.fov
     },
+    startAmbientExperience,
     transitionTo,
     update,
   })
