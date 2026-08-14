@@ -1,0 +1,118 @@
+{
+  "dprIndependent": true,
+  "dpr2Test": {
+    "viewport": [
+      1280,
+      720
+    ],
+    "occupancy": 0.78,
+    "result": "UNAVAILABLE_IN_SELECTED_BROWSER_BACKEND",
+    "note": "The capture URL requested dpr=2, but the selected in-app browser continued to report devicePixelRatio=1. DPR-independent solver math was verified because it consumes CSS viewport dimensions only."
+  },
+  "targetRange": [
+    0.75,
+    0.82
+  ],
+  "results": [
+    {
+      "viewport": [
+        1280,
+        720
+      ],
+      "occupancy": 0.78,
+      "heightRatio": 0.84997,
+      "skewRatio": 1.06767,
+      "distance": 0.2984,
+      "position": [
+        0.78644,
+        1.54746,
+        -0.03362
+      ],
+      "bezelVisible": true,
+      "deckVisible": true,
+      "roomContextVisible": true,
+      "clipping": false,
+      "safetyCorrection": false
+    },
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "occupancy": 0.78,
+      "heightRatio": 0.75553,
+      "skewRatio": 1.06078,
+      "distance": 0.3311,
+      "position": [
+        0.75381,
+        1.54837,
+        -0.03183
+      ],
+      "bezelVisible": true,
+      "deckVisible": true,
+      "roomContextVisible": true,
+      "clipping": false,
+      "safetyCorrection": false
+    },
+    {
+      "viewport": [
+        1280,
+        800
+      ],
+      "occupancy": 0.78,
+      "heightRatio": 0.75553,
+      "skewRatio": 1.06078,
+      "distance": 0.3311,
+      "position": [
+        0.75381,
+        1.54837,
+        -0.03183
+      ],
+      "bezelVisible": true,
+      "deckVisible": true,
+      "roomContextVisible": true,
+      "clipping": false,
+      "safetyCorrection": false
+    },
+    {
+      "viewport": [
+        1024,
+        768
+      ],
+      "occupancy": 0.78,
+      "heightRatio": 0.62961,
+      "skewRatio": 1.05049,
+      "distance": 0.3965,
+      "position": [
+        0.68853,
+        1.5502,
+        -0.02824
+      ],
+      "bezelVisible": true,
+      "deckVisible": true,
+      "roomContextVisible": true,
+      "clipping": false,
+      "safetyCorrection": false
+    },
+    {
+      "viewport": [
+        1600,
+        900
+      ],
+      "occupancy": 0.78,
+      "heightRatio": 0.84997,
+      "skewRatio": 1.06767,
+      "distance": 0.2984,
+      "position": [
+        0.78644,
+        1.54746,
+        -0.03362
+      ],
+      "bezelVisible": true,
+      "deckVisible": true,
+      "roomContextVisible": true,
+      "clipping": false,
+      "safetyCorrection": false
+    }
+  ]
+}

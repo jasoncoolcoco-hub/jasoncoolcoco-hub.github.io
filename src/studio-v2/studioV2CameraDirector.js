@@ -138,6 +138,12 @@ export function createStudioV2CameraDirector({
   let resumeNotBefore = 0
   let reducedMotionOverride = 'AUTO'
   let endpointPhase = 'NONE'
+  let macbookFocusSolver = null
+  let macbookFocusSourcePose = null
+  let macbookFocusLastExit = 'NONE'
+  let macbookFocusCorridor = null
+  let railConsumedBy = 'NONE'
+  let tableSkipAudit = null
   let finalDriftFramePending = false
   let tableArrivalPending = false
   let railCompleted = false
@@ -249,6 +255,21 @@ export function createStudioV2CameraDirector({
     controls.enabled = Boolean(orbitRequested && !transition && (roomOrbit || manualProfile))
     if (!controls.enabled) clearOrbitMomentum()
     return controls.enabled
+  }
+
+  function consumeAmbientRail(source) {
+    if (railCompleted) return false
+    railCompleted = true
+    railConsumedBy = source
+    automaticDriftArmed = false
+    finalDriftFramePending = false
+    tableArrivalPending = false
+    frozenProgress = null
+    returnTransition = null
+    overrideIdleDeadline = null
+    pointerCandidate = null
+    debugScrubFrozen = false
+    return true
   }
 
   function applyResolvedPose(pose, { legacy = pose.state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT } = {}) {
@@ -493,14 +514,21 @@ export function createStudioV2CameraDirector({
     transition = {
       id: pose.id ?? String(poseOrState),
       fromFov: camera.fov,
-      toFov: responsiveFov(pose.fov ?? activeBaseFov, viewportWidth),
+      toFov: options.exactFov
+        ? (pose.fov ?? activeBaseFov)
+        : responsiveFov(pose.fov ?? activeBaseFov, viewportWidth),
       baseFov: pose.fov ?? activeBaseFov,
+      fromNear: camera.near,
       near: pose.near ?? camera.near,
       far: pose.far ?? camera.far,
       duration: Math.max(1, options.duration ?? 900),
       startedAt: performance.now(),
       progress: 0,
       targetState: pose.state ?? state,
+      intermediatePosition: options.intermediatePosition
+        ? new THREE.Vector3().fromArray(options.intermediatePosition)
+        : null,
+      onComplete: options.onComplete ?? null,
     }
     inputOwner = 'CAMERA_DIRECTOR'
     inputType = 'TRANSITION'
@@ -517,23 +545,218 @@ export function createStudioV2CameraDirector({
     )
     transition.progress = progress
     const eased = easeInOutCubic(progress)
-    camera.position.lerpVectors(transitionFromPosition, transitionToPosition, eased)
+    if (transition.intermediatePosition) {
+      const inverse = 1 - eased
+      camera.position.copy(transitionFromPosition).multiplyScalar(inverse * inverse)
+        .addScaledVector(transition.intermediatePosition, 2 * inverse * eased)
+        .addScaledVector(transitionToPosition, eased * eased)
+    } else {
+      camera.position.lerpVectors(transitionFromPosition, transitionToPosition, eased)
+    }
     controls.target.lerpVectors(transitionFromTarget, transitionToTarget, eased)
     camera.fov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, eased)
-    camera.near = transition.near
+    camera.near = THREE.MathUtils.lerp(transition.fromNear, transition.near, eased)
     camera.far = transition.far
     camera.updateProjectionMatrix()
     updateControlsWithoutMomentum()
     camera.updateMatrixWorld(true)
     if (progress >= 1) {
-      activeBaseFov = transition.baseFov
-      state = transition.targetState
+      const completedTransition = transition
+      activeBaseFov = completedTransition.baseFov
+      state = completedTransition.targetState
       transition = null
       inputOwner = 'NONE'
       inputType = 'NONE'
       updateOrbitAvailability()
+      completedTransition.onComplete?.()
     }
     return true
+  }
+
+  function focusReducedMotion(mode) {
+    if (mode === 'REDUCE') return true
+    if (mode === 'ALLOW') return false
+    return reducedMotionQuery.matches
+  }
+
+  function focusCorridorAudit(fromPosition, toPosition, target, focusSafety = {}, intermediatePosition = null) {
+    const samples = 121
+    const ignoredObstacleIds = ['KITCHEN ISLAND / BODY', 'KITCHEN STOOLS / ROW']
+    let safe = true
+    let minimumBoundaryClearance = Infinity
+    let minimumDisplayClearance = Infinity
+    let minimumMacbookClearance = Infinity
+    let minimumTableClearance = Infinity
+    const macbookBounds = focusSafety.macbookBounds
+      ? new THREE.Box3(
+        new THREE.Vector3().fromArray(focusSafety.macbookBounds.min),
+        new THREE.Vector3().fromArray(focusSafety.macbookBounds.max),
+      )
+      : null
+    const failures = []
+    for (let index = 0; index < samples; index += 1) {
+      const progress = index / (samples - 1)
+      const position = intermediatePosition
+        ? fromPosition.clone().multiplyScalar((1 - progress) ** 2)
+          .addScaledVector(intermediatePosition, 2 * (1 - progress) * progress)
+          .addScaledVector(toPosition, progress ** 2)
+        : fromPosition.clone().lerp(toPosition, progress)
+      const inspection = volumeSafety.inspect(position, target, { ignoredObstacleIds })
+      const displayClearance = position.distanceTo(target)
+      const macbookClearance = macbookBounds?.distanceToPoint(position) ?? Infinity
+      const tableClearance = position.y - (focusSafety.tableY ?? 1.415)
+      minimumBoundaryClearance = Math.min(minimumBoundaryClearance, inspection.minimumBoundaryClearance)
+      minimumDisplayClearance = Math.min(minimumDisplayClearance, displayClearance)
+      minimumMacbookClearance = Math.min(minimumMacbookClearance, macbookClearance)
+      minimumTableClearance = Math.min(minimumTableClearance, tableClearance)
+      if (!inspection.safe || displayClearance < 0.12 || macbookClearance < 0.02 || tableClearance < 0.12) {
+        safe = false
+        if (failures.length < 8) failures.push({ progress: rounded(progress, 4), reasons: inspection.reasons })
+      }
+    }
+    return {
+      safe,
+      samples,
+      ignoredObstacleIds,
+      minimumBoundaryClearance: rounded(minimumBoundaryClearance),
+      minimumDisplayClearance: rounded(minimumDisplayClearance),
+      minimumMacbookClearance: rounded(minimumMacbookClearance),
+      minimumTableClearance: rounded(minimumTableClearance),
+      failures,
+      architecture: 'STATE_SPECIFIC_MACBOOK_FOCUS_CORRIDOR',
+    }
+  }
+
+  function applyFocusPose(pose) {
+    camera.position.fromArray(pose.position)
+    controls.target.fromArray(pose.target)
+    activeBaseFov = pose.fov
+    camera.fov = pose.fov
+    camera.near = pose.near
+    camera.far = pose.far
+    camera.updateProjectionMatrix()
+    updateControlsWithoutMomentum()
+    camera.updateMatrixWorld(true)
+    safetyClampActive = false
+  }
+
+  function configureMacbookFocus({ solvePose }) {
+    macbookFocusSolver = solvePose
+    return Boolean(macbookFocusSolver)
+  }
+
+  function requestMacbookFocus(pose = macbookFocusSolver?.(), options = {}) {
+    const ambientShortcut = [
+      STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
+      STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
+    ].includes(state)
+    if (!pose || (transition && !ambientShortcut) || ![
+      STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
+      STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
+      STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW,
+      STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT,
+      STUDIO_V2_CAMERA_STATES.ROOM_ORBIT,
+    ].includes(state)) return false
+    if (ambientShortcut) {
+      if (transition) transition = null
+    }
+    macbookFocusSourcePose = getCurrentPose()
+    const intermediatePosition = options.intermediatePosition
+      ? new THREE.Vector3().fromArray(options.intermediatePosition)
+      : null
+    macbookFocusCorridor = focusCorridorAudit(
+      camera.position.clone(),
+      new THREE.Vector3().fromArray(pose.position),
+      new THREE.Vector3().fromArray(pose.target),
+      options.focusSafety,
+      intermediatePosition,
+    )
+    if (!macbookFocusCorridor.safe) {
+      const directCorridor = focusCorridorAudit(
+        camera.position.clone(),
+        new THREE.Vector3().fromArray(pose.position),
+        new THREE.Vector3().fromArray(pose.target),
+        options.focusSafety,
+      )
+      if (!directCorridor.safe) return false
+      macbookFocusCorridor = directCorridor
+      options.intermediatePosition = null
+    }
+    if (ambientShortcut) consumeAmbientRail('MACBOOK')
+    state = STUDIO_V2_CAMERA_STATES.MACBOOK_FOCUS_TRANSITION
+    endpointPhase = 'MACBOOK_FOCUS_TRANSITION'
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'MACBOOK_FOCUS_ENTER'
+    return transitionTo(pose, {
+      allowOfficial: true,
+      duration: focusReducedMotion(options.reducedMotionOverride)
+        ? 200
+        : THREE.MathUtils.clamp(1400 + camera.position.distanceTo(new THREE.Vector3().fromArray(pose.position)) * 95, 1500, 2200),
+      exactFov: true,
+      intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
+        ? null
+        : options.intermediatePosition,
+      onComplete: () => {
+        state = STUDIO_V2_CAMERA_STATES.MACBOOK_FOCUS
+        endpointPhase = 'MACBOOK_FOCUS'
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'MACBOOK_SCREEN_READY'
+        controls.enabled = false
+      },
+    })
+  }
+
+  function closeMacbookFocus(options = {}) {
+    if (![STUDIO_V2_CAMERA_STATES.MACBOOK_FOCUS_TRANSITION,
+      STUDIO_V2_CAMERA_STATES.MACBOOK_FOCUS,
+      STUDIO_V2_CAMERA_STATES.MACBOOK_EXIT_TRANSITION,
+    ].includes(state)) return false
+    if (state === STUDIO_V2_CAMERA_STATES.MACBOOK_EXIT_TRANSITION) return true
+    if (transition) transition = null
+    state = STUDIO_V2_CAMERA_STATES.MACBOOK_EXIT_TRANSITION
+    endpointPhase = 'MACBOOK_EXIT_TRANSITION'
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'MACBOOK_FOCUS_EXIT'
+    return transitionTo(STUDIO_V2_TABLE_OVERVIEW_POSE, {
+      allowOfficial: true,
+      duration: focusReducedMotion(options.reducedMotionOverride) ? 200 : 1300,
+      onComplete: () => {
+        captureEndpointSnapshot('MACBOOK_EXIT_FINAL_TRANSITION')
+        endpointPhase = 'TABLE_OVERVIEW'
+        captureEndpointSnapshot('MACBOOK_EXIT_TABLE_OVERVIEW')
+        enterTableFreeOrbit()
+        captureEndpointSnapshot('MACBOOK_EXIT_TABLE_FREE_ORBIT')
+        macbookFocusLastExit = options.source ?? 'API'
+      },
+    })
+  }
+
+  function refreshMacbookFocus() {
+    if (transition || state !== STUDIO_V2_CAMERA_STATES.MACBOOK_FOCUS || !macbookFocusSolver) return false
+    applyFocusPose(macbookFocusSolver())
+    return true
+  }
+
+  function getMacbookFocusState() {
+    return {
+      state,
+      transition: transition?.id ?? null,
+      transitionProgress: transition ? rounded(transition.progress, 4) : null,
+      inputOwner,
+      inputType,
+      ownerCount: inputOwner === 'NONE' ? 0 : 1,
+      controlsLocked: !controls.enabled,
+      screenInteractionEnabled: state === STUDIO_V2_CAMERA_STATES.MACBOOK_FOCUS && !transition,
+      sourcePose: macbookFocusSourcePose,
+      corridor: macbookFocusCorridor,
+      lastExit: macbookFocusLastExit,
+      near: camera.near,
+      fov: camera.fov,
+    }
   }
 
   function startOverrideReturn(time) {
@@ -617,7 +840,7 @@ export function createStudioV2CameraDirector({
     }
     if (tableArrivalPending) {
       tableArrivalPending = false
-      enterTableFreeOrbit({ preservePose: true })
+      enterTableFreeOrbit()
       endpointPhase = 'TABLE_FREE_ORBIT'
       captureEndpointSnapshot(endpointPhase, time)
       return true
@@ -691,7 +914,15 @@ export function createStudioV2CameraDirector({
     if (!profile) return false
     applyControlsProfile(profile)
     controls.update()
-    const volumeResult = volumeSafety.resolve(camera.position, controls.target)
+    const tableOrbit = state === STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT
+    const volumeInspection = tableOrbit
+      ? volumeSafety.inspect(camera.position, controls.target, {
+        ignoredObstacleIds: ['KITCHEN ISLAND / BODY'],
+      })
+      : null
+    const volumeResult = tableOrbit && volumeInspection.safe
+      ? { corrected: false, position: camera.position, target: controls.target }
+      : volumeSafety.resolve(camera.position, controls.target)
     safetyClampActive = volumeResult.corrected
     if (volumeResult.corrected) {
       camera.position.copy(volumeResult.position)
@@ -751,6 +982,8 @@ export function createStudioV2CameraDirector({
   function startAmbientExperience({ automatic = true, immediate = false, startedAt = performance.now() } = {}) {
     experienceStarted = true
     railCompleted = false
+    railConsumedBy = 'NONE'
+    tableSkipAudit = null
     clearEndpointAudit()
     driftElapsedMs = 0
     debugScrubFrozen = false
@@ -797,6 +1030,8 @@ export function createStudioV2CameraDirector({
     if (!debug) return false
     experienceStarted = true
     railCompleted = false
+    railConsumedBy = 'NONE'
+    tableSkipAudit = null
     clearEndpointAudit()
     railProgress = THREE.MathUtils.clamp(progress, 0, 1)
     driftElapsedMs = elapsedForTravelProgress(railProgress)
@@ -836,9 +1071,44 @@ export function createStudioV2CameraDirector({
     return true
   }
 
-  function enterTableFreeOrbit({ preservePose = false } = {}) {
+  function requestTableSkip(options = {}) {
+    if (![STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
+    ].includes(state) || transition) return false
+    const sourcePose = getCurrentPose()
+    const sourceProgress = railProgress
+    consumeAmbientRail('TABLE')
+    state = STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION
+    endpointPhase = 'TABLE_SKIP_TRANSITION'
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'TABLE_SKIP'
+    const distance = camera.position.distanceTo(new THREE.Vector3().fromArray(STUDIO_V2_TABLE_OVERVIEW_POSE.position))
+    const duration = focusReducedMotion(options.reducedMotionOverride)
+      ? 200
+      : THREE.MathUtils.clamp(650 + distance * 55, 650, 1200)
+    const accepted = transitionTo({
+      ...STUDIO_V2_TABLE_OVERVIEW_POSE,
+      id: 'TABLE_SKIP_TO_OVERVIEW',
+      state: STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW,
+    }, {
+      allowOfficial: true,
+      duration,
+      onComplete: () => enterTableFreeOrbit(),
+    })
+    tableSkipAudit = {
+      accepted,
+      sourceProgress: rounded(sourceProgress, 4),
+      sourcePose,
+      durationMs: rounded(duration, 1),
+      destination: STUDIO_V2_TABLE_OVERVIEW_POSE.id,
+      railConsumed: true,
+    }
+    return accepted
+  }
+
+  function enterTableFreeOrbit() {
     debugScrubFrozen = false
-    if (!preservePose) applyResolvedPose(STUDIO_V2_TABLE_OVERVIEW_POSE, { legacy: false })
     state = STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT
     endpointPhase = 'TABLE_FREE_ORBIT'
     orbitRequested = true
@@ -848,6 +1118,11 @@ export function createStudioV2CameraDirector({
     updateControlsWithoutMomentum()
     updateOrbitAvailability()
     return true
+  }
+
+  function currentViewPitchDegrees() {
+    const direction = controls.target.clone().sub(camera.position).normalize()
+    return rounded(THREE.MathUtils.radToDeg(Math.asin(direction.y)), 3)
   }
 
   function setDebugTableOrbitPose({ radius = 2.05, azimuthDegrees = 0, polarRadians = 1.37 } = {}) {
@@ -879,7 +1154,9 @@ export function createStudioV2CameraDirector({
       radius: camera.position.distanceTo(controls.target),
       azimuthDegrees,
       polarRadians: safePolar,
-      volume: volumeSafety.inspect(camera.position, controls.target),
+      volume: volumeSafety.inspect(camera.position, controls.target, {
+        ignoredObstacleIds: ['KITCHEN ISLAND / BODY'],
+      }),
     }
   }
 
@@ -960,6 +1237,8 @@ export function createStudioV2CameraDirector({
     armAmbientDrift,
     beginUserInput,
     cancelTransition,
+    closeMacbookFocus,
+    configureMacbookFocus,
     captureCurrentPose() {
       return JSON.stringify({ id: 'CAPTURED_CAMERA_POSE', state, ...poseFromCamera(camera, controls) }, null, 2)
     },
@@ -999,6 +1278,7 @@ export function createStudioV2CameraDirector({
     getCurrentState() {
       return state
     },
+    getMacbookFocusState,
     getEndpointPhase() {
       return endpointPhase
     },
@@ -1015,12 +1295,16 @@ export function createStudioV2CameraDirector({
     getDebugSnapshot() {
       const radius = camera.position.distanceTo(controls.target)
       const railSnapshot = ambientRail.getSnapshot()
-      const volumeInspection = volumeSafety.inspect(camera.position, controls.target)
+      const volumeInspection = volumeSafety.inspect(camera.position, controls.target, state === STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT
+        ? { ignoredObstacleIds: ['KITCHEN ISLAND / BODY'] }
+        : undefined)
       return {
         state,
         pose: getCurrentPose(),
         orbitRadius: Number(radius.toFixed(4)),
         orbitEnabled: controls.enabled,
+        viewPitchDegrees: currentViewPitchDegrees(),
+        tablePitchRangeDegrees: STUDIO_V2_TABLE_ORBIT_PROFILE.viewPitchDegrees,
         inputOwner,
         inputType,
         transition: transition ? {
@@ -1064,6 +1348,8 @@ export function createStudioV2CameraDirector({
           reducedMotionOverride,
           reducedMotionActive: effectiveReducedMotion(),
           railCompleted,
+          railConsumedBy,
+          tableSkipAudit,
           endpointPhase,
           endpointSnapshots: { ...endpointSnapshots },
           endpointDifferences: {
@@ -1118,6 +1404,9 @@ export function createStudioV2CameraDirector({
       return applyResolvedPose(STUDIO_V2_ACCEPTED_OPENING_POSE, { legacy: true })
     },
     resetToRoomWideStart,
+    requestMacbookFocus,
+    requestTableSkip,
+    refreshMacbookFocus,
     scrubAmbientProgress,
     setDebugHeadLook,
     setDebugReturnProgress,
@@ -1147,6 +1436,7 @@ export function createStudioV2CameraDirector({
       if (!transition) {
         camera.fov = responsiveFov(activeBaseFov, viewportWidth)
         camera.updateProjectionMatrix()
+        refreshMacbookFocus()
       }
       return camera.fov
     },

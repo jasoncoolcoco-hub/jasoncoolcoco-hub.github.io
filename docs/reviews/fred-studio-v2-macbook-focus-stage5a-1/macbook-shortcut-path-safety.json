@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "samples": [0, 0.1, 0.25, 0.5, 0.75, 0.9],
+  "architecture": "current-live-pose to responsive MACBOOK_FOCUS using the Stage 5A state-specific corridor; intermediate waypoint is retained when safe and direct path is the audited fallback",
+  "durationRangeMs": [1500, 2200],
+  "railConsumed": true,
+  "railRestartsAfterExit": false,
+  "destinationAfterExit": "TABLE_FREE_ORBIT via canonical TABLE_OVERVIEW",
+  "nearPlaneM": 0.025,
+  "targetOccupancy": 0.78
+}

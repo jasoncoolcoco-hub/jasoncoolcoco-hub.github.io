@@ -42,6 +42,7 @@ import {
   STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
 } from './studioV2FloorReflection'
 import { createStudioV2CameraDirector } from './studioV2CameraDirector'
+import { createStudioV2MacbookFocus } from './studioV2MacbookFocus'
 import { STUDIO_V2_MAJOR_CAMERA_OBSTACLES } from './studioV2CameraSafetyVolume'
 import {
   STUDIO_V2_ROOM_WIDE_START_POSE,
@@ -144,6 +145,23 @@ function percentile(sortedValues, percentileValue) {
   const upper = Math.ceil(index)
   if (lower === upper) return sortedValues[lower]
   return THREE.MathUtils.lerp(sortedValues[lower], sortedValues[upper], index - lower)
+}
+
+function createTableInteractionTarget() {
+  const island = STUDIO_V2_MAJOR_CAMERA_OBSTACLES.find(({ id }) => id === 'KITCHEN ISLAND / BODY')
+  if (!island) return null
+  const min = new THREE.Vector3().fromArray(island.min)
+  const max = new THREE.Vector3().fromArray(island.max)
+  const size = max.clone().sub(min)
+  const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
+  const material = new THREE.MeshBasicMaterial()
+  material.visible = false
+  const target = new THREE.Mesh(geometry, material)
+  target.name = 'TABLE_ISLAND_INTERACTION_TARGET'
+  target.userData.studioV2SemanticId = 'TABLE_ISLAND_INTERACTION_TARGET'
+  target.position.copy(min).add(max).multiplyScalar(0.5)
+  target.updateMatrixWorld(true)
+  return target
 }
 
 const SHADOW_MAP_TYPES = Object.freeze({
@@ -462,6 +480,8 @@ export function createStudioV2Scene({
   let marshallInteraction = null
   let unsubscribeAudioState = null
   let radioPanel = null
+  let macbookFocus = null
+  let tableInteractionTarget = null
   let unsubscribeRadioPanel = null
   let spatialDebug = null
   let modelAudit = null
@@ -853,6 +873,22 @@ export function createStudioV2Scene({
     mount.dataset.floorReflectionEnabled = String(Boolean(visualState.floorReflection?.enabled))
     entryRoot.updateMatrixWorld(true)
     camera.updateMatrixWorld(true)
+    const macbookRoot = entryRoot.getObjectByName('MACBOOK_ISLAND_01')
+    tableInteractionTarget = createTableInteractionTarget()
+    if (tableInteractionTarget) {
+      entryRoot.add(tableInteractionTarget)
+      cameraInteractionTargets.push(tableInteractionTarget)
+    }
+    macbookFocus = createStudioV2MacbookFocus({
+      camera,
+      cameraDirector,
+      domElement: renderer.domElement,
+      getRadioState: () => radioPanel?.getState() ?? radioPanelState,
+      macbookRoot,
+      renderSize,
+      tableTarget: tableInteractionTarget,
+    })
+    mount.dataset.macbookFocusTarget = 'MACBOOK_DISPLAY_TARGET'
     entryGate.markCondition('worldMatricesReady')
     entryGate.markCondition('shadowsReady')
 
@@ -1203,6 +1239,7 @@ export function createStudioV2Scene({
     mount.dataset.cameraDirectorState = cameraDirector.getCurrentState()
     mount.dataset.cameraEndpointPhase = cameraDirector.getEndpointPhase()
     mount.dataset.cameraRailProgress = String(cameraDirector.getRailProgress())
+    mount.dataset.macbookFocusState = macbookFocus?.getState().state ?? 'UNAVAILABLE'
     lightHelpers.forEach((helper) => helper.update())
     if (performanceSample?.updateBaseline) renderer.info.reset()
     if (floorReflection) floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
@@ -1243,6 +1280,7 @@ export function createStudioV2Scene({
       mount.dataset.cameraSafetyClamp = String(cameraDirectorState.safetyClampActive)
       mount.dataset.cameraRailProgress = String(cameraDirectorState.ambient?.railProgress ?? 0)
       mount.dataset.cameraPaused = String(cameraDirectorState.ambient?.paused ?? false)
+      mount.dataset.macbookFocusAudit = JSON.stringify(macbookFocus?.getState() ?? null)
       onDiagnostics?.({
         ...diagnostics,
         camera: {
@@ -1505,6 +1543,37 @@ export function createStudioV2Scene({
     getCameraDirectorState() {
       return cameraDirector.getDebugSnapshot()
     },
+    getMacbookFocusState() {
+      return macbookFocus?.getState() ?? null
+    },
+    subscribeMacbookFocus(listener) {
+      return macbookFocus?.subscribe(listener) ?? (() => {})
+    },
+    getMacbookDisplayContract() {
+      return macbookFocus?.getContract() ?? null
+    },
+    getMacbookDisplayProjection() {
+      return macbookFocus?.getProjection() ?? null
+    },
+    requestMacbookFocus(source = 'RUNTIME') {
+      return macbookFocus?.requestFocus(source) ?? false
+    },
+    requestTableSkip() {
+      return cameraDirector.requestTableSkip()
+    },
+    getAudioRuntimeState() {
+      return audioController?.getState?.() ?? null
+    },
+    closeMacbookFocus(source = 'RUNTIME') {
+      return macbookFocus?.closeFocus(source) ?? false
+    },
+    refreshMacbookFocus() {
+      return macbookFocus?.refresh() ?? false
+    },
+    setMacbookReducedMotionOverride(mode) {
+      if (!debug && !capture) return 'AUTO'
+      return macbookFocus?.setReducedMotionOverride(mode) ?? 'AUTO'
+    },
     getAmbientCameraReport() {
       return cameraDirector.getAmbientReport()
     },
@@ -1535,6 +1604,14 @@ export function createStudioV2Scene({
     setDebugTableOrbitPose(options) {
       if (!debug) return false
       return cameraDirector.setDebugTableOrbitPose(options)
+    },
+    setDebugTablePitch(viewPitchDegrees = 0, azimuthDegrees = 0, radius = 1.775) {
+      if (!debug) return false
+      return cameraDirector.setDebugTableOrbitPose({
+        radius,
+        azimuthDegrees,
+        polarRadians: THREE.MathUtils.degToRad(90 + Number(viewPitchDegrees)),
+      })
     },
     interruptDebugHeadLookReturn(options) {
       if (!debug) return false
@@ -1711,6 +1788,12 @@ export function createStudioV2Scene({
       unsubscribeAudioState?.()
       unsubscribeRadioPanel?.()
       radioPanel?.dispose()
+      macbookFocus?.dispose()
+      macbookFocus = null
+      tableInteractionTarget?.geometry.dispose()
+      tableInteractionTarget?.material.dispose()
+      tableInteractionTarget?.removeFromParent()
+      tableInteractionTarget = null
       radioPanelSubscribers.clear()
       cameraDirector.dispose()
       controls.dispose()
@@ -1748,6 +1831,9 @@ export function createStudioV2Scene({
       delete mount.dataset.cameraSafetyClamp
       delete mount.dataset.cameraRailProgress
       delete mount.dataset.cameraPaused
+      delete mount.dataset.macbookFocusState
+      delete mount.dataset.macbookFocusAudit
+      delete mount.dataset.macbookFocusTarget
       delete mount.dataset.floorReflectionEnabled
       delete mount.dataset.floorReflectionReady
       delete mount.dataset.floorReflectionUpdates

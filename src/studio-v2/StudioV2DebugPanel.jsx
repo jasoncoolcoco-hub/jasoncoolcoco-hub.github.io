@@ -123,6 +123,8 @@ export default function StudioV2DebugPanel({
   const cameraDirector = diagnostics?.cameraDirector ?? runtime?.getCameraDirectorState?.() ?? {}
   const ambient = cameraDirector.ambient ?? {}
   const ambientReport = runtime?.getAmbientCameraReport?.() ?? {}
+  const macbookFocus = runtime?.getMacbookFocusState?.() ?? {}
+  const macbookDisplay = runtime?.getMacbookDisplayContract?.() ?? {}
   const delivery = runtime?.getAssetDeliveryConfig?.() ?? audit?.delivery ?? {}
   const entry = entryState
     ?? diagnostics?.entry
@@ -305,18 +307,28 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="TRACK ID" value={audioState.trackId} />
           <InspectorRow label="TRACK TITLE" value={audioState.trackTitle} />
           <InspectorRow label="AUDIO STATE" value={audioState.status?.toUpperCase?.()} />
+          <InspectorRow label="AUDIO ELEMENT" value={audioState.audioElementExists ? 'EXISTS' : 'MISSING'} />
+          <InspectorRow label="SOURCE" value={audioState.src} />
+          <InspectorRow label="READY / NETWORK" value={`${audioState.readyState ?? '—'} / ${audioState.networkState ?? '—'}`} />
+          <InspectorRow label="PAUSED / ENDED / MUTED" value={`${audioState.paused ? 'YES' : 'NO'} / ${audioState.ended ? 'YES' : 'NO'} / ${audioState.muted ? 'YES' : 'NO'}`} />
           <InspectorRow label="ENTRY AUDIO" value={audioState.entryStatus?.toUpperCase?.()} />
           <InspectorRow label="AUTOPLAY POLICY" value={audioState.autoplayPolicy?.toUpperCase?.()} />
+          <InspectorRow label="PLAY ATTEMPT" value={audioState.playAttemptState?.toUpperCase?.()} />
+          <InspectorRow label="PLAY PROMISE" value={audioState.latestPlayPromiseResult} />
           <InspectorRow label="FALLBACK ARMED" value={audioState.fallbackArmed ? 'YES' : 'NO'} />
+          <InspectorRow label="FALLBACK CONSUMED" value={audioState.fallbackConsumed ? 'YES' : 'NO'} />
           <InspectorRow label="FIRST GESTURE FALLBACK" value={audioState.firstGestureFallbackUsed ? 'USED' : 'NO'} />
           <InspectorRow label="CURRENT TIME" value={Number(audioState.currentTime ?? 0).toFixed(2)} />
           <InspectorRow label="DURATION" value={Number.isFinite(audioState.duration) ? Number(audioState.duration).toFixed(2) : '—'} />
           <InspectorRow label="VOLUME" value={Number(audioState.volume ?? 0).toFixed(2)} />
+          <InspectorRow label="VOLUME RAMP" value={audioState.activeVolumeRamp ? 'ACTIVE' : 'IDLE'} />
+          <InspectorRow label="MANUAL INTENT" value={audioState.manualIntentState?.toUpperCase?.()} />
           <InspectorRow label="LOOP" value={audioState.loop ? 'ON' : 'OFF'} />
           <InspectorRow label="MARSHALL HIT" value={marshallInteraction.pointerOver ? 'YES' : 'NO'} />
           <InspectorRow label="POINTER MOVE" value={`${Number(marshallInteraction.pointerMovement ?? 0).toFixed(2)} PX`} />
           <InspectorRow label="LAST RESULT" value={marshallInteraction.lastInteractionResult} />
           <InspectorRow label="LAST ERROR" value={audioState.errorCode ?? audioState.error ?? 'NONE'} />
+          <InspectorRow label="MEDIA ERROR" value={audioState.latestMediaError ?? 'NONE'} />
           <InspectorRow label="ROUTE ACTIVE" value={marshallInteraction.routeActive ? 'YES' : 'NO'} />
         </dl>
         <div className="studio-v2__debug-actions">
@@ -614,11 +626,43 @@ export default function StudioV2DebugPanel({
 
       <section className="studio-v2__debug-section">
         <h2>CAMERA / ORBIT</h2>
+        <h3>MACBOOK FOCUS</h3>
+        <dl>
+          <InspectorRow label="STATE" value={macbookFocus.state} />
+          <InspectorRow label="SEMANTIC TARGET" value={macbookFocus.semanticTarget} />
+          <InspectorRow label="DISPLAY MESH" value={macbookDisplay.meshName} />
+          <InspectorRow label="DISPLAY WORLD W/H" value={macbookDisplay.worldWidth ? `${macbookDisplay.worldWidth} × ${macbookDisplay.worldHeight}` : null} />
+          <InspectorRow label="DISPLAY OCCUPANCY" value={macbookDisplay.solvedPose?.projection?.widthRatio} />
+          <InspectorRow label="DISPLAY SKEW" value={macbookDisplay.solvedPose?.projection?.skewRatio} />
+          <InspectorRow label="FOCUS FOV / NEAR" value={macbookDisplay.solvedPose ? `${macbookDisplay.solvedPose.fov} / ${macbookDisplay.solvedPose.near}` : null} />
+          <InspectorRow label="FOCUS POSITION" value={vectorText(macbookDisplay.solvedPose?.position)} />
+          <InspectorRow label="FOCUS TARGET" value={vectorText(macbookDisplay.solvedPose?.target)} />
+          <InspectorRow label="CORRIDOR" value={macbookFocus.corridor?.safe ? `${macbookFocus.corridor.samples} SAMPLES SAFE` : 'NOT AUDITED / BLOCKED'} />
+          <InspectorRow label="CORRIDOR BOUNDARY CLEARANCE" value={macbookFocus.corridor?.minimumBoundaryClearance} />
+          <InspectorRow label="CONTROLS" value={macbookFocus.controlsLocked ? 'LOCKED' : 'AVAILABLE'} />
+          <InspectorRow label="SCREEN API" value={macbookFocus.screenInteractionEnabled ? 'READY FOR STAGE 5B' : 'INACTIVE'} />
+          <InspectorRow label="LAST REQUEST" value={macbookFocus.lastRequest} />
+        </dl>
+        <div className="studio-v2__debug-actions">
+          <button type="button" onClick={() => runtime.requestMacbookFocus('DEBUG_BUTTON')}>ENTER MACBOOK FOCUS</button>
+          <button type="button" onClick={() => runtime.closeMacbookFocus('DEBUG_BUTTON')}>EXIT MACBOOK FOCUS</button>
+          <button type="button" onClick={() => runtime.refreshMacbookFocus()}>REFRESH RESPONSIVE POSE</button>
+        </div>
+        <div className="studio-v2__debug-actions">
+          {['AUTO', 'REDUCE', 'ALLOW'].map((mode) => (
+            <button key={`macbook-${mode}`} type="button" onClick={() => runtime.setMacbookReducedMotionOverride(mode)}>
+              MACBOOK MOTION {mode}
+            </button>
+          ))}
+        </div>
         <dl>
           <InspectorRow label="DIRECTOR STATE" value={cameraDirector.state} />
           <InspectorRow label="DIRECTOR INPUT OWNER" value={cameraDirector.inputOwner} />
           <InspectorRow label="DIRECTOR INPUT TYPE" value={cameraDirector.inputType} />
           <InspectorRow label="DIRECTOR TRANSITION" value={cameraDirector.transition?.id ?? 'NONE'} />
+          <InspectorRow label="VIEW PITCH" value={Number.isFinite(cameraDirector.viewPitchDegrees) ? `${cameraDirector.viewPitchDegrees}°` : '—'} />
+          <InspectorRow label="TABLE PITCH RANGE" value={cameraDirector.tablePitchRangeDegrees ? `${cameraDirector.tablePitchRangeDegrees.min}° — ${cameraDirector.tablePitchRangeDegrees.max}°` : '—'} />
+          <InspectorRow label="RAIL CONSUMED BY" value={ambient.railConsumedBy ?? 'NONE'} />
           <InspectorRow label="TRANSITION PROGRESS" value={cameraDirector.transition ? cameraDirector.transition.progress : 'N.A.'} />
           <InspectorRow label="AMBIENT PROGRESS" value={ambient.railProgress} />
           <InspectorRow label="AMBIENT TIME" value={`${ambient.driftElapsedMs ?? '—'} / ${ambient.driftDurationMs ?? '—'} MS`} />
@@ -750,9 +794,15 @@ export default function StudioV2DebugPanel({
           <button type="button" onClick={() => runtime.jumpCameraToTableOverview()}>
             JUMP TABLE OVERVIEW
           </button>
+          <button type="button" onClick={() => runtime.requestTableSkip()}>
+            SKIP TO TABLE
+          </button>
           <button type="button" onClick={() => runtime.enterTableFreeOrbit()}>
             ENTER TABLE FREE ORBIT
           </button>
+          <button type="button" onClick={() => runtime.setDebugTablePitch(-35)}>TABLE PITCH −35°</button>
+          <button type="button" onClick={() => runtime.setDebugTablePitch(0)}>TABLE EYE LEVEL 0°</button>
+          <button type="button" onClick={() => runtime.setDebugTablePitch(6)}>TABLE PITCH +6°</button>
         </div>
         <div className="studio-v2__debug-actions">
           <button type="button" onClick={() => runtime.scrubAmbientCamera(0.999)}>

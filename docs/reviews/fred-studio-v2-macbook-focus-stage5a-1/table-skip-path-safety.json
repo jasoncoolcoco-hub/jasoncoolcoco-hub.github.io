@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "samples": [0, 0.1, 0.25, 0.5, 0.75, 0.9],
+  "transition": "TABLE_SKIP_TRANSITION",
+  "durationRangeMs": [650, 1200],
+  "source": "current live rail pose",
+  "destination": "canonical TABLE_OVERVIEW",
+  "completionState": "TABLE_FREE_ORBIT",
+  "railConsumed": true,
+  "teleport": false,
+  "restartsRail": false
+}

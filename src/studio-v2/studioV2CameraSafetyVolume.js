@@ -160,7 +160,8 @@ export function createStudioV2CameraVolumeSafety({ scene, debug = false } = {}) 
     )
   }
 
-  function inspect(position, target) {
+  function inspect(position, target, { ignoredObstacleIds = [] } = {}) {
+    const ignored = new Set(ignoredObstacleIds)
     const boundaryDistances = planes.map(({ id, plane }) => ({
       id,
       distance: plane.distanceToPoint(position),
@@ -175,7 +176,7 @@ export function createStudioV2CameraVolumeSafety({ scene, debug = false } = {}) 
       .filter(({ distance }) => distance < -0.00001)
       .map(({ id }) => id)
     const intersectedObstacles = obstacleDistances
-      .filter(({ inside }) => inside)
+      .filter(({ id, inside }) => inside && !ignored.has(id))
       .map(({ id }) => id)
     const targetSafe = targetBounds.containsPoint(target)
     const reasons = [
@@ -194,6 +195,7 @@ export function createStudioV2CameraVolumeSafety({ scene, debug = false } = {}) 
       minimumBoundaryClearance: Math.min(...boundaryDistances.map(({ distance }) => distance)),
       minimumObstacleClearance: Math.min(...obstacleDistances.map(({ distance }) => distance)),
       minimumTargetClearance: targetClearance,
+      ignoredObstacleIds: [...ignored],
     }
   }
 

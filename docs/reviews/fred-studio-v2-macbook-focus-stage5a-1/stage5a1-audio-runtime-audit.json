@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "rootCause": "Entry autoplay is rejected by browser policy on a direct visit; the previous one-shot fallback could be consumed by a synthetic or still-untrusted event and then disarmed, leaving playback silent.",
+  "controller": {
+    "audioElementCount": 1,
+    "preload": "auto",
+    "entryTargetVolume": 0.1,
+    "fadeDurationMs": 4500,
+    "cameraIndependent": true
+  },
+  "verifiedBlockedFlow": {
+    "initialStatus": "waiting-for-gesture",
+    "initialErrorCode": "AUTOPLAY_POLICY_BLOCKED",
+    "fallbackRemainsArmedAfterRepeatedNotAllowedError": true,
+    "trustedMacbookGestureResult": "playing",
+    "firstGestureFallbackUsed": true,
+    "cameraActionAlsoCompleted": true
+  },
+  "debugFields": [
+    "audioElementExists", "src", "trackId", "readyState", "networkState",
+    "paused", "ended", "muted", "volume", "currentTime", "playAttemptState",
+    "autoplayPolicy", "fallbackArmed", "fallbackConsumed", "latestPlayPromiseResult",
+    "latestMediaError", "activeVolumeRamp", "manualIntentState"
+  ]
+}

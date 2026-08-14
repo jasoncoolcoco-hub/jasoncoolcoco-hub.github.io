@@ -1,0 +1,12 @@
+{
+  "target": [1.3, 1.43, -0.12],
+  "distanceRangeM": [1.45, 2.1],
+  "viewPitchRangeDegrees": [-35, 6],
+  "polarRangeDegrees": [55, 96],
+  "azimuthRange": "360 degrees",
+  "pan": false,
+  "zoom": true,
+  "canonicalOverviewPitchDegrees": -23.108,
+  "eyeLevelReferenceDegrees": 0,
+  "clampResponse": "OrbitControls polar clamp with damping; no Director competing owner"
+}

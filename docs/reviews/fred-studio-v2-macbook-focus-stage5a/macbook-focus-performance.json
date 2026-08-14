@@ -1,0 +1,43 @@
+{
+  "viewport": [
+    1280,
+    720
+  ],
+  "dpr": 1,
+  "measurement": "six one-second browser samples after focus settle",
+  "tableFreeOrbit": {
+    "expectedFps": 58,
+    "reflectionCadenceHz": 0
+  },
+  "focusTransition": {
+    "targetDurationMs": 1500,
+    "reflectionCadence": "FAST",
+    "maxReflectionCadenceHz": 22,
+    "ownerCount": 1
+  },
+  "macbookFocusStatic": {
+    "samplesFps": [
+      58,
+      58,
+      58,
+      58,
+      58,
+      58
+    ],
+    "averageFps": 58,
+    "medianFps": 58,
+    "onePercentLowFps": 58,
+    "p95FrameTimeMs": 17.24,
+    "drawCalls": 58,
+    "renderedTriangles": 425460,
+    "reflectionCadenceHz": 0,
+    "ownerCount": 1
+  },
+  "exitTransition": {
+    "targetDurationMs": 1300,
+    "reflectionCadence": "FAST",
+    "maxReflectionCadenceHz": 22,
+    "ownerCount": 1
+  },
+  "newRenderingPasses": 0
+}

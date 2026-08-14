@@ -1,0 +1,35 @@
+{
+  "architecture": "STATE_SPECIFIC_MACBOOK_FOCUS_CORRIDOR",
+  "pathType": "restrained quadratic Bezier",
+  "samples": 121,
+  "testedStarts": [
+    "TABLE_OVERVIEW",
+    "WINDOW_SIDE_R1.05_A-90",
+    "KITCHEN_SIDE_R1.05_A90",
+    "OPPOSITE_R1.05_A180",
+    "MIN_RADIUS",
+    "MAX_RADIUS"
+  ],
+  "valid": true,
+  "invalidSamples": 0,
+  "minimumBoundaryClearanceM": 1.34,
+  "minimumDisplayClearanceM": 0.2984,
+  "minimumMacbookBoundsClearanceM": 0.0496,
+  "minimumTableClearanceM": 0.1325,
+  "ignoredNormalOrbitColliders": [
+    "KITCHEN ISLAND / BODY",
+    "KITCHEN STOOLS / ROW"
+  ],
+  "retainedGuards": [
+    "floor",
+    "ceiling",
+    "walls",
+    "glass",
+    "exterior",
+    "MacBook bounds",
+    "display plane",
+    "table height"
+  ],
+  "focusNear": 0.025,
+  "normalNearRestoredOnExit": 0.05
+}

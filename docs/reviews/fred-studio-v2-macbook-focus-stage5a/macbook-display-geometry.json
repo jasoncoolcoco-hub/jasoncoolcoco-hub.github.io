@@ -1,0 +1,44 @@
+{
+  "semanticId": "MACBOOK_DISPLAY_TARGET",
+  "meshName": "Object_6",
+  "hierarchy": "Ecran_6/Object_6",
+  "completeMacbookWorldBounds": {
+    "min": [
+      0.836,
+      1.415,
+      -0.22785
+    ],
+    "max": [
+      1.086,
+      1.665,
+      0.12785
+    ],
+    "size": [
+      0.25,
+      0.25,
+      0.3557
+    ],
+    "center": [
+      0.961,
+      1.54,
+      -0.05
+    ]
+  },
+  "display": {
+    "width": 0.3557,
+    "height": 0.2444,
+    "aspectRatio": 1.4554,
+    "thickness": 0.006,
+    "center": [
+      1.08424,
+      1.54279,
+      -0.05
+    ],
+    "normal": [-1, 0, 0],
+    "up": [0, 1, 0],
+    "right": [0, 0, 1]
+  },
+  "hingeRelationship": "Object_8 is a child of Ecran_6/Charniere_5 and was not used as the display target.",
+  "keyboardDeck": "Object_4 retained unchanged.",
+  "tableY": 1.415
+}

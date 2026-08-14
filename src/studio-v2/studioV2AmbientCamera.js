@@ -30,8 +30,8 @@ export const STUDIO_V2_TABLE_ORBIT_PROFILE = Object.freeze({
   target: STUDIO_V2_TABLE_OVERVIEW_POSE.target,
   minDistance: 1.45,
   maxDistance: 2.1,
-  minPolarAngle: 0.9,
-  maxPolarAngle: 1.25,
+  minPolarAngle: THREE.MathUtils.degToRad(55),
+  maxPolarAngle: THREE.MathUtils.degToRad(96),
   minAzimuthAngle: -Infinity,
   maxAzimuthAngle: Infinity,
   rotateSpeed: 0.36,
@@ -39,7 +39,8 @@ export const STUDIO_V2_TABLE_ORBIT_PROFILE = Object.freeze({
   dampingFactor: 0.14,
   enablePan: false,
   enableZoom: true,
-  targetHeightBounds: Object.freeze([1.38, 1.5]),
+  targetHeightBounds: Object.freeze([1.38, 1.58]),
+  viewPitchDegrees: Object.freeze({ min: -35, max: 6 }),
   sampledAzimuthPositions: 720,
 })
 
@@ -246,7 +247,9 @@ function validateTableOrbit(inspectPose) {
         const theta = THREE.MathUtils.degToRad(degree - 180)
         spherical.set(radius, polarAngle, theta)
         position.copy(target).add(new THREE.Vector3().setFromSpherical(spherical))
-        const inspection = inspectPose(position, target)
+        const inspection = inspectPose(position, target, {
+          ignoredObstacleIds: ['KITCHEN ISLAND / BODY'],
+        })
         minimumBoundaryClearance = Math.min(minimumBoundaryClearance, inspection.minimumBoundaryClearance)
         minimumObstacleClearance = Math.min(minimumObstacleClearance, inspection.minimumObstacleClearance)
         if (!inspection.safe) {

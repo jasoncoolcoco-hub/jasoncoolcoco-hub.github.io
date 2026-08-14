@@ -135,7 +135,7 @@ function partitionConnectedComponents(object, variantNames, classify) {
   components.forEach((component) => {
     const variantName = classify(component)
     const bucket = buckets.get(variantName) ?? buckets.get(variantNames[0])
-    bucket.push(...component.indices)
+    component.indices.forEach((indexValue) => bucket.push(indexValue))
     counts.set(variantName, (counts.get(variantName) ?? 0) + 1)
   })
 
@@ -147,7 +147,7 @@ function partitionConnectedComponents(object, variantNames, classify) {
     const indices = buckets.get(variantName)
     if (!indices?.length) return
     const start = combinedIndices.length
-    combinedIndices.push(...indices)
+    indices.forEach((indexValue) => combinedIndices.push(indexValue))
     geometry.addGroup(start, indices.length, materials.length)
     materials.push(cloneMaterialVariant(source, variantName))
   })
@@ -225,23 +225,43 @@ function splitStudioV2Materials(root) {
       return
     }
 
-    if (object.name === 'node_0.001_Material.006_0' && source.name === 'Material.006') {
+    if (
+      (object.name === 'node_0.001_Material.006_0' || object.name === 'node_0001_Material006_0')
+      && source.name === 'Material.006'
+    ) {
       const result = partitionConnectedComponents(
         object,
         [
           'StudioV2KitchenPainted',
           'StudioV2KitchenMetal',
           'StudioV2KitchenHandle',
+          'StudioV2KitchenKnob',
+          'StudioV2KitchenOvenControl',
+          'StudioV2KitchenOvenHandle',
           'StudioV2KitchenAppliance',
           'StudioV2KitchenGlass',
         ],
-        ({ center, size }) => {
+        ({ center, size, triangles }) => {
           const dimensions = size.toArray().sort((a, b) => a - b)
           const [smallest, middle, longest] = dimensions
           const thin = smallest <= 0.09
-          const compact = longest <= 0.84
-          const handleLike = compact && middle <= 0.18 && smallest <= 0.12
-          const knobLike = longest <= 0.22
+          const handleLike = center.x >= 5.28 && center.x <= 5.96
+            && size.z >= 0.18 && size.z <= 0.34
+            && size.x <= 0.1 && size.y <= 0.085
+            && triangles >= 8
+          const ovenKnob = center.x >= 5.28 && center.x <= 5.46
+            && center.y >= 1.24 && center.y <= 1.47
+            && center.z >= -2.35 && center.z <= -1.42
+            && longest >= 0.03 && longest <= 0.14
+            && triangles >= 8
+          const ovenControlBand = center.x >= 5.26 && center.x <= 5.47
+            && center.y >= 1 && center.y <= 1.48
+            && center.z >= -2.4 && center.z <= -1.25
+          const ovenHandle = center.x >= 5.28 && center.x <= 5.46
+            && center.y >= 1.1 && center.y <= 1.25
+            && center.z >= -2.35 && center.z <= -1.3
+            && size.x <= 0.12 && size.y <= 0.13 && size.z >= 0.35
+            && triangles >= 8
           const worktopPart = center.y >= 1.25 && center.y <= 1.78 && longest <= 1.45 && thin
           const ovenGlass = center.x <= 5.5
             && center.y >= 0.65 && center.y <= 1.18
@@ -250,9 +270,13 @@ function splitStudioV2Materials(root) {
           const ovenZone = center.z >= -2.4 && center.z <= -1.45
             && center.y >= 0.3 && center.y <= 1.48 && longest <= 1.25 && thin
           if (ovenGlass) return 'StudioV2KitchenGlass'
+          if (ovenKnob) return 'StudioV2KitchenKnob'
+          if (ovenHandle) return 'StudioV2KitchenOvenHandle'
+          if (ovenControlBand) return 'StudioV2KitchenOvenControl'
+          if (triangles <= 8) return 'StudioV2KitchenPainted'
+          if (handleLike) return 'StudioV2KitchenHandle'
           if (ovenZone) return 'StudioV2KitchenAppliance'
           if (worktopPart) return 'StudioV2KitchenMetal'
-          if (handleLike || knobLike) return 'StudioV2KitchenHandle'
           return 'StudioV2KitchenPainted'
         },
       )
@@ -275,6 +299,60 @@ function applyTuning(material, tuning) {
   material.needsUpdate = true
 }
 
+const STUDIO_V2_CABINET_SEAM_BACKINGS = [
+  // Upper cabinet doors on the kitchen wall.
+  { axis: 'vertical', x: 5.93, y: 2.953, z: -3.357, length: 1.23 },
+  { axis: 'vertical', x: 5.93, y: 2.953, z: -2.34, length: 1.23 },
+  { axis: 'vertical', x: 5.93, y: 2.953, z: -1.31, length: 1.23 },
+  // Lower cabinet doors and drawer columns.
+  { axis: 'vertical', x: 5.42, y: 0.849, z: -3.331, length: 1.18 },
+  { axis: 'vertical', x: 5.42, y: 0.849, z: -2.34, length: 1.18 },
+  { axis: 'vertical', x: 5.42, y: 0.849, z: -1.31, length: 1.18 },
+  { axis: 'horizontal', x: 5.42, y: 0.732, z: -0.81, length: 1.01 },
+  { axis: 'horizontal', x: 5.42, y: 1.227, z: -0.81, length: 1.01 },
+  // Tall cabinet split lines.
+  { axis: 'vertical', x: 5.42, y: 2.51, z: 0.235, length: 2.11 },
+  { axis: 'horizontal', x: 5.42, y: 1.449, z: -0.035, length: 0.53 },
+  { axis: 'horizontal', x: 5.42, y: 1.449, z: 0.755, length: 0.53 },
+  // Rear white cabinet row directly below the timber countertop.
+  { axis: 'horizontal', x: 5.46, y: 1.455, z: 2.26, length: 2.04 },
+]
+
+function createKitchenCabinetSeamBackings(root) {
+  const seamMaterial = new THREE.MeshBasicMaterial({
+    color: '#111110',
+    depthWrite: true,
+    fog: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  })
+  seamMaterial.name = 'StudioV2KitchenSeamBacking'
+  const group = new THREE.Group()
+  group.name = 'StudioV2KitchenSeamBackings'
+  group.renderOrder = -1
+  const seamWidth = 0.026
+  STUDIO_V2_CABINET_SEAM_BACKINGS.forEach((seam, index) => {
+    const width = seam.axis === 'vertical' ? seamWidth : seam.length
+    const height = seam.axis === 'vertical' ? seam.length : seamWidth
+    const backing = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      seamMaterial,
+    )
+    backing.name = `StudioV2KitchenSeamBacking_${index + 1}`
+    backing.position.set(seam.x, seam.y, seam.z)
+    backing.rotation.y = Math.PI / 2
+    backing.castShadow = false
+    backing.receiveShadow = false
+    group.add(backing)
+  })
+  root.add(group)
+  return {
+    count: group.children.length,
+    minimumDepthOffset: 0.025,
+    width: seamWidth,
+  }
+}
+
 export function applyStudioV2MaterialTuning(root, renderer) {
   const materials = new Map()
   const materialMeshes = new Map()
@@ -282,6 +360,7 @@ export function applyStudioV2MaterialTuning(root, renderer) {
   const report = []
   const maxAnisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8)
   const segmentation = splitStudioV2Materials(root)
+  const cabinetSeamBackings = createKitchenCabinetSeamBackings(root)
 
   root.traverse((object) => {
     if (!object.isMesh || !object.visible) return
@@ -321,6 +400,7 @@ export function applyStudioV2MaterialTuning(root, renderer) {
     materials,
     report,
     segmentation,
+    cabinetSeamBackings,
   }
 }
 

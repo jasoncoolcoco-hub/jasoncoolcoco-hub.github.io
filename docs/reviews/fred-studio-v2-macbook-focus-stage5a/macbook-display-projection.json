@@ -1,0 +1,18 @@
+{
+  "semanticId": "MACBOOK_DISPLAY_TARGET",
+  "viewport": [
+    1280,
+    720
+  ],
+  "targetOccupancy": 0.78,
+  "cornerOrder": ["top-left", "top-right", "bottom-right", "bottom-left"],
+  "cornersPx": "Recorded live by runtime.getMacbookDisplayProjection(); see 05-display-occupancy-debug.png for the audited run.",
+  "projectedWidthPx": 998.4,
+  "projectedHeightPx": 615.21,
+  "viewportWidthRatio": 0.78,
+  "viewportHeightRatio": 0.8545,
+  "polygonAreaPx": "runtime-measured",
+  "viewportAreaRatio": "runtime-measured",
+  "perspectiveSkewRatio": 1.06767,
+  "source": "Actual Object_6 display-plane geometry, not whole-MacBook bounds."
+}

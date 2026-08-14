@@ -22,10 +22,15 @@ const INITIAL_STATE = Object.freeze({
   entryStartedAt: null,
   entryPlaybackStartedAt: null,
   entryFadeDurationMs: 4500,
-  entryTargetVolume: 0.08,
+  entryTargetVolume: 0.1,
   autoplayPolicy: 'untested',
   fallbackArmed: false,
   firstGestureFallbackUsed: false,
+  fallbackConsumed: false,
+  playAttemptState: 'idle',
+  latestPlayPromiseResult: 'none',
+  latestMediaError: null,
+  manualIntentState: 'none',
 })
 
 function errorMessage(error, fallback) {
@@ -121,6 +126,16 @@ export function createStudioV2AudioController({
 
   const snapshot = () => Object.freeze({
     ...state,
+    audioElementExists: Boolean(audio),
+    src: audio.currentSrc || audio.src || '',
+    readyState: audio.readyState,
+    networkState: audio.networkState,
+    paused: audio.paused,
+    ended: audio.ended,
+    muted: audio.muted,
+    volume: audio.volume,
+    currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+    activeVolumeRamp: fadeFrame !== null,
     tracks: state.tracks.map((track) => ({ ...track })),
   })
 
@@ -157,7 +172,11 @@ export function createStudioV2AudioController({
     paused: true,
     currentTime: Number.isFinite(audio.duration) ? audio.duration : audio.currentTime,
   })
-  const handleAudioError = () => setError(new Error(mediaErrorMessage(audio.error)))
+  const handleAudioError = () => {
+    const message = mediaErrorMessage(audio.error)
+    publish({ latestMediaError: message })
+    setError(new Error(message), 'Audio playback failed.', 'AUDIO_MEDIA_ERROR')
+  }
 
   const audioEvents = {
     durationchange: syncTime,
@@ -357,22 +376,28 @@ export function createStudioV2AudioController({
 
   async function play() {
     manualIntentRevision += 1
+    publish({ manualIntentState: 'play', playAttemptState: 'attempting', latestPlayPromiseResult: 'pending' })
     disarmFallback()
     if (destroyed) return snapshot()
     if (!selectedTrack) await loadDefaultTrack()
     if (!selectedTrack || state.status === 'error') return snapshot()
     try {
       await audio.play()
-      if (audio.volume === 0) audio.volume = Math.min(0.08, selectedTrack?.volume ?? 0.08)
-      return publish({ status: 'playing', paused: false, error: null, errorCode: null })
+      if (audio.volume === 0) audio.volume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
+      return publish({
+        status: 'playing', paused: false, error: null, errorCode: null,
+        playAttemptState: 'playing', latestPlayPromiseResult: 'resolved',
+      })
     } catch (error) {
-      return setError(error, 'Audio playback was rejected.')
+      publish({ playAttemptState: 'failed', latestPlayPromiseResult: `rejected:${error?.name ?? 'Error'}` })
+      return setError(error, 'Audio playback was rejected.', 'AUDIO_PLAYBACK_FAILED')
     }
   }
 
   function pause() {
     if (destroyed || !selectedTrack) return snapshot()
     manualIntentRevision += 1
+    publish({ manualIntentState: 'pause' })
     disarmFallback()
     audio.pause()
     return publish({
@@ -385,6 +410,7 @@ export function createStudioV2AudioController({
   function stop() {
     if (destroyed || !selectedTrack) return snapshot()
     manualIntentRevision += 1
+    publish({ manualIntentState: 'stop' })
     disarmFallback()
     audio.pause()
     try {
@@ -441,7 +467,7 @@ export function createStudioV2AudioController({
       cancelAnimationFrame(fadeFrame)
       fadeFrame = null
     }
-    const targetVolume = Math.min(0.08, selectedTrack?.volume ?? 0.08)
+    const targetVolume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
     const tick = (now) => {
       if (destroyed || audio.paused) {
         fadeFrame = null
@@ -470,18 +496,32 @@ export function createStudioV2AudioController({
 
   async function handleFirstGesture() {
     if (!fallbackArmed || destroyed) return
-    disarmFallback()
     lastFallbackGestureAt = performance.now()
+    publish({ fallbackConsumed: true, playAttemptState: 'gesture-attempting', latestPlayPromiseResult: 'pending' })
     try {
       await audio.play()
+      disarmFallback()
       const playbackStartedAt = performance.now()
       fadeToEntryVolume(playbackStartedAt)
       publish({
         status: 'playing', paused: false, entryStatus: 'playing-after-gesture',
         entryPlaybackStartedAt: playbackStartedAt, firstGestureFallbackUsed: true,
         autoplayPolicy: 'blocked-then-recovered', error: null, errorCode: null,
+        playAttemptState: 'playing', latestPlayPromiseResult: 'resolved',
       })
     } catch (error) {
+      if (error?.name === 'NotAllowedError') {
+        publish({
+          status: 'ready', paused: true, entryStatus: 'waiting-for-gesture',
+          autoplayPolicy: 'blocked', fallbackArmed: true,
+          playAttemptState: 'policy-blocked',
+          latestPlayPromiseResult: 'rejected:NotAllowedError',
+          error: null, errorCode: 'AUTOPLAY_POLICY_BLOCKED',
+        })
+        return
+      }
+      disarmFallback()
+      publish({ playAttemptState: 'failed', latestPlayPromiseResult: `rejected:${error?.name ?? 'Error'}` })
       setError(error, 'Audio playback failed after user interaction.', 'AUDIO_PLAYBACK_FAILED')
     }
   }
@@ -507,7 +547,10 @@ export function createStudioV2AudioController({
 
   async function startEntryExperience({ timestamp = performance.now(), forcePolicyBlocked = false } = {}) {
     const startingManualIntentRevision = manualIntentRevision
-    publish({ entryStatus: 'attempting', entryStartedAt: timestamp, volume: 0 })
+    publish({
+      entryStatus: 'attempting', entryStartedAt: timestamp, volume: 0,
+      playAttemptState: 'attempting', latestPlayPromiseResult: 'pending',
+    })
     if (!selectedTrack) await prepareEntry()
     if (!selectedTrack) return snapshot()
     audio.volume = 0
@@ -527,6 +570,7 @@ export function createStudioV2AudioController({
       return publish({
         status: 'playing', paused: false, entryStatus: 'playing', entryPlaybackStartedAt: playbackStartedAt,
         autoplayPolicy: 'allowed', error: null, errorCode: null,
+        playAttemptState: 'playing', latestPlayPromiseResult: 'resolved',
       })
     } catch (error) {
       if (error?.name === 'NotAllowedError') {
@@ -534,8 +578,10 @@ export function createStudioV2AudioController({
         return publish({
           status: 'ready', paused: true, entryStatus: 'waiting-for-gesture', autoplayPolicy: 'blocked',
           error: null, errorCode: 'AUTOPLAY_POLICY_BLOCKED',
+          playAttemptState: 'policy-blocked', latestPlayPromiseResult: 'rejected:NotAllowedError',
         })
       }
+      publish({ playAttemptState: 'failed', latestPlayPromiseResult: `rejected:${error?.name ?? 'Error'}` })
       return setError(error, 'Audio playback failed.', 'AUDIO_PLAYBACK_FAILED')
     }
   }

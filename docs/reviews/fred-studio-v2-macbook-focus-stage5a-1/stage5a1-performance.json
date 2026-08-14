@@ -1,0 +1,16 @@
+{
+  "viewport": [1280, 720],
+  "dpr": 1,
+  "observedFps": 58,
+  "observedDrawCalls": 99,
+  "renderedTriangles": 780688,
+  "reflectionCadence": {
+    "ambient": "SLOW",
+    "shortcuts": "FAST",
+    "tableFreeOrbit": "ORBIT",
+    "static": "0 Hz"
+  },
+  "transitionOwnerCount": 1,
+  "fullSceneRaycastPerFrame": false,
+  "interactionRaycasts": "pointer events only"
+}
