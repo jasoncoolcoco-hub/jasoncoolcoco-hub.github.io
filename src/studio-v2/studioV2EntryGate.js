@@ -36,6 +36,30 @@ export const ENTRY_CRITICAL_ASSETS = Object.freeze([
     kind: 'opening-visible-world-ui',
     semanticIds: Object.freeze(['MARSHALL_RADIO_PANEL_01']),
   }),
+  Object.freeze({
+    id: 'PHOTO_BOARD_01',
+    kind: 'photo-board-base',
+    resourceKey: 'photoBoardUrl',
+    semanticIds: Object.freeze(['PHOTO_BOARD_01', 'PHOTO_BOARD_SURFACE', 'PHOTO_BOARD_FRAME']),
+  }),
+  Object.freeze({
+    id: 'POLAROID_CAMERA_01',
+    kind: 'opening-visible-prop',
+    resourceKey: 'polaroidCameraUrl',
+    semanticIds: Object.freeze(['POLAROID_CAMERA_01']),
+  }),
+  Object.freeze({
+    id: 'DOCUMENT_FOLDER_01',
+    kind: 'opening-visible-prop',
+    resourceKey: 'documentFolderUrl',
+    semanticIds: Object.freeze(['DOCUMENT_FOLDER_01']),
+  }),
+  Object.freeze({
+    id: 'COFFEE_CUP_01',
+    kind: 'opening-visible-prop',
+    resourceKey: 'coffeeCupUrl',
+    semanticIds: Object.freeze(['COFFEE_CUP_01']),
+  }),
 ])
 
 export const ENTRY_READY_CONDITIONS = Object.freeze([
@@ -145,6 +169,10 @@ export function createStudioV2EntryGate({
       guitarReady: assets.GIBSON_GUITAR === 'ready',
       interactionsEnabled,
       macBookReady: assets.MACBOOK_ISLAND_01 === 'ready',
+      photoBoardReady: assets.PHOTO_BOARD_01 === 'ready',
+      polaroidCameraReady: assets.POLAROID_CAMERA_01 === 'ready',
+      documentFolderReady: assets.DOCUMENT_FOLDER_01 === 'ready',
+      coffeeCupReady: assets.COFFEE_CUP_01 === 'ready',
       manifest,
       marshallGroupReady: assets.MARSHALL_GUITAR_FLOOR_01 === 'ready',
       marshallReady: assets.MARSHALL_AMP === 'ready',

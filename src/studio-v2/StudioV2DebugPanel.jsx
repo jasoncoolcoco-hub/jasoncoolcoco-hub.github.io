@@ -62,6 +62,10 @@ function InspectorRow({ label, value }) {
 const PLACED_OBJECT_ANCHOR_NAMES = Object.freeze([
   'MARSHALL_GUITAR_FLOOR_01',
   'MACBOOK_ISLAND_01',
+  'PHOTO_BOARD_01',
+  'POLAROID_CAMERA_01',
+  'DOCUMENT_FOLDER_01',
+  'COFFEE_CUP_01',
 ])
 
 const placedObjectAnchorText = PLACED_OBJECT_ANCHOR_NAMES
@@ -199,6 +203,10 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="GUITAR READY" value={readinessText(entry.guitarReady)} />
           <InspectorRow label="MUSIC GROUP READY" value={readinessText(entry.marshallGroupReady)} />
           <InspectorRow label="RADIO PANEL READY" value={readinessText(entry.radioPanelReady)} />
+          <InspectorRow label="PHOTO BOARD READY" value={readinessText(entry.photoBoardReady)} />
+          <InspectorRow label="POLAROID CAMERA READY" value={readinessText(entry.polaroidCameraReady)} />
+          <InspectorRow label="DOCUMENT FOLDER READY" value={readinessText(entry.documentFolderReady)} />
+          <InspectorRow label="COFFEE CUP READY" value={readinessText(entry.coffeeCupReady)} />
           <InspectorRow label="TEXTURES READY" value={readinessText(entry.texturesReady)} />
           <InspectorRow label="MATERIALS READY" value={readinessText(entry.materialsReady)} />
           <InspectorRow label="ANCHORS READY" value={readinessText(entry.anchorsReady)} />

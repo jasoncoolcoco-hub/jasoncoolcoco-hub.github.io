@@ -47,3 +47,57 @@
 - Runtime treatment: The complete open 16-inch MacBook Pro is retained. Its uniform scale is calculated from the loaded world-space width against the verified `0.3557 m` target.
 - SHA-256: `1a38db1f63a4699573a0393c888b2191030c99cf81c2d3325712a69cb2b7af5f`
 - Date added: 2026-08-05
+
+## Fred Studio V2 Polaroid camera
+
+- Model title: `Polaroid Camera`
+- Author: Boxroom 3D
+- Author page: <https://sketchfab.com/Boxroom_3D>
+- Original source: <https://sketchfab.com/3d-models/polaroid-camera-920ad62faa9d4aa48bc6e9535f3d07fe>
+- Embedded licence metadata: `CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)`
+- Original local source: `/Users/lixinyu/Downloads/polaroid_camera.glb` (read-only source)
+- Project asset: `public/models/fred-studio-v2/objects/polaroid_camera.glb`
+- Runtime treatment: Uniformly normalized and placed as a static desk prop; no interaction is enabled in Stage 5B Pass 1.
+- SHA-256: `198c5cd70e38e0bd466783062e8f1f4b887fe74203546fe16e89247ea6ba8f13`
+- Date added: 2026-08-15
+
+## Fred Studio V2 document file folder
+
+- Model title: `Document File Folder`
+- Author: Kami Rapacz
+- Author page: <https://sketchfab.com/kuroderuta>
+- Original source: <https://sketchfab.com/3d-models/document-file-folder-11390179bba7462484d344e2fe22c703>
+- Embedded licence metadata: `CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)`
+- Original local source: `/Users/lixinyu/Downloads/document_file_folder.glb` (read-only source)
+- Project asset: `public/models/fred-studio-v2/objects/document_file_folder.glb`
+- Runtime treatment: Uniformly normalized to an A4-scale footprint and kept static; its embedded morph animation is deliberately not started in Stage 5B Pass 1.
+- SHA-256: `9ce8cf2992eb5beec1ce399b4df4940dd9412c2fada994900fc945fd39ccdba5`
+- Date added: 2026-08-15
+
+## Fred Studio V2 coffee cup
+
+- Model title: `Coffee Cup`
+- Author: AK STUDIO
+- Author page: <https://sketchfab.com/inven2000>
+- Original source: <https://sketchfab.com/3d-models/coffee-cup-992750b0df674378989fa915b0688ce1>
+- Embedded licence metadata: `CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)`
+- Original local source: `/Users/lixinyu/Downloads/coffee_cup.glb` (read-only source)
+- Project asset: `public/models/fred-studio-v2/objects/coffee_cup.glb`
+- Runtime treatment: Uniformly normalized and placed as a static glazed-ceramic desk prop; no interaction is enabled in Stage 5B Pass 1.
+- SHA-256: `2c7b55bb636573c9a443d64dafbc6501b5b0a4013bac46d23818f7d6a633a923`
+- Date added: 2026-08-15
+
+## Fred Studio V2 clean cork-board base
+
+- Model title: `Cork Board`
+- Author: rickmaolly
+- Author page: <https://sketchfab.com/rickmaolly>
+- Original source: <https://sketchfab.com/3d-models/cork-board-9534ee2ad4344ea6b02b95b61bd4a913>
+- Embedded licence metadata: `CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)`
+- Original local source: `/Users/lixinyu/Downloads/cork_board.glb` (read-only source)
+- Clean project derivative: `public/models/fred-studio-v2/objects/cork_board_clean.glb`
+- Cleanup treatment: The source contained one combined mesh with 126 connected geometry components and a shared atlas containing marketplace sample imagery. The clean derivative retains only 14 structural frame/board components, removes all 112 decorative photo, note, pin, and clutter components, and contains no embedded images or textures.
+- Material treatment: The retained structural frame and blank board surface use separate texture-free PBR materials suitable for the existing room lighting.
+- Source SHA-256: `831115794387ee7f91ebe0b7c69c2a8d1b5948a136bb06a2e1404365e719e4d4`
+- Clean derivative SHA-256: `429d2c5585b03f8ddd6cc445e5ffea4208da44a23e87537afa9d7a0d2c776edb`
+- Date added: 2026-08-15

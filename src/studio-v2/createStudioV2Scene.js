@@ -43,6 +43,10 @@ import {
 } from './studioV2FloorReflection'
 import { createStudioV2CameraDirector } from './studioV2CameraDirector'
 import { createStudioV2MacbookFocus } from './studioV2MacbookFocus'
+import {
+  loadStudioV2SceneExpansion,
+  STUDIO_V2_SCENE_EXPANSION_IDS,
+} from './studioV2SceneExpansion'
 import { STUDIO_V2_MAJOR_CAMERA_OBSTACLES } from './studioV2CameraSafetyVolume'
 import {
   STUDIO_V2_ROOM_WIDE_START_POSE,
@@ -492,6 +496,7 @@ export function createStudioV2Scene({
   let windowDecorationRemoval = null
   let materialTuningReport = []
   let placedObjectsResource = null
+  let sceneExpansionResource = null
   let placedObjectRecords = []
   let maximumAnisotropy = 1
   let modelResource = null
@@ -767,9 +772,20 @@ export function createStudioV2Scene({
     },
   )
 
+  const loadSceneExpansion = () => loadStudioV2SceneExpansion(
+    entryRoot,
+    renderer,
+    activeDeliveryConfig,
+    {
+      onAssetReady: (assetId, detail) => entryGate.markAssetReady(assetId, detail),
+      testConfig: entryTestConfig,
+    },
+  )
+
   const readyPromise = (async () => {
     entryGate.setPhase('loading-entry-assets')
     const placedObjectsPromise = parallelEntryLoading ? loadPlacedObjects() : null
+    const sceneExpansionPromise = parallelEntryLoading ? loadSceneExpansion() : null
     const radioPanelPromise = (async () => {
       const metadataState = audioController
         ? await audioController.loadCatalogue({
@@ -818,29 +834,41 @@ export function createStudioV2Scene({
     ).then(prepareRoom)
     let roomPreparation
     if (parallelEntryLoading) {
-      [roomPreparation, placedObjectsResource, radioPanel] = await Promise.all([
+      [roomPreparation, placedObjectsResource, sceneExpansionResource, radioPanel] = await Promise.all([
         roomPreparationPromise,
         placedObjectsPromise,
+        sceneExpansionPromise,
         radioPanelPromise,
       ])
     } else {
       roomPreparation = await roomPreparationPromise
       await new Promise((resolve) => requestAnimationFrame(() => resolve()))
       placedObjectsResource = await loadPlacedObjects()
+      sceneExpansionResource = await loadSceneExpansion()
       radioPanel = await radioPanelPromise
     }
     if (!roomPreparation || disposed) {
       placedObjectsResource?.dispose()
       placedObjectsResource = null
+      sceneExpansionResource?.dispose()
+      sceneExpansionResource = null
       return null
     }
 
     const { environment, firstRoomFrameMs, gltf, tuned } = roomPreparation
     placedObjectsResource.setMaterialMode(initialAssetMaterialMode)
+    sceneExpansionResource.setMaterialMode(initialAssetMaterialMode)
     cameraInteractionTargets.push(placedObjectsResource.group)
-    placedObjectRecords = placedObjectsResource.records
+    placedObjectRecords = [
+      ...placedObjectsResource.records,
+      ...sceneExpansionResource.records,
+    ]
     entryGate.markCondition('texturesReady', {
-      formats: [...new Set([...roomTextureFormats, ...placedObjectsResource.textureFormats])],
+      formats: [...new Set([
+        ...roomTextureFormats,
+        ...placedObjectsResource.textureFormats,
+        ...sceneExpansionResource.textureFormats,
+      ])],
     })
     entryGate.markCondition('materialsReady', {
       roomMaterials: materialTuningReport.length,
@@ -901,6 +929,10 @@ export function createStudioV2Scene({
       'MACBOOK_ISLAND_01',
       'MARSHALL_GUITAR_FLOOR_01',
       STUDIO_V2_RADIO_PANEL_ID,
+      STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard,
+      STUDIO_V2_SCENE_EXPANSION_IDS.camera,
+      STUDIO_V2_SCENE_EXPANSION_IDS.folder,
+      STUDIO_V2_SCENE_EXPANSION_IDS.coffee,
     ].every((semanticId) => openingSemanticIds.has(semanticId))
     if (!openingGroupsPresent) {
       throw new Error('Entry-critical opening groups were not all registered before warm-up.')
@@ -1019,10 +1051,12 @@ export function createStudioV2Scene({
         selectedGpuTextureFormat: [...new Set([
           ...roomTextureFormats,
           ...placedObjectsResource.textureFormats,
+          ...sceneExpansionResource.textureFormats,
         ])].join(', '),
         gpuTextureFormats: [...new Set([
           ...roomTextureFormats,
           ...placedObjectsResource.textureFormats,
+          ...sceneExpansionResource.textureFormats,
         ])],
       },
       entry,
@@ -1687,10 +1721,12 @@ export function createStudioV2Scene({
         selectedGpuTextureFormat: [...new Set([
           ...roomTextureFormats,
           ...(placedObjectsResource?.textureFormats ?? []),
+          ...(sceneExpansionResource?.textureFormats ?? []),
         ])].join(', ') || roomLoaderSupport?.selectedGpuTextureFormat,
         gpuTextureFormats: [...new Set([
           ...roomTextureFormats,
           ...(placedObjectsResource?.textureFormats ?? []),
+          ...(sceneExpansionResource?.textureFormats ?? []),
         ])],
       }
     },
@@ -1761,7 +1797,9 @@ export function createStudioV2Scene({
       return placedObjectsResource?.getMaterialMode() ?? 'refined'
     },
     setAssetMaterialMode(mode) {
-      return placedObjectsResource?.setMaterialMode(mode) ?? 'refined'
+      const materialMode = placedObjectsResource?.setMaterialMode(mode) ?? 'refined'
+      sceneExpansionResource?.setMaterialMode(materialMode)
+      return materialMode
     },
     getVisualConfig() {
       return {
@@ -1798,6 +1836,7 @@ export function createStudioV2Scene({
       cameraDirector.dispose()
       controls.dispose()
       placedObjectsResource?.dispose()
+      sceneExpansionResource?.dispose()
       floorReflection?.dispose()
       modelResource?.release()
       roomLoaderSupport?.dispose()
