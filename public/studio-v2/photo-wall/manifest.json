@@ -1,7 +1,9 @@
 {
   "version": 1,
+  "packagingMode": "all-polaroid",
+  "normalizedSize": "medium",
   "defaults": {
-    "style": "print",
+    "style": "polaroid",
     "size": "medium",
     "fitMode": "contain",
     "caption": null,
@@ -11,33 +13,43 @@
     "zOrder": 0,
     "enabled": true
   },
-  "previewIds": [
-    "PHOTO_PRINT_001",
-    "PHOTO_PRINT_002",
-    "PHOTO_PRINT_003",
-    "PHOTO_POLAROID_001"
-  ],
+  "previewIds": [],
   "photos": [
     {
       "id": "PHOTO_PRINT_001",
       "filename": "fixture-landscape.png",
       "generatedFilename": "generated/fixture-landscape.png",
       "style": "print",
-      "size": "hero"
+      "size": "hero",
+      "enabled": true,
+      "rotation": 0,
+      "x": null,
+      "y": null,
+      "zOrder": 0
     },
     {
       "id": "PHOTO_PRINT_002",
       "filename": "fixture-portrait.png",
       "generatedFilename": "generated/fixture-portrait.png",
       "style": "print",
-      "size": "large"
+      "size": "large",
+      "enabled": true,
+      "rotation": 0,
+      "x": null,
+      "y": null,
+      "zOrder": 0
     },
     {
       "id": "PHOTO_PRINT_003",
       "filename": "fixture-square.png",
       "generatedFilename": "generated/fixture-square.png",
       "style": "print",
-      "size": "large"
+      "size": "large",
+      "enabled": true,
+      "rotation": 0,
+      "x": null,
+      "y": null,
+      "zOrder": 0
     },
     {
       "id": "PHOTO_POLAROID_001",
@@ -46,7 +58,12 @@
       "style": "polaroid",
       "size": "large",
       "fitMode": "smart",
-      "polaroidVariant": "landscape"
+      "polaroidVariant": "landscape",
+      "enabled": true,
+      "rotation": 0,
+      "x": null,
+      "y": null,
+      "zOrder": 0
     },
     {
       "id": "PHOTO_2CD8047D8O6563365B718D707BC48642_A782BB03",
@@ -56,11 +73,15 @@
       "aspectRatio": 1.495019,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -1,
+      "enabled": true,
+      "x": 5.8,
+      "y": 10.1,
+      "zOrder": 0,
+      "generatedFilename": "generated/2cd8047d8o6563365b718d707bc48642.jpg"
     },
     {
       "id": "PHOTO_5B2E16A17QA30AC793816C4FF326A9ED_8E5E861F",
@@ -73,8 +94,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 1,
+      "enabled": true,
+      "x": 18.9,
+      "y": 11.9,
+      "zOrder": 0,
+      "generatedFilename": "generated/5b2e16a17qa30ac793816c4ff326a9ed.jpg"
     },
     {
       "id": "PHOTO_8AB0254B_738F_4404_89B4_9EB5AE2E4865_6DA8A60A",
@@ -84,11 +109,15 @@
       "aspectRatio": 1.333333,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "hero",
       "fitMode": "contain",
       "caption": "",
       "rotation": 0,
-      "enabled": true
+      "enabled": true,
+      "x": 30.6,
+      "y": 9.7,
+      "zOrder": 3,
+      "generatedFilename": "generated/8AB0254B-738F-4404-89B4-9EB5AE2E4865.jpg"
     },
     {
       "id": "PHOTO_62A2EA2F5L7A5D834261B4ACBD5D499A_0213289D",
@@ -101,8 +130,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -3,
+      "enabled": true,
+      "x": 44.1,
+      "y": 11.4,
+      "zOrder": 0,
+      "generatedFilename": "generated/62a2ea2f5l7a5d834261b4acbd5d499a.jpg"
     },
     {
       "id": "PHOTO_426A18745Q86F2F59319CD88E84C1545_0B90720F",
@@ -115,8 +148,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -3,
+      "enabled": true,
+      "x": 55.7,
+      "y": 10.2,
+      "zOrder": 0,
+      "generatedFilename": "generated/426a18745q86f2f59319cd88e84c1545.jpg"
     },
     {
       "id": "PHOTO_441E4BBB8UE15C867300A891D52FEDF2_A0F569F1",
@@ -129,8 +166,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -2,
+      "enabled": true,
+      "x": 69.5,
+      "y": 12,
+      "zOrder": 0,
+      "generatedFilename": "generated/441e4bbb8ue15c867300a891d52fedf2.jpg"
     },
     {
       "id": "PHOTO_714EB7FAFT7E7F7CE382BB41AD7661FE_B50415C6",
@@ -140,11 +181,15 @@
       "aspectRatio": 1.480066,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 4,
+      "enabled": true,
+      "x": 81,
+      "y": 9.9,
+      "zOrder": 1,
+      "generatedFilename": "generated/714eb7faft7e7f7ce382bb41ad7661fe.jpg"
     },
     {
       "id": "PHOTO_3519C9CB1M496632892B9167A2500EB5_07015ADA",
@@ -157,8 +202,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 94.2,
+      "y": 11.2,
+      "zOrder": 0,
+      "generatedFilename": "generated/3519c9cb1m496632892b9167a2500eb5.jpg"
     },
     {
       "id": "PHOTO_79461DBFBG65409B5EE85FF96C3D5EFE_365C6E96",
@@ -168,11 +217,15 @@
       "aspectRatio": 1.480066,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -1,
+      "enabled": true,
+      "x": 6.4,
+      "y": 30.8,
+      "zOrder": 1,
+      "generatedFilename": "generated/79461dbfbg65409b5ee85ff96c3d5efe.jpg"
     },
     {
       "id": "PHOTO_939642C46U08CA812F791165267EB56A_D1926C22",
@@ -185,8 +238,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -2,
+      "enabled": true,
+      "x": 17.9,
+      "y": 28.7,
+      "zOrder": 1,
+      "generatedFilename": "generated/939642c46u08ca812f791165267eb56a.jpg"
     },
     {
       "id": "PHOTO_000020290016_23B69FE7",
@@ -199,8 +256,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -3,
+      "enabled": true,
+      "x": 31.6,
+      "y": 30.1,
+      "zOrder": 0,
+      "generatedFilename": "generated/000020290016.jpg"
     },
     {
       "id": "PHOTO_000020290034_417A49A3",
@@ -213,8 +274,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 43.2,
+      "y": 29.1,
+      "zOrder": 0,
+      "generatedFilename": "generated/000020290034.jpg"
     },
     {
       "id": "PHOTO_000102450009_447F4C1D",
@@ -224,11 +289,15 @@
       "aspectRatio": 1.507853,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 56.9,
+      "y": 31,
+      "zOrder": 1,
+      "generatedFilename": "generated/000102450009.jpg"
     },
     {
       "id": "PHOTO_000102450015_8CB65918",
@@ -241,8 +310,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -3,
+      "enabled": true,
+      "x": 68.3,
+      "y": 28.5,
+      "zOrder": 0,
+      "generatedFilename": "generated/000102450015.jpg"
     },
     {
       "id": "PHOTO_000102460031_B20D793D",
@@ -251,12 +324,16 @@
       "width": 6048,
       "aspectRatio": 1.507853,
       "orientation": "landscape",
-      "style": "print",
-      "size": "medium",
+      "style": "polaroid",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 4,
+      "enabled": true,
+      "x": 82.1,
+      "y": 30.5,
+      "zOrder": 1,
+      "generatedFilename": "generated/000102460031.jpg"
     },
     {
       "id": "PHOTO_591557096I6B8D344CE6F1C78F968D75_D0FFB836",
@@ -269,8 +346,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -2,
+      "enabled": true,
+      "x": 93.6,
+      "y": 29.4,
+      "zOrder": 0,
+      "generatedFilename": "generated/591557096i6b8d344ce6f1c78f968d75.jpg"
     },
     {
       "id": "PHOTO_A1142DBE2P81F6D8C766D8F648317DDC_F6AF7499",
@@ -279,12 +360,16 @@
       "width": 3637,
       "aspectRatio": 1.494862,
       "orientation": "landscape",
-      "style": "print",
-      "size": "medium",
+      "style": "polaroid",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 4,
+      "enabled": true,
+      "x": 5.9,
+      "y": 48.8,
+      "zOrder": 1,
+      "generatedFilename": "generated/a1142dbe2p81f6d8c766d8f648317ddc.jpg"
     },
     {
       "id": "PHOTO_CB432DA1_EABA_4C10_A1C5_72E591D1A1B2_E7CD8173",
@@ -294,11 +379,15 @@
       "aspectRatio": 0.8,
       "orientation": "portrait",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -1,
+      "enabled": true,
+      "x": 19.5,
+      "y": 50.7,
+      "zOrder": 2,
+      "generatedFilename": "generated/CB432DA1-EABA-4C10-A1C5-72E591D1A1B2.jpg"
     },
     {
       "id": "PHOTO_CCF5A8971OD33F35C8611A484284DD9B_40FD0373",
@@ -308,11 +397,15 @@
       "aspectRatio": 1.494862,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -2,
+      "enabled": true,
+      "x": 30.8,
+      "y": 49.4,
+      "zOrder": 3,
+      "generatedFilename": "generated/ccf5a8971od33f35c8611a484284dd9b.jpg"
     },
     {
       "id": "PHOTO_D476B9656R9721621CF4AE1F154816BC_0427AC06",
@@ -321,12 +414,16 @@
       "width": 3601,
       "aspectRatio": 1.480066,
       "orientation": "landscape",
-      "style": "print",
-      "size": "medium",
+      "style": "polaroid",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -3,
+      "enabled": true,
+      "x": 44.5,
+      "y": 51,
+      "zOrder": 1,
+      "generatedFilename": "generated/d476b9656r9721621cf4ae1f154816bc.jpg"
     },
     {
       "id": "PHOTO_D4604DF3FL854198F217ADE0751C0735_4B19A1D4",
@@ -336,11 +433,15 @@
       "aspectRatio": 1.213787,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 55.8,
+      "y": 48.6,
+      "zOrder": 0,
+      "generatedFilename": "generated/d4604df3fl854198f217ade0751c0735.jpg"
     },
     {
       "id": "PHOTO_DBB1B0CB2I9B3C961C9D0251902BE858_4B545129",
@@ -353,8 +454,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 3,
+      "enabled": true,
+      "x": 69.7,
+      "y": 50.4,
+      "zOrder": 0,
+      "generatedFilename": "generated/dbb1b0cb2i9b3c961c9d0251902be858.jpg"
     },
     {
       "id": "PHOTO_DD2071906J0097BDB244072A2B5C5492_A33D1F43",
@@ -367,8 +472,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 3,
+      "enabled": true,
+      "x": 80.9,
+      "y": 49,
+      "zOrder": 1,
+      "generatedFilename": "generated/dd2071906j0097bdb244072a2b5c5492.jpg"
     },
     {
       "id": "PHOTO_E2A54932FT896EE5FFD14AE27548EC90_E192833E",
@@ -378,11 +487,15 @@
       "aspectRatio": 1.480066,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 1,
+      "enabled": true,
+      "x": 94.3,
+      "y": 50.8,
+      "zOrder": 2,
+      "generatedFilename": "generated/e2a54932ft896ee5ffd14ae27548ec90.jpg"
     },
     {
       "id": "PHOTO_F64BA67B1R7737E363A832A7549776C2_3B2B6C04",
@@ -392,11 +505,15 @@
       "aspectRatio": 1.494862,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "hero",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 1,
+      "enabled": true,
+      "x": 6.3,
+      "y": 70.4,
+      "zOrder": 4,
+      "generatedFilename": "generated/f64ba67b1r7737e363a832a7549776c2.jpg"
     },
     {
       "id": "PHOTO_F78FFEF1CM9411F0BA9B93F5289DCC26_61520168",
@@ -409,8 +526,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -3,
+      "enabled": true,
+      "x": 18,
+      "y": 69.4,
+      "zOrder": 0,
+      "generatedFilename": "generated/f78ffef1cm9411f0ba9b93f5289dcc26.jpg"
     },
     {
       "id": "PHOTO_IMG_0948_75007F6F",
@@ -419,12 +540,16 @@
       "width": 2601,
       "aspectRatio": 0.75,
       "orientation": "portrait",
-      "style": "print",
-      "size": "medium",
+      "style": "polaroid",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -4,
+      "enabled": true,
+      "x": 31.9,
+      "y": 69.8,
+      "zOrder": 2,
+      "generatedFilename": "generated/IMG_0948.jpg"
     },
     {
       "id": "PHOTO_IMG_1851_65039E2B",
@@ -437,8 +562,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 3,
+      "enabled": true,
+      "x": 43.5,
+      "y": 71,
+      "zOrder": 1,
+      "generatedFilename": "generated/IMG_1851.jpg"
     },
     {
       "id": "PHOTO_IMG_1855_9863A78E",
@@ -448,11 +577,15 @@
       "aspectRatio": 1.508229,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -2,
+      "enabled": true,
+      "x": 57,
+      "y": 68.7,
+      "zOrder": 0,
+      "generatedFilename": "generated/IMG_1855.jpg"
     },
     {
       "id": "PHOTO_IMG_1856_0D9EC4D3",
@@ -465,8 +598,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -1,
+      "enabled": true,
+      "x": 68.5,
+      "y": 70.5,
+      "zOrder": 0,
+      "generatedFilename": "generated/IMG_1856.jpg"
     },
     {
       "id": "PHOTO_IMG_1857_B674192F",
@@ -476,11 +613,15 @@
       "aspectRatio": 1.508229,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 82,
+      "y": 68.2,
+      "zOrder": 1,
+      "generatedFilename": "generated/IMG_1857.jpg"
     },
     {
       "id": "PHOTO_IMG_1878_FB89773A",
@@ -493,22 +634,30 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -1,
+      "enabled": true,
+      "x": 93.8,
+      "y": 69.9,
+      "zOrder": 0,
+      "generatedFilename": "generated/IMG_1878.jpg"
     },
     {
       "id": "PHOTO_IMG_2333_A12597D9",
       "filename": "IMG_2333.jpeg",
-      "height": 3024,
-      "width": 4032,
-      "aspectRatio": 1.333333,
-      "orientation": "landscape",
+      "height": 4032,
+      "width": 3024,
+      "aspectRatio": 0.75,
+      "orientation": "portrait",
       "style": "print",
-      "size": "medium",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 7.6,
+      "y": 89,
+      "zOrder": 0,
+      "generatedFilename": "generated/IMG_2333.jpg"
     },
     {
       "id": "PHOTO_IMG_8364_A56C72AC",
@@ -521,8 +670,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -2,
+      "enabled": true,
+      "x": 22.8,
+      "y": 87.9,
+      "zOrder": 0,
+      "generatedFilename": "generated/IMG_8364.jpg"
     },
     {
       "id": "PHOTO_IMG_8595_18C0369D",
@@ -535,8 +688,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 3,
+      "enabled": true,
+      "x": 35.4,
+      "y": 90,
+      "zOrder": 1,
+      "generatedFilename": "generated/IMG_8595.jpg"
     },
     {
       "id": "PHOTO_IMG_8618_83D1BD21",
@@ -549,8 +706,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 2,
+      "enabled": true,
+      "x": 50.9,
+      "y": 88.4,
+      "zOrder": 2,
+      "generatedFilename": "generated/IMG_8618.jpg"
     },
     {
       "id": "PHOTO_IMG_8622_67E0CAAB",
@@ -563,8 +724,12 @@
       "size": "medium",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": -1,
+      "enabled": true,
+      "x": 63.1,
+      "y": 90.2,
+      "zOrder": 0,
+      "generatedFilename": "generated/IMG_8622.jpg"
     },
     {
       "id": "PHOTO_IMG_8623_11B73803",
@@ -573,12 +738,16 @@
       "width": 3130,
       "aspectRatio": 1.508434,
       "orientation": "landscape",
-      "style": "print",
-      "size": "medium",
+      "style": "polaroid",
+      "size": "small",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 4,
+      "enabled": true,
+      "x": 78.7,
+      "y": 88.1,
+      "zOrder": 1,
+      "generatedFilename": "generated/IMG_8623.jpg"
     },
     {
       "id": "PHOTO_IMG_9621_49C211C3",
@@ -588,11 +757,15 @@
       "aspectRatio": 1.333333,
       "orientation": "landscape",
       "style": "print",
-      "size": "medium",
+      "size": "large",
       "fitMode": "contain",
       "caption": "",
-      "rotation": 0,
-      "enabled": true
+      "rotation": 1,
+      "enabled": true,
+      "x": 91.4,
+      "y": 89.7,
+      "zOrder": 2,
+      "generatedFilename": "generated/IMG_9621.jpg"
     }
   ]
 }

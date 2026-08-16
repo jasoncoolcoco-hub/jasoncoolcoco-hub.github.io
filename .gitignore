@@ -8,6 +8,10 @@ source_assets/
 90_Backup/
 1. Photo Dump/
 
+# Local-only Fred Studio photo originals; commit web-ready derivatives instead.
+public/studio-v2/photo-wall/source/*
+!public/studio-v2/photo-wall/source/.gitkeep
+
 # Fred Studio V2 local KTX2 encoder intermediates (manifests remain tracked).
 generated/fred-studio-v2-optimisation/textures-ktx2/*-data.glb
 

@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { STUDIO_V2_ANCHORS } from './studioV2Anchors'
 import { createStudioV2GltfLoader } from './studioV2GltfLoader'
+import { createStudioV2PhotoPackagingPreview } from './studioV2PhotoPackaging'
+import { STUDIO_V2_PHOTO_BOARD_SURFACE } from './studioV2PhotoBoardLayout'
 
 export const STUDIO_V2_SCENE_EXPANSION_IDS = Object.freeze({
   photoBoard: 'PHOTO_BOARD_01',
@@ -256,14 +258,7 @@ function createStaticPlacement(gltf, renderer, config, url) {
   placement.add(normalized.group)
   const semanticIds = [config.id]
   if (config.role === 'photoBoard') {
-    const futurePlacementPlane = Object.freeze({
-      height: 0.634,
-      localOrigin: Object.freeze([-0.675, -0.3375, -0.0007]),
-      normal: Object.freeze([0, 0, 1]),
-      width: 1.309,
-      worldHeight: 1.268,
-      worldWidth: 2.618,
-    })
+    const futurePlacementPlane = STUDIO_V2_PHOTO_BOARD_SURFACE
     placement.userData.futurePlacementPlane = futurePlacementPlane
     placement.userData.scaleAnchor = scaleAnchor
     placement.userData.sourceCleanup = Object.freeze({
@@ -353,6 +348,8 @@ function disposeGroup(group, additionalMaterials) {
 
 export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig, {
   onAssetReady,
+  photoBoardGrid = false,
+  photoSlotOverlay = false,
   testConfig,
 } = {}) {
   const loaderSupport = await createStudioV2GltfLoader(renderer, deliveryConfig)
@@ -368,8 +365,43 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     loadAsset(loaderSupport.loader, urls.folder, STUDIO_V2_SCENE_EXPANSION_IDS.folder, testConfig),
     loadAsset(loaderSupport.loader, urls.coffee, STUDIO_V2_SCENE_EXPANSION_IDS.coffee, testConfig),
   ])
+  const photoBoardPlacement = createStaticPlacement(
+    photoBoardGltf,
+    renderer,
+    ASSET_CONFIG.photoBoard,
+    urls.photoBoard,
+  )
+  let photoPackaging
+  try {
+    photoPackaging = await createStudioV2PhotoPackagingPreview({
+      boardScale: STUDIO_V2_ANCHORS[ASSET_CONFIG.photoBoard.id].scale,
+      debugCoordinateOverlay: photoBoardGrid,
+      debugSlotOverlay: photoSlotOverlay,
+      manifestUrl: deliveryConfig.photoManifestUrl,
+      renderer,
+    })
+  } catch (error) {
+    const emptyGroup = new THREE.Group()
+    emptyGroup.name = 'PHOTO_PACKAGING_PREVIEW_UNAVAILABLE'
+    photoPackaging = {
+      group: emptyGroup,
+      records: [],
+      report: Object.freeze({
+        arbitraryCountSupported: true,
+        debugCoordinateOverlay: false,
+        error: error instanceof Error ? error.message : String(error),
+        positionedCount: 0,
+        previewCount: 0,
+      }),
+    }
+  }
+  photoBoardPlacement.placement.add(photoPackaging.group)
+  photoBoardPlacement.placement.userData.photoPackaging = photoPackaging.report
+  photoBoardPlacement.record.photoPackaging = photoPackaging.report
+  photoBoardPlacement.record.semanticIds.push(...photoPackaging.records.map(({ id }) => id))
+
   const placements = [
-    createStaticPlacement(photoBoardGltf, renderer, ASSET_CONFIG.photoBoard, urls.photoBoard),
+    photoBoardPlacement,
     createStaticPlacement(cameraGltf, renderer, ASSET_CONFIG.camera, urls.camera),
     createStaticPlacement(folderGltf, renderer, ASSET_CONFIG.folder, urls.folder),
     createStaticPlacement(coffeeGltf, renderer, ASSET_CONFIG.coffee, urls.coffee),

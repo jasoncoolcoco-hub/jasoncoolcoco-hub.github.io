@@ -134,6 +134,13 @@ export const STUDIO_V2_CAMERA_PRESETS = {
     near: 0.03,
     far: 160,
   },
+  PHOTO_WALL_REVIEW: {
+    position: [3.625, 1.8825, -2.35],
+    target: [3.625, 1.8825, -4.45],
+    fov: 42,
+    near: 0.03,
+    far: 160,
+  },
 }
 
 export const STUDIO_V2_DEFAULT_CAMERA = 'REFERENCE'

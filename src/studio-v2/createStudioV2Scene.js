@@ -49,6 +49,7 @@ import {
 } from './studioV2SceneExpansion'
 import { STUDIO_V2_MAJOR_CAMERA_OBSTACLES } from './studioV2CameraSafetyVolume'
 import {
+  STUDIO_V2_CAMERA_STATES,
   STUDIO_V2_ROOM_WIDE_START_POSE,
   STUDIO_V2_TABLE_OVERVIEW_CANDIDATES,
 } from './studioV2CameraPoses'
@@ -206,6 +207,9 @@ export function createStudioV2Scene({
   pixelRatioCap = STUDIO_V2_RENDERING.maxPixelRatio,
   forcedViewport,
   performanceTest = null,
+  photoBoardGrid = false,
+  photoSlotOverlay = false,
+  photoWallReview = false,
 }) {
   const activeDeliveryConfig = deliveryConfig ?? createStudioV2DeliveryConfig({}, false)
   const initialLighting = STUDIO_V2_LIGHTING_CANDIDATES[initialLightingCandidate]
@@ -227,6 +231,7 @@ export function createStudioV2Scene({
   const activeShadowProfile = STUDIO_V2_SHADOW_PROFILES[activeShadowProfileName]
   const indirectLighting = STUDIO_V2_LIGHTING
   const officialPresentation = !debug && !capture
+  const staticPhotoWallReview = debug && photoWallReview
   const stableOrbitMode = !capture
   const renderSize = () => ({
     width: forcedViewport?.[0] ?? Math.max(1, mount.clientWidth),
@@ -263,7 +268,8 @@ export function createStudioV2Scene({
     furnitureCollisionExperimental: false,
   })
   const requestedInitialPreset = cameraConfigForPreset(initialCameraPreset)
-  const initialPreset = capture && STUDIO_V2_TABLE_OVERVIEW_CANDIDATES[initialCameraPreset]
+  const initialPreset = staticPhotoWallReview
+    || (capture && STUDIO_V2_TABLE_OVERVIEW_CANDIDATES[initialCameraPreset])
     ? requestedInitialPreset
     : cameraSafety.clampConfig(requestedInitialPreset)
   const initialResponsivePreset = {
@@ -408,7 +414,11 @@ export function createStudioV2Scene({
     controls,
     debug: debug || capture,
     domElement: renderer.domElement,
-    initialPose: capture ? initialPreset : STUDIO_V2_ROOM_WIDE_START_POSE,
+    initialPose: staticPhotoWallReview
+      ? { ...initialPreset, state: STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW }
+      : capture
+        ? initialPreset
+        : STUDIO_V2_ROOM_WIDE_START_POSE,
     isInteractivePointer: isInteractiveCameraPointer,
     prepareOrbitLimits: applyRearWallLimits,
     readRearBoundary: updateRearClampState,
@@ -778,6 +788,8 @@ export function createStudioV2Scene({
     activeDeliveryConfig,
     {
       onAssetReady: (assetId, detail) => entryGate.markAssetReady(assetId, detail),
+      photoBoardGrid,
+      photoSlotOverlay,
       testConfig: entryTestConfig,
     },
   )
@@ -987,11 +999,13 @@ export function createStudioV2Scene({
     cameraDirector.setOrbitEnabled(exploreEnabled)
     if (!capture) {
       const entryStartedAt = performance.now()
-      cameraDirector.startAmbientExperience({
-        automatic: officialPresentation,
-        immediate: true,
-        startedAt: entryStartedAt,
-      })
+      if (!staticPhotoWallReview) {
+        cameraDirector.startAmbientExperience({
+          automatic: officialPresentation,
+          immediate: true,
+          startedAt: entryStartedAt,
+        })
+      }
       audioController?.startEntryExperience({
         timestamp: entryStartedAt,
         forcePolicyBlocked: forceAutoplayBlocked,

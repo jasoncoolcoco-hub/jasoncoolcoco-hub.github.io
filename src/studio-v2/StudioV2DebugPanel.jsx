@@ -163,6 +163,7 @@ export default function StudioV2DebugPanel({
   const placeholder = spatial?.placeholder
   const picked = spatial?.pick
   const placedObjects = runtime.getPlacedObjects?.() ?? []
+  const photoPackaging = placedObjects.find((record) => record.anchorName === 'PHOTO_BOARD_01')?.photoPackaging
   const materialOverrides = placedObjects.flatMap((record) => record.resources.materialOverrides ?? [])
   const materialOverrideById = Object.fromEntries(materialOverrides.map((record) => [record.id, record]))
 
@@ -627,6 +628,25 @@ export default function StudioV2DebugPanel({
               key={record.anchorName}
               label={record.anchorName}
               value={`ASSET ${record.assetScale} · ${record.resources.meshes} MESHES · WORLD ${boundsText(record.worldBounds)}`}
+            />
+          ))}
+        </dl>
+
+        <h3>PHOTO PACKAGING</h3>
+        <dl>
+          <InspectorRow label="DEFAULT STYLE" value={photoPackaging?.defaultStyle?.toUpperCase()} />
+          <InspectorRow
+            label="MANIFEST / POSITIONED"
+            value={photoPackaging ? `${photoPackaging.manifestCount} / ${photoPackaging.positionedCount}` : 'NOT LOADED'}
+          />
+          <InspectorRow label="COORDINATES" value={photoPackaging ? '(0,0) TOP-LEFT · (100,100) BOTTOM-RIGHT · CENTER ANCHOR' : null} />
+          <InspectorRow label="USABLE CORK" value={photoPackaging?.boardSurface ? `${photoPackaging.boardSurface.worldWidth} × ${photoPackaging.boardSurface.worldHeight} M` : null} />
+          <InspectorRow label="COORDINATE GRID" value={photoPackaging?.debugCoordinateOverlay ? 'VISIBLE · ?debug=1&photoGrid=1' : 'OFF'} />
+          {photoPackaging?.records?.map((record) => (
+            <InspectorRow
+              key={record.id}
+              label={record.id}
+              value={`${record.style.toUpperCase()} · ${record.orientation} · ${record.sourceWidth}×${record.sourceHeight} · ${record.dimensions.width.toFixed(3)}×${record.dimensions.height.toFixed(3)} M`}
             />
           ))}
         </dl>

@@ -75,7 +75,10 @@ function readJpegMetadata(buffer) {
     const dataOffset = offset + 2
     const dataLength = segmentLength - 2
     assertReadableRange(buffer, dataOffset, dataLength, 'JPEG segment')
-    if (marker === 0xe1) {
+    if (
+      marker === 0xe1
+      && buffer.subarray(dataOffset, dataOffset + Math.min(6, dataLength)).toString('ascii') === 'Exif\0\0'
+    ) {
       orientation = readExifOrientation(buffer.subarray(dataOffset, dataOffset + dataLength))
     }
     if (JPEG_START_OF_FRAME_MARKERS.has(marker)) {
@@ -206,9 +209,21 @@ export function mergeStudioV2PhotoManifest(manifest, inventory) {
   }
   const photos = manifest.photos.map((entry) => ({ ...entry }))
   const existingEntriesPreserved = photos.length
+  const placementDefaults = {
+    enabled: manifest.defaults?.enabled ?? true,
+    rotation: manifest.defaults?.rotation ?? 0,
+    size: manifest.defaults?.size ?? 'medium',
+    style: manifest.defaults?.style ?? 'print',
+    x: manifest.defaults?.x ?? null,
+    y: manifest.defaults?.y ?? null,
+    zOrder: manifest.defaults?.zOrder ?? 0,
+  }
   const byFilename = new Map()
   const usedIds = new Set()
   for (const entry of photos) {
+    for (const [field, defaultValue] of Object.entries(placementDefaults)) {
+      if (entry[field] === undefined) entry[field] = defaultValue
+    }
     if (!entry.id || usedIds.has(entry.id)) throw new Error(`Manifest has a missing or duplicate photo ID: ${entry.id}.`)
     usedIds.add(entry.id)
     if (entry.filename) {
@@ -232,6 +247,9 @@ export function mergeStudioV2PhotoManifest(manifest, inventory) {
       fitMode: 'contain',
       caption: '',
       rotation: 0,
+      x: null,
+      y: null,
+      zOrder: 0,
       enabled: true,
     }
     usedIds.add(photo.id)

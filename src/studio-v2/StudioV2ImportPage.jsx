@@ -9,6 +9,12 @@ import {
 import { studioV2EntryTestConfig } from './studioV2EntryGate'
 import { createStudioV2AudioController } from './studioV2AudioController'
 import { resolveStudioV2AudioCatalogue } from './studioV2AudioCatalogue'
+import {
+  studioV2PhotoBoardGridEnabled,
+  studioV2PhotoSlotOverlayEnabled,
+  studioV2PhotoWallDebugPanelEnabled,
+  studioV2PhotoWallReviewEnabled,
+} from './studioV2PhotoBoardLayout'
 
 const StudioV2DebugPanel = lazy(() => import('./StudioV2DebugPanel'))
 
@@ -43,9 +49,15 @@ export default function StudioV2ImportPage() {
   const debugEnabled = searchParams.get('debug') === '1'
   const captureEnabled = searchParams.get('capture') === '1'
   const performanceEnabled = (debugEnabled || captureEnabled) && searchParams.get('perf') === '1'
-  const initialCameraPreset = debugEnabled || captureEnabled
-    ? searchParams.get('view') || undefined
-    : undefined
+  const photoBoardGridEnabled = studioV2PhotoBoardGridEnabled(searchParams, debugEnabled)
+  const photoSlotOverlayEnabled = studioV2PhotoSlotOverlayEnabled(searchParams, debugEnabled)
+  const photoWallReviewEnabled = studioV2PhotoWallReviewEnabled(searchParams, debugEnabled)
+  const photoWallDebugPanelEnabled = studioV2PhotoWallDebugPanelEnabled(searchParams, debugEnabled)
+  const initialCameraPreset = photoWallReviewEnabled
+    ? 'PHOTO_WALL_REVIEW'
+    : debugEnabled || captureEnabled
+      ? searchParams.get('view') || undefined
+      : undefined
   const requestedCameraProgress = Number(searchParams.get('cameraProgress'))
   const initialAmbientProgress = captureEnabled
     && searchParams.has('cameraProgress')
@@ -180,6 +192,9 @@ export default function StudioV2ImportPage() {
       pixelRatioCap,
       forcedViewport,
       performanceTest,
+      photoBoardGrid: photoBoardGridEnabled,
+      photoSlotOverlay: photoSlotOverlayEnabled,
+      photoWallReview: photoWallReviewEnabled,
       deliveryConfig,
       entryTestConfig,
       audioController: controller,
@@ -219,7 +234,7 @@ export default function StudioV2ImportPage() {
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
-  }, [attempt, captureEnabled, debugEnabled, forceAutoplayBlocked, initialAmbientCandidate, initialAmbientProgress, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled])
+  }, [attempt, captureEnabled, debugEnabled, forceAutoplayBlocked, initialAmbientCandidate, initialAmbientProgress, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled, photoBoardGridEnabled, photoSlotOverlayEnabled, photoWallReviewEnabled])
 
   const enableExplore = () => {
     setExploring(true)
@@ -240,6 +255,8 @@ export default function StudioV2ImportPage() {
       data-complete-ready-ms={entryState?.completeReadyMs ?? ''}
       data-interactions-enabled={entryState?.interactionsEnabled ?? false}
       data-critical-requests={entryState?.requests?.length ?? 0}
+      data-photo-wall-review={photoWallReviewEnabled || undefined}
+      data-photo-slot-overlay={photoSlotOverlayEnabled || undefined}
     >
       <div
         ref={mountRef}
@@ -298,7 +315,7 @@ export default function StudioV2ImportPage() {
         />
       )}
 
-      {debugEnabled && !captureEnabled && !performanceEnabled && (
+      {debugEnabled && !captureEnabled && !performanceEnabled && photoWallDebugPanelEnabled && (
         <header className="studio-v2__header">
           <a href="/" className="studio-v2__back">BACK</a>
           <p><span>FRED STUDIO</span><small>IMPORTED LOFT / V2</small></p>
@@ -309,7 +326,7 @@ export default function StudioV2ImportPage() {
         </header>
       )}
 
-      {debugEnabled && !captureEnabled && !performanceEnabled && ready && !exploring && (
+      {debugEnabled && !captureEnabled && !performanceEnabled && photoWallDebugPanelEnabled && ready && !exploring && (
         <p className="studio-v2__hint">SELECT EXPLORE TO ORBIT THE LOFT</p>
       )}
 
@@ -319,7 +336,7 @@ export default function StudioV2ImportPage() {
         visible={loadingVisible || Boolean(error)}
         onRetry={() => setAttempt((value) => value + 1)}
       />
-      {debugEnabled && !captureEnabled && !performanceEnabled && (
+      {debugEnabled && !captureEnabled && !performanceEnabled && photoWallDebugPanelEnabled && (
         <Suspense fallback={null}>
           <StudioV2DebugPanel
             audit={audit}

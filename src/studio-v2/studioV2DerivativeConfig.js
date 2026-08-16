@@ -127,6 +127,7 @@ export function createStudioV2DeliveryConfig(requested = {}, allowDerivatives = 
     marshallUrl: sourceOnly ? null : derivativeUrl(derivativeName('marshall', marshall), textures, meshCompression),
     guitarUrl: sourceOnly ? null : derivativeUrl(derivativeName('guitar', guitar), textures, meshCompression),
     photoBoardUrl: assetUrl('models/fred-studio-v2/objects/cork_board_clean.glb'),
+    photoManifestUrl: assetUrl('studio-v2/photo-wall/manifest.json'),
     polaroidCameraUrl: assetUrl('models/fred-studio-v2/objects/polaroid_camera.glb'),
     documentFolderUrl: assetUrl('models/fred-studio-v2/objects/document_file_folder.glb'),
     coffeeCupUrl: assetUrl('models/fred-studio-v2/objects/coffee_cup.glb'),
