@@ -13,44 +13,48 @@ export const STUDIO_V2_PHOTO_STYLES = Object.freeze(['print', 'polaroid'])
 export const STUDIO_V2_PHOTO_SIZES = Object.freeze(['small', 'medium', 'large', 'hero'])
 export const STUDIO_V2_PHOTO_FIT_MODES = Object.freeze(['contain', 'cover', 'smart'])
 export const STUDIO_V2_PHOTO_PACKAGING_MODES = Object.freeze(['mixed', 'all-polaroid'])
+export const STUDIO_V2_PHOTO_SCALE_PASS = 0.78
+export const STUDIO_V2_PHOTO_CARD_SCALE = 0.702
 export const STUDIO_V2_PHOTO_MATERIAL_PROFILE = Object.freeze({
-  contactShadowBoardLift: 0.00035,
-  contactShadowMargin: 0.014,
-  contactShadowOpacity: 0.52,
+  contactShadowBoardLift: 0.00036,
+  contactShadowMargin: 0.0155,
+  contactShadowOpacity: 0.5,
   imageBumpScale: 0.000012,
-  imageClearcoat: 0.07,
-  imageClearcoatRoughness: 0.82,
+  imageClearcoat: 0.04,
+  imageClearcoatRoughness: 0.9,
   imageEnvMapIntensity: 0.17,
-  imageRoughness: 0.66,
-  paperBumpScale: 0.000065,
-  paperEdgeEnvMapIntensity: 0.04,
-  paperEnvMapIntensity: 0.1,
-  paperThickness: 0.0072,
+  imageRoughness: 0.64,
+  paperBumpScale: 0.000105,
+  paperEdgeEnvMapIntensity: 0.045,
+  paperEdgeRoughness: 0.96,
+  paperEnvMapIntensity: 0.09,
+  paperThickness: 0.0125,
+  printBorderWidth: 0.0062,
 })
 export const STUDIO_V2_POLAROID_VARIANTS = Object.freeze([
   Object.freeze({
     id: 'classic',
-    edgeWidth: 0.0085,
-    bottomWidth: 0.0304,
+    edgeWidth: 0.012,
+    bottomWidth: 0.0425,
     edgeColor: '#e7ded1',
     paperColor: '#f5f1e8',
-    roughness: 0.93,
+    roughness: 0.96,
   }),
   Object.freeze({
     id: 'soft-ivory',
-    edgeWidth: 0.009,
-    bottomWidth: 0.0331,
+    edgeWidth: 0.0126,
+    bottomWidth: 0.046,
     edgeColor: '#e9e1d5',
     paperColor: '#f6f2e9',
-    roughness: 0.95,
+    roughness: 0.97,
   }),
   Object.freeze({
     id: 'slim',
-    edgeWidth: 0.008,
-    bottomWidth: 0.0283,
+    edgeWidth: 0.0112,
+    bottomWidth: 0.0395,
     edgeColor: '#e6ddd0',
     paperColor: '#f4f0e7',
-    roughness: 0.92,
+    roughness: 0.95,
   }),
 ])
 
@@ -287,8 +291,8 @@ function createContactShadow(width, height, shared) {
   const shadow = new THREE.Mesh(shared.planeGeometry, shared.contactShadowMaterial)
   shadow.name = 'PHOTO_CONTACT_SHADOW'
   shadow.position.set(
-    0.0016,
-    -0.0022,
+    0.002,
+    -0.0028,
     -STUDIO_V2_PHOTO_BOARD_DEPTH.baseOffsetWorld
       + STUDIO_V2_PHOTO_MATERIAL_PROFILE.contactShadowBoardLift,
   )
@@ -305,26 +309,31 @@ function createContactShadow(width, height, shared) {
 
 function createPrintCard(entry, texture, aspect, shared) {
   const dimensions = calculateStudioV2PrintDimensions(aspect, entry.size)
-  const edge = 0.004
+  const edge = STUDIO_V2_PHOTO_MATERIAL_PROFILE.printBorderWidth
   const group = new THREE.Group()
+  const rigidCard = new THREE.Group()
+  rigidCard.name = 'PHOTO_RIGID_CARD'
   group.add(createContactShadow(dimensions.width, dimensions.height, shared))
-  group.add(createPaperBody(dimensions.width, dimensions.height, 0, shared))
-  group.add(createPhotoSurface(
+  rigidCard.add(createPaperBody(dimensions.width, dimensions.height, 0, shared))
+  rigidCard.add(createPhotoSurface(
     texture,
     Math.max(0.001, dimensions.width - edge * 2),
     Math.max(0.001, dimensions.height - edge * 2),
     shared.paperThickness + 0.00022,
     shared,
   ))
-  return { dimensions, group, windowAspect: aspect }
+  group.add(rigidCard)
+  return { dimensions, group, rigidCard, windowAspect: aspect }
 }
 
 function createPolaroidCard(entry, texture, aspect, shared) {
   const layout = calculateStudioV2PolaroidLayout(aspect, entry.size, entry.slotNumber)
   const variantIndex = STUDIO_V2_POLAROID_VARIANTS.indexOf(layout.variant)
   const group = new THREE.Group()
+  const rigidCard = new THREE.Group()
+  rigidCard.name = 'PHOTO_RIGID_CARD'
   group.add(createContactShadow(layout.dimensions.width, layout.dimensions.height, shared))
-  group.add(createPaperBody(layout.dimensions.width, layout.dimensions.height, variantIndex, shared))
+  rigidCard.add(createPaperBody(layout.dimensions.width, layout.dimensions.height, variantIndex, shared))
   const surface = createPhotoSurface(
     texture,
     layout.windowDimensions.width,
@@ -333,11 +342,13 @@ function createPolaroidCard(entry, texture, aspect, shared) {
     shared,
   )
   surface.position.y = layout.windowOffsetY
-  group.add(surface)
+  rigidCard.add(surface)
+  group.add(rigidCard)
   return {
     border: Object.freeze({ bottom: layout.bottom, side: layout.side, top: layout.top }),
     dimensions: layout.dimensions,
     group,
+    rigidCard,
     packagingVariant: layout.variant.id,
     windowAspect: aspect,
   }
@@ -447,11 +458,11 @@ function createContactShadowTexture(renderer) {
   canvas.height = 256
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
-  context.shadowColor = 'rgba(48, 35, 23, 0.42)'
-  context.shadowBlur = 22
-  context.shadowOffsetX = 2
-  context.shadowOffsetY = 3
-  context.fillStyle = 'rgba(48, 35, 23, 0.26)'
+  context.shadowColor = 'rgba(48, 35, 23, 0.36)'
+  context.shadowBlur = 27
+  context.shadowOffsetX = 1.5
+  context.shadowOffsetY = 2.5
+  context.fillStyle = 'rgba(48, 35, 23, 0.22)'
   context.fillRect(24, 24, 208, 208)
   return configureProceduralTexture(canvas, renderer, { color: true })
 }
@@ -477,7 +488,7 @@ function createSharedResources(renderer) {
       color: variant.edgeColor,
       envMapIntensity: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperEdgeEnvMapIntensity,
       metalness: 0,
-      roughness: 0.97,
+      roughness: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperEdgeRoughness,
     })),
     paperFaceMaterials: STUDIO_V2_POLAROID_VARIANTS.map((variant, index) => new THREE.MeshStandardMaterial({
       bumpMap: paperTextures[index].bump,
@@ -592,7 +603,7 @@ export async function createStudioV2PhotoPackagingPreview({
     const card = entry.style === 'polaroid'
       ? createPolaroidCard(entry, texture, aspect, shared)
       : createPrintCard(entry, texture, aspect, shared)
-    if (debugSlotOverlay) card.group.add(createSlotMarker(entry.slotNumber, card.dimensions, shared))
+    if (debugSlotOverlay) card.rigidCard.add(createSlotMarker(entry.slotNumber, card.dimensions, shared))
     const coordinates = resolveStudioV2PhotoBoardCoordinates(entry)
     const localPosition = boardCoordinatesToStudioV2Position({
       ...coordinates,
@@ -626,7 +637,7 @@ export async function createStudioV2PhotoPackagingPreview({
     })
     card.group.position.copy(localPosition)
     card.group.rotation.z = THREE.MathUtils.degToRad(entry.rotation)
-    card.group.scale.setScalar(1 / boardScale)
+    card.group.scale.setScalar(STUDIO_V2_PHOTO_CARD_SCALE / boardScale)
     group.add(card.group)
     records[index] = Object.freeze({ id: entry.id, ...card.group.userData.photoPackaging })
   }))
@@ -646,6 +657,8 @@ export async function createStudioV2PhotoPackagingPreview({
       manifestCount: manifest.photos.length,
       materialProfile: STUDIO_V2_PHOTO_MATERIAL_PROFILE,
       packagingMode: manifest.packagingMode,
+      photoCardScale: STUDIO_V2_PHOTO_CARD_SCALE,
+      photoScalePass: STUDIO_V2_PHOTO_SCALE_PASS,
       normalizedSize: manifest.normalizedSize,
       positionedCount: positionedEntries.length,
       previewCount: positionedEntries.length,

@@ -43,6 +43,9 @@ import {
 } from './studioV2FloorReflection'
 import { createStudioV2CameraDirector } from './studioV2CameraDirector'
 import { createStudioV2MacbookFocus } from './studioV2MacbookFocus'
+import { createStudioV2PhotoWallFocus } from './studioV2PhotoWallFocus'
+import { createStudioV2PhotoHover } from './studioV2PhotoHover'
+import { createStudioV2PhotoDetail } from './studioV2PhotoDetail'
 import {
   loadStudioV2SceneExpansion,
   STUDIO_V2_SCENE_EXPANSION_IDS,
@@ -495,6 +498,9 @@ export function createStudioV2Scene({
   let unsubscribeAudioState = null
   let radioPanel = null
   let macbookFocus = null
+  let photoWallFocus = null
+  let photoHover = null
+  let photoDetail = null
   let tableInteractionTarget = null
   let unsubscribeRadioPanel = null
   let spatialDebug = null
@@ -929,6 +935,28 @@ export function createStudioV2Scene({
       tableTarget: tableInteractionTarget,
     })
     mount.dataset.macbookFocusTarget = 'MACBOOK_DISPLAY_TARGET'
+    const photoBoardRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard)
+    photoWallFocus = createStudioV2PhotoWallFocus({
+      camera,
+      cameraDirector,
+      domElement: renderer.domElement,
+      isInteractionLocked: () => photoDetail?.isOpen() ?? false,
+      photoBoardRoot,
+    })
+    mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
+    photoHover = createStudioV2PhotoHover({
+      camera,
+      cameraDirector,
+      domElement: renderer.domElement,
+      photoBoardRoot,
+    })
+    photoDetail = createStudioV2PhotoDetail({
+      camera,
+      cameraDirector,
+      domElement: renderer.domElement,
+      photoBoardRoot,
+      photoHover,
+    })
     entryGate.markCondition('worldMatricesReady')
     entryGate.markCondition('shadowsReady')
 
@@ -1108,6 +1136,7 @@ export function createStudioV2Scene({
     const { width, height } = renderSize()
     camera.aspect = width / height
     cameraDirector.setViewport(width)
+    photoDetail?.refresh()
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, width < 700 ? 1.35 : pixelRatioCap))
     renderer.setSize(width, height)
   }
@@ -1284,10 +1313,15 @@ export function createStudioV2Scene({
     // Camera Director owns transition, controls, safety resolution and final pose
     // within one update cycle, so no invalid candidate reaches the renderer.
     cameraDirector.update(time)
+    photoHover?.update(time)
+    photoDetail?.update(time)
     mount.dataset.cameraDirectorState = cameraDirector.getCurrentState()
     mount.dataset.cameraEndpointPhase = cameraDirector.getEndpointPhase()
     mount.dataset.cameraRailProgress = String(cameraDirector.getRailProgress())
     mount.dataset.macbookFocusState = macbookFocus?.getState().state ?? 'UNAVAILABLE'
+    mount.dataset.photoWallFocusState = photoWallFocus?.getState().state ?? 'UNAVAILABLE'
+    mount.dataset.photoHoverId = photoHover?.getState().hoveredId ?? 'NONE'
+    mount.dataset.photoDetailState = photoDetail?.getState().interactionState ?? 'UNAVAILABLE'
     lightHelpers.forEach((helper) => helper.update())
     if (performanceSample?.updateBaseline) renderer.info.reset()
     if (floorReflection) floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
@@ -1622,6 +1656,37 @@ export function createStudioV2Scene({
       if (!debug && !capture) return 'AUTO'
       return macbookFocus?.setReducedMotionOverride(mode) ?? 'AUTO'
     },
+    getPhotoWallFocusState() {
+      return photoWallFocus?.getState() ?? null
+    },
+    getPhotoWallFocusContract() {
+      return photoWallFocus?.getContract() ?? null
+    },
+    subscribePhotoWallFocus(listener) {
+      return photoWallFocus?.subscribe(listener) ?? (() => {})
+    },
+    requestPhotoWallFocus(source = 'RUNTIME') {
+      return photoWallFocus?.requestFocus(source) ?? false
+    },
+    closePhotoWallFocus(source = 'RUNTIME') {
+      return photoWallFocus?.closeFocus(source) ?? false
+    },
+    setPhotoWallReducedMotionOverride(mode) {
+      if (!debug && !capture) return 'AUTO'
+      return photoWallFocus?.setReducedMotionOverride(mode) ?? 'AUTO'
+    },
+    getPhotoHoverState() {
+      return photoHover?.getState() ?? null
+    },
+    getPhotoDetailState() {
+      return photoDetail?.getState() ?? null
+    },
+    requestPhotoDetail(id, source = 'RUNTIME') {
+      return photoDetail?.requestDetailById(id, source) ?? false
+    },
+    closePhotoDetail(source = 'RUNTIME') {
+      return photoDetail?.closeDetail(source) ?? false
+    },
     getAmbientCameraReport() {
       return cameraDirector.getAmbientReport()
     },
@@ -1842,6 +1907,12 @@ export function createStudioV2Scene({
       radioPanel?.dispose()
       macbookFocus?.dispose()
       macbookFocus = null
+      photoWallFocus?.dispose()
+      photoWallFocus = null
+      photoDetail?.dispose()
+      photoDetail = null
+      photoHover?.dispose()
+      photoHover = null
       tableInteractionTarget?.geometry.dispose()
       tableInteractionTarget?.material.dispose()
       tableInteractionTarget?.removeFromParent()
@@ -1887,6 +1958,10 @@ export function createStudioV2Scene({
       delete mount.dataset.macbookFocusState
       delete mount.dataset.macbookFocusAudit
       delete mount.dataset.macbookFocusTarget
+      delete mount.dataset.photoWallFocusState
+      delete mount.dataset.photoWallFocusTarget
+      delete mount.dataset.photoHoverId
+      delete mount.dataset.photoDetailState
       delete mount.dataset.floorReflectionEnabled
       delete mount.dataset.floorReflectionReady
       delete mount.dataset.floorReflectionUpdates

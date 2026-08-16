@@ -5,6 +5,7 @@ import {
   STUDIO_V2_CAMERA_BASELINE,
   STUDIO_V2_CAMERA_POSES,
   STUDIO_V2_CAMERA_STATES,
+  STUDIO_V2_PHOTO_WALL_FOCUS_POSE,
   STUDIO_V2_ROOM_WIDE_START_POSE,
   STUDIO_V2_TABLE_OVERVIEW_POSE,
   studioV2CameraPose,
@@ -142,6 +143,9 @@ export function createStudioV2CameraDirector({
   let macbookFocusSourcePose = null
   let macbookFocusLastExit = 'NONE'
   let macbookFocusCorridor = null
+  let photoWallFocusPose = STUDIO_V2_PHOTO_WALL_FOCUS_POSE
+  let photoWallFocusSourcePose = null
+  let photoWallFocusLastExit = 'NONE'
   let railConsumedBy = 'NONE'
   let tableSkipAudit = null
   let finalDriftFramePending = false
@@ -759,6 +763,88 @@ export function createStudioV2CameraDirector({
     }
   }
 
+  function configurePhotoWallFocus({ pose = STUDIO_V2_PHOTO_WALL_FOCUS_POSE } = {}) {
+    photoWallFocusPose = pose
+    return Boolean(photoWallFocusPose)
+  }
+
+  function requestPhotoWallFocus(pose = photoWallFocusPose, options = {}) {
+    if (!pose || transition || state !== STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT) return false
+    photoWallFocusSourcePose = getCurrentPose()
+    state = STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS_TRANSITION
+    endpointPhase = 'PHOTO_WALL_FOCUS_TRANSITION'
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'PHOTO_WALL_FOCUS_ENTER'
+    return transitionTo(pose, {
+      allowOfficial: true,
+      duration: focusReducedMotion(options.reducedMotionOverride)
+        ? 200
+        : (options.duration ?? 1550),
+      exactFov: true,
+      intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
+        ? null
+        : options.intermediatePosition,
+      onComplete: () => {
+        state = STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS
+        endpointPhase = 'PHOTO_WALL_FOCUS'
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'PHOTO_WALL_FIXED_INSPECTION'
+        controls.enabled = false
+      },
+    })
+  }
+
+  function closePhotoWallFocus(options = {}) {
+    if (![STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS_TRANSITION,
+      STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS,
+      STUDIO_V2_CAMERA_STATES.PHOTO_WALL_EXIT_TRANSITION,
+    ].includes(state)) return false
+    if (state === STUDIO_V2_CAMERA_STATES.PHOTO_WALL_EXIT_TRANSITION) return true
+    if (transition) transition = null
+    state = STUDIO_V2_CAMERA_STATES.PHOTO_WALL_EXIT_TRANSITION
+    endpointPhase = 'PHOTO_WALL_EXIT_TRANSITION'
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'PHOTO_WALL_FOCUS_EXIT'
+    return transitionTo(STUDIO_V2_TABLE_OVERVIEW_POSE, {
+      allowOfficial: true,
+      duration: focusReducedMotion(options.reducedMotionOverride)
+        ? 200
+        : (options.duration ?? 1350),
+      intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
+        ? null
+        : options.intermediatePosition,
+      onComplete: () => {
+        endpointPhase = 'TABLE_OVERVIEW'
+        enterTableFreeOrbit()
+        photoWallFocusLastExit = options.source ?? 'API'
+      },
+    })
+  }
+
+  function refreshPhotoWallFocus() {
+    if (transition || state !== STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS || !photoWallFocusPose) return false
+    applyFocusPose(photoWallFocusPose)
+    return true
+  }
+
+  function getPhotoWallFocusState() {
+    return {
+      state,
+      transition: transition?.id ?? null,
+      transitionProgress: transition ? rounded(transition.progress, 4) : null,
+      inputOwner,
+      inputType,
+      controlsLocked: !controls.enabled,
+      fixedInspection: state === STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS && !transition,
+      orbitEnabled: controls.enabled,
+      zoomEnabled: controls.enabled && controls.enableZoom,
+      sourcePose: photoWallFocusSourcePose,
+      lastExit: photoWallFocusLastExit,
+      near: camera.near,
+      fov: camera.fov,
+    }
+  }
+
   function startOverrideReturn(time) {
     returnTransition = {
       startedAt: time,
@@ -1238,7 +1324,9 @@ export function createStudioV2CameraDirector({
     beginUserInput,
     cancelTransition,
     closeMacbookFocus,
+    closePhotoWallFocus,
     configureMacbookFocus,
+    configurePhotoWallFocus,
     captureCurrentPose() {
       return JSON.stringify({ id: 'CAPTURED_CAMERA_POSE', state, ...poseFromCamera(camera, controls) }, null, 2)
     },
@@ -1279,6 +1367,7 @@ export function createStudioV2CameraDirector({
       return state
     },
     getMacbookFocusState,
+    getPhotoWallFocusState,
     getEndpointPhase() {
       return endpointPhase
     },
@@ -1405,8 +1494,10 @@ export function createStudioV2CameraDirector({
     },
     resetToRoomWideStart,
     requestMacbookFocus,
+    requestPhotoWallFocus,
     requestTableSkip,
     refreshMacbookFocus,
+    refreshPhotoWallFocus,
     scrubAmbientProgress,
     setDebugHeadLook,
     setDebugReturnProgress,
@@ -1437,6 +1528,7 @@ export function createStudioV2CameraDirector({
         camera.fov = responsiveFov(activeBaseFov, viewportWidth)
         camera.updateProjectionMatrix()
         refreshMacbookFocus()
+        refreshPhotoWallFocus()
       }
       return camera.fov
     },

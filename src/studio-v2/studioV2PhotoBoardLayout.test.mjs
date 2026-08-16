@@ -17,6 +17,7 @@ import {
   calculateStudioV2PolaroidLayout,
   resolveStudioV2PhotoManifest,
   resolveStudioV2PolaroidVariant,
+  STUDIO_V2_PHOTO_CARD_SCALE,
   STUDIO_V2_PHOTO_MATERIAL_PROFILE,
   STUDIO_V2_POLAROID_VARIANTS,
 } from './studioV2PhotoPackaging.js'
@@ -158,8 +159,12 @@ for (const photo of realPhotos) {
   assert.ok(layout.bottom > layout.top * 3)
   const { width: cardWidth, height: cardHeight } = layout.dimensions
   const radians = Math.abs(photo.rotation) * Math.PI / 180
-  const rotatedWidth = Math.abs(cardWidth * Math.cos(radians)) + Math.abs(cardHeight * Math.sin(radians))
-  const rotatedHeight = Math.abs(cardWidth * Math.sin(radians)) + Math.abs(cardHeight * Math.cos(radians))
+  const rotatedWidth = (
+    Math.abs(cardWidth * Math.cos(radians)) + Math.abs(cardHeight * Math.sin(radians))
+  ) * STUDIO_V2_PHOTO_CARD_SCALE
+  const rotatedHeight = (
+    Math.abs(cardWidth * Math.sin(radians)) + Math.abs(cardHeight * Math.cos(radians))
+  ) * STUDIO_V2_PHOTO_CARD_SCALE
   const halfBoardX = rotatedWidth / STUDIO_V2_PHOTO_BOARD_SURFACE.worldWidth * 50
   const halfBoardY = rotatedHeight / STUDIO_V2_PHOTO_BOARD_SURFACE.worldHeight * 50
   assert.ok(photo.x - halfBoardX >= 0 && photo.x + halfBoardX <= 100, `${photo.id} crosses the board's horizontal edge`)

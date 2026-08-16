@@ -828,6 +828,12 @@ export default function StudioV2DebugPanel({
           <button type="button" onClick={() => runtime.enterTableFreeOrbit()}>
             ENTER TABLE FREE ORBIT
           </button>
+          <button type="button" onClick={() => runtime.requestPhotoWallFocus('DEBUG_BUTTON')}>
+            ENTER PHOTO WALL FOCUS
+          </button>
+          <button type="button" onClick={() => runtime.closePhotoWallFocus('DEBUG_BUTTON')}>
+            EXIT PHOTO WALL FOCUS
+          </button>
           <button type="button" onClick={() => runtime.setDebugTablePitch(-35)}>TABLE PITCH −35°</button>
           <button type="button" onClick={() => runtime.setDebugTablePitch(0)}>TABLE EYE LEVEL 0°</button>
           <button type="button" onClick={() => runtime.setDebugTablePitch(6)}>TABLE PITCH +6°</button>
