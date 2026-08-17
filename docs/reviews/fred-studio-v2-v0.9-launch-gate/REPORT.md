@@ -60,14 +60,25 @@ Passed:
 
 Deployment uses the existing GitHub Pages workflow at `.github/workflows/deploy.yml`, triggered by a push to `main`. The workflow installs dependencies, builds the Vite site, and deploys the Pages artifact. Vite base remains `/`, and `CNAME` remains `jasoncoolcocobobo.com`.
 
-Checkpoint status when this report entered the release commit: local acceptance passed; production deployment and live-domain verification were pending the authorized feature push and fast-forward merge to `main`. The final task handoff records the resulting workflow run, production verification, and final commit SHAs.
+Release checkpoint `100cc8dc49d65e08a98d69ac578bf75181bc8d8c` was pushed to the feature branch and fast-forwarded to `main`. GitHub Actions run [32005687601](https://github.com/jasoncoolcoco-hub/jasoncoolcoco-hub.github.io/actions/runs/32005687601) completed successfully: both the build and GitHub Pages deploy jobs passed.
+
+Live verification at `https://jasoncoolcocobobo.com/` passed:
+
+- HTTPS and the production root resolve to Fred Studio V2.
+- The scene reaches Scene Ready and all critical production assets load.
+- The physical MacBook, visible Chrome target, Home, native scrolling, Footprints, Back, Escape, and reopen route work with real browser input.
+- The Photo Wall focus, hover, Photo Detail, close, and exit route work with real browser input; all 39 photos are visibly populated.
+- A trusted click on the visible Fred Studio Radio starts the production audio track.
+- The observed production asset inventory contained 65 assets, including 8 GLBs, 40 Photo Wall resources, the published audio catalogue, and the production audio file; no localhost asset URL was present.
+- Production console output contained no errors. The only entry was the known non-blocking Three.js shadow-map deprecation warning.
 
 ## Known non-blocking limitations
 
 - The 3D room is desktop-first and uses a deliberately cropped composition on a narrow mobile viewport, while keeping core entry and exit paths usable.
+- A cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment while loading the large 3D payload from a cold edge cache. The loading UI remained responsive, progress advanced, and subsequent interaction was stable; future asset-weight work remains desirable.
 - The current Three.js version emits a `PCFSoftShadowMap` deprecation warning and falls back to `PCFShadowMap`; no visible failure was observed.
 - The generated JavaScript bundle produces Vite's existing large-chunk advisory; it does not block this release.
 
 ## Decision
 
-Local launch gate: **PASS**. No release-blocking visual, interaction, asset, console, audio, responsive, or performance defect was found in the accepted v0.9 scope.
+Launch gate: **PASS**. Local and live-production verification found no release-blocking visual, interaction, asset, console, audio, responsive, or performance defect in the accepted v0.9 scope.
