@@ -98,12 +98,35 @@ The entry gate now reports five requests, the nominal Scene Ready footprint is a
 
 Local visual and functional parity passed for the normal room, all Tier 2 props, the complete 39-photo wall, Photo Wall hover/detail/exit, Catalina desktop, visible Chrome icon, Home, native scrolling, Footprints with a 4096-texture WebGPU Earth, Back, Escape, full MacBook leave/revisit, and trusted-gesture audio recovery. Repeated lifecycle checks retained one Portal, one Home instance, one Earth canvas, and one audio resource.
 
-Production performance and live verification will be appended after the Stage 5G.1 checkpoint reaches GitHub Pages. The remaining intentionally unchanged Tier 1 weight is led by approximately 28.47 MB of Photo Wall images plus the room, guitar, and Marshall models.
+Stage 5G.1 checkpoint `a27a5bf59592c730d0856adde9f01b36359eb3e6` was pushed to `perf/fred-studio-v2-cold-load`, fast-forwarded to `main`, and deployed through GitHub Pages in Actions run [32012187775](https://github.com/jasoncoolcoco-hub/jasoncoolcoco-hub.github.io/actions/runs/32012187775). The local branch, remote performance branch, local `main`, and remote `main` all matched that checkpoint before the documentation-only follow-up.
+
+Production functional verification passed at `https://jasoncoolcocobobo.com/`:
+
+- Scene Ready completed and the accepted normal room rendered with the post-ready Polaroid camera, folder, and coffee cup present.
+- All 39 Photo Wall photos rendered; real pointer input entered focus, activated hover, opened Photo Detail, closed it, and exited cleanly.
+- Real pointer input entered MacBook Focus and opened Home through the visible Chrome icon. Native scrolling reached Footprints, whose Earth rendered with its accepted 4096 textures. Back, Chrome reopen, Escape, and MacBook exit restored their accepted states without duplicate Portal or Earth layers.
+- Trusted-gesture audio recovery reached `playing` with the unchanged published M4A; the audio binary remained outside the Scene Ready gate.
+- No production console error or asset failure was observed. The only console entry was the known non-blocking Three.js shadow-map deprecation warning.
+
+Production cold-cache results did **not** meet the Stage 5G.1 objective:
+
+| Measurement | Instrumented Scene Ready | Observed wall time |
+|---|---:|---:|
+| Independent cold profile 1 | 53.648 s | 58.600 s |
+| Independent cold profile 2 | 60.586 s | approximately 60.6 s |
+| Two-profile midpoint | 57.117 s | approximately 59.6 s |
+| Isolated warm run | 2.130 s | 2.711 s |
+
+Only two genuinely independent production cache profiles were available through the supported browser environments. A third run was not fabricated from a normal warm reload; the two independent results already reproduce the 55–60 second unfamiliar-device problem and establish the `>=30s` classification. The startup inventory remained five gate requests and approximately 78.3 MB nominal response-body bytes. Browser-level transferred bytes and per-resource timing were not exposed by the supported inspection surface.
+
+Direct no-cache production response samples corroborated the remaining Tier 1 network cost: the 18.42 MB room model took 25.29 seconds, the 9.98 MB Marshall model took 24.01 seconds, the 17.33 MB guitar model took 12.90 seconds, and the 2.45 MB MacBook model took 12.55 seconds in the sampled network conditions. In addition, all 39 generated Photo Wall images remain in Tier 1 at approximately 28 MB. These accepted, visually lossless assets explain why the architectural change produces a 2.71-second warm load but does not solve cold production delivery on this path.
+
+Stage 5G.1 production performance decision: **FAIL / objective not fully achieved**. The deployment remains online because the release is functionally stable and visually unchanged. A future Stage 5G.2 should address Tier 1 delivery and request strategy without reducing geometry, photo, texture, DPR, lighting, shadow, reflection, or material quality; no Stage 5G.2 work was started here.
 
 ## Known non-blocking limitations
 
 - The 3D room is desktop-first and uses a deliberately cropped composition on a narrow mobile viewport, while keeping core entry and exit paths usable.
-- Before Stage 5G.1, a cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment while loading the large 3D payload from a cold edge cache. This remains the historical baseline until the optimized production deployment is measured.
+- Before Stage 5G.1, a cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment. The optimized deployment reproduced that range in two independent cold profiles (53.648 and 60.586 seconds instrumented), so the production cold-load objective remains open despite the substantial local and warm-cache improvement.
 - The current Three.js version emits a `PCFSoftShadowMap` deprecation warning and falls back to `PCFShadowMap`; no visible failure was observed.
 - The generated JavaScript bundle produces Vite's existing large-chunk advisory; it does not block this release.
 
