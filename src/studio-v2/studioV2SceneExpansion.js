@@ -359,12 +359,12 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     folder: deliveryConfig.documentFolderUrl,
     coffee: deliveryConfig.coffeeCupUrl,
   }
-  const [photoBoardGltf, cameraGltf, folderGltf, coffeeGltf] = await Promise.all([
-    loadAsset(loaderSupport.loader, urls.photoBoard, STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard, testConfig),
-    loadAsset(loaderSupport.loader, urls.camera, STUDIO_V2_SCENE_EXPANSION_IDS.camera, testConfig),
-    loadAsset(loaderSupport.loader, urls.folder, STUDIO_V2_SCENE_EXPANSION_IDS.folder, testConfig),
-    loadAsset(loaderSupport.loader, urls.coffee, STUDIO_V2_SCENE_EXPANSION_IDS.coffee, testConfig),
-  ])
+  const photoBoardGltf = await loadAsset(
+    loaderSupport.loader,
+    urls.photoBoard,
+    STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard,
+    testConfig,
+  )
   const photoBoardPlacement = createStaticPlacement(
     photoBoardGltf,
     renderer,
@@ -400,12 +400,14 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   photoBoardPlacement.record.photoPackaging = photoPackaging.report
   photoBoardPlacement.record.semanticIds.push(...photoPackaging.records.map(({ id }) => id))
 
-  const placements = [
-    photoBoardPlacement,
-    createStaticPlacement(cameraGltf, renderer, ASSET_CONFIG.camera, urls.camera),
-    createStaticPlacement(folderGltf, renderer, ASSET_CONFIG.folder, urls.folder),
-    createStaticPlacement(coffeeGltf, renderer, ASSET_CONFIG.coffee, urls.coffee),
-  ]
+  const placements = [photoBoardPlacement]
+  const records = placements.map(({ record }) => record)
+  const textureFormats = [...new Set(
+    placements.flatMap(({ resources }) => resources.textureFormats),
+  )].sort()
+  let deferredPromise = null
+  let deferredState = 'idle'
+  let disposed = false
   const group = new THREE.Group()
   group.name = 'FredStudioV2SceneExpansion'
   group.userData.studioV2Id = 'SCENE_EXPANSION_STAGE5B'
@@ -415,14 +417,52 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     semanticIds: record.semanticIds,
     url: record.url,
   }))
-  const textureFormats = [...new Set(placements.flatMap(({ resources }) => resources.textureFormats))].sort()
+
+  const loadDeferredAssets = () => {
+    if (disposed) return Promise.resolve({ records: [], status: 'disposed' })
+    if (deferredPromise) return deferredPromise
+    deferredState = 'loading'
+    deferredPromise = Promise.all([
+      loadAsset(loaderSupport.loader, urls.camera, STUDIO_V2_SCENE_EXPANSION_IDS.camera, testConfig),
+      loadAsset(loaderSupport.loader, urls.folder, STUDIO_V2_SCENE_EXPANSION_IDS.folder, testConfig),
+      loadAsset(loaderSupport.loader, urls.coffee, STUDIO_V2_SCENE_EXPANSION_IDS.coffee, testConfig),
+    ]).then(([cameraGltf, folderGltf, coffeeGltf]) => {
+      if (disposed) return { records: [], status: 'disposed' }
+      const deferredPlacements = [
+        createStaticPlacement(cameraGltf, renderer, ASSET_CONFIG.camera, urls.camera),
+        createStaticPlacement(folderGltf, renderer, ASSET_CONFIG.folder, urls.folder),
+        createStaticPlacement(coffeeGltf, renderer, ASSET_CONFIG.coffee, urls.coffee),
+      ]
+      deferredPlacements.forEach(({ placement }) => group.add(placement))
+      deferredPlacements.forEach(({ record }) => onAssetReady?.(record.anchorName, {
+        deferred: true,
+        semanticIds: record.semanticIds,
+        url: record.url,
+      }))
+      placements.push(...deferredPlacements)
+      records.push(...deferredPlacements.map(({ record }) => record))
+      textureFormats.splice(0, textureFormats.length, ...new Set(
+        placements.flatMap(({ resources }) => resources.textureFormats),
+      ))
+      deferredState = 'ready'
+      return { records: deferredPlacements.map(({ record }) => record), status: deferredState }
+    }).catch((error) => {
+      deferredState = 'error'
+      throw error
+    })
+    return deferredPromise
+  }
+
   return {
     group,
-    records: placements.map(({ record }) => record),
+    records,
     textureFormats,
+    getDeferredState: () => deferredState,
     getMaterialMode: () => 'refined',
+    loadDeferredAssets,
     setMaterialMode: () => 'refined',
     dispose() {
+      disposed = true
       group.removeFromParent()
       disposeGroup(
         group,

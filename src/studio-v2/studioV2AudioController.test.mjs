@@ -10,11 +10,13 @@ class FakeAudio {
     this.duration = 180
     this.error = null
     this.listeners = new Map()
+    this.loadCalls = 0
     this.loop = false
     this.paused = true
     this.preload = 'auto'
     this.src = ''
     this.volume = 1
+    this.playCalls = 0
   }
 
   addEventListener(name, listener) {
@@ -32,6 +34,7 @@ class FakeAudio {
   }
 
   load() {
+    this.loadCalls += 1
     this.emit('loadedmetadata')
   }
 
@@ -41,6 +44,7 @@ class FakeAudio {
   }
 
   play() {
+    this.playCalls += 1
     this.paused = false
     this.emit('playing')
     return Promise.resolve()
@@ -107,6 +111,24 @@ const catalogue = {
     },
   ],
 }
+
+let deferredEntryAudio
+const deferredEntryController = createStudioV2AudioController({
+  createAudioElement: () => {
+    deferredEntryAudio = new FakeAudio()
+    return deferredEntryAudio
+  },
+  fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
+})
+await deferredEntryController.prepareEntry()
+assert.equal(deferredEntryAudio.preload, 'none')
+assert.equal(deferredEntryAudio.loadCalls, 0)
+assert.equal(deferredEntryController.getState().entryStatus, 'prepared')
+await deferredEntryController.startEntryExperience()
+assert.equal(deferredEntryAudio.preload, 'auto')
+assert.equal(deferredEntryAudio.playCalls, 1)
+deferredEntryController.destroy()
+FakeAudio.instances = 0
 
 const controller = createStudioV2AudioController({
   createAudioElement: () => new FakeAudio(),

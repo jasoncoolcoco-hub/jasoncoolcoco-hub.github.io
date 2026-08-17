@@ -162,7 +162,6 @@ export default function StudioV2ImportPage() {
       catalogueUrl: catalogueSource.url,
     })
     const unsubscribeAudio = controller.subscribe(setAudioState)
-    controller.prepareEntry()
     setAudioController(controller)
     const scene = createStudioV2Scene({
       mount: mountRef.current,

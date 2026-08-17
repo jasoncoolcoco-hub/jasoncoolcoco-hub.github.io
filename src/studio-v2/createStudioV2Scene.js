@@ -523,6 +523,8 @@ export function createStudioV2Scene({
   let modelResource = null
   let roomLoaderSupport = null
   let roomTextureFormats = []
+  let deferredAssetsIdleId = null
+  let deferredAssetsTimer = null
   let radioMetadataReadyMs = null
   let radioPanelReadyMs = null
   let radioPanelState = null
@@ -978,9 +980,6 @@ export function createStudioV2Scene({
       'MARSHALL_GUITAR_FLOOR_01',
       STUDIO_V2_RADIO_PANEL_ID,
       STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard,
-      STUDIO_V2_SCENE_EXPANSION_IDS.camera,
-      STUDIO_V2_SCENE_EXPANSION_IDS.folder,
-      STUDIO_V2_SCENE_EXPANSION_IDS.coffee,
     ].every((semanticId) => openingSemanticIds.has(semanticId))
     if (!openingGroupsPresent) {
       throw new Error('Entry-critical opening groups were not all registered before warm-up.')
@@ -1129,6 +1128,28 @@ export function createStudioV2Scene({
     mount.dataset.modelReady = 'true'
     onStudioV2Ready?.(audit)
     onReady?.(audit)
+    const loadDeferredSceneAssets = () => {
+      deferredAssetsIdleId = null
+      if (disposed) return
+      mount.dataset.deferredAssets = 'loading'
+      sceneExpansionResource.loadDeferredAssets().then((result) => {
+        if (disposed) return
+        placedObjectRecords.push(...result.records)
+        entryRoot.updateMatrixWorld(true)
+        mount.dataset.deferredAssets = result.status
+      }).catch(() => {
+        if (!disposed) mount.dataset.deferredAssets = 'error'
+      })
+    }
+    deferredAssetsTimer = window.setTimeout(() => {
+      deferredAssetsTimer = null
+      if (disposed) return
+      if (window.requestIdleCallback) {
+        deferredAssetsIdleId = window.requestIdleCallback(loadDeferredSceneAssets, { timeout: 1800 })
+      } else {
+        loadDeferredSceneAssets()
+      }
+    }, 700)
     return audit
   })().catch((error) => {
     if (!disposed) {
@@ -1934,6 +1955,8 @@ export function createStudioV2Scene({
       if (disposed) return
       disposed = true
       cancelAnimationFrame(animationFrame)
+      if (deferredAssetsTimer !== null) window.clearTimeout(deferredAssetsTimer)
+      if (deferredAssetsIdleId !== null) window.cancelIdleCallback?.(deferredAssetsIdleId)
       resizeObserver.disconnect()
       marshallInteraction?.dispose()
       unsubscribeAudioState?.()
@@ -1976,6 +1999,7 @@ export function createStudioV2Scene({
       delete mount.dataset.criticalRequests
       delete mount.dataset.firstVisibleFrameMs
       delete mount.dataset.interactionsEnabled
+      delete mount.dataset.deferredAssets
       delete mount.dataset.sceneReady
       delete mount.dataset.audioState
       delete mount.dataset.audioCurrentTime

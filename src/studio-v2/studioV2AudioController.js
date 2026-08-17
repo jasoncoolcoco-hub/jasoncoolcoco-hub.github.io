@@ -106,7 +106,7 @@ export function createStudioV2AudioController({
 } = {}) {
   const audio = createAudioElement()
   audio.autoplay = false
-  audio.preload = 'auto'
+  audio.preload = 'none'
 
   const listeners = new Set()
   let catalogue = null
@@ -288,7 +288,7 @@ export function createStudioV2AudioController({
     return cataloguePromise
   }
 
-  async function setTrack(trackId) {
+  async function setTrack(trackId, { preload = true } = {}) {
     if (destroyed) return snapshot()
     if (!catalogue) await loadCatalogue()
     if (!catalogue) return snapshot()
@@ -300,6 +300,7 @@ export function createStudioV2AudioController({
     audio.pause()
     selectedTrack = nextTrack
     audio.src = nextTrack.file
+    audio.preload = preload ? 'auto' : 'none'
     audio.loop = nextTrack.loop
     audio.volume = 0
     audio.currentTime = 0
@@ -315,7 +316,7 @@ export function createStudioV2AudioController({
       error: null,
       errorCode: null,
     })
-    audio.load()
+    if (preload) audio.load()
     return snapshot()
   }
 
@@ -381,6 +382,7 @@ export function createStudioV2AudioController({
     if (destroyed) return snapshot()
     if (!selectedTrack) await loadDefaultTrack()
     if (!selectedTrack || state.status === 'error') return snapshot()
+    audio.preload = 'auto'
     try {
       await audio.play()
       if (audio.volume === 0) audio.volume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
@@ -538,10 +540,8 @@ export function createStudioV2AudioController({
   async function prepareEntry() {
     await loadCatalogue()
     if (!catalogue?.defaultTrackId) return snapshot()
-    await loadDefaultTrack()
-    audio.preload = 'auto'
+    await setTrack(catalogue.defaultTrackId, { preload: false })
     audio.volume = 0
-    audio.load()
     return publish({ entryStatus: 'prepared', volume: 0 })
   }
 
@@ -553,6 +553,7 @@ export function createStudioV2AudioController({
     })
     if (!selectedTrack) await prepareEntry()
     if (!selectedTrack) return snapshot()
+    audio.preload = 'auto'
     audio.volume = 0
     try {
       if (forcePolicyBlocked) {

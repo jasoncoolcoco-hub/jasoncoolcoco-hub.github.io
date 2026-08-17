@@ -72,10 +72,38 @@ Live verification at `https://jasoncoolcocobobo.com/` passed:
 - The observed production asset inventory contained 65 assets, including 8 GLBs, 40 Photo Wall resources, the published audio catalogue, and the production audio file; no localhost asset URL was present.
 - Production console output contained no errors. The only entry was the known non-blocking Three.js shadow-map deprecation warning.
 
+## Stage 5G.1 cold-load performance optimization
+
+Stage 5G.1 preserves the accepted production assets and renderer quality while restructuring the startup dependency graph. The prior release had a real unfamiliar-device production observation of roughly 55–60 seconds and a local cold-contention baseline as high as 25.35 seconds. The entry gate previously covered eight distinct GLB requests, while the early page lifecycle exposed approximately 161 MB of nominal response-body bytes.
+
+The optimized loading tiers are:
+
+- Tier 1: room, MacBook, Marshall, guitar, radio metadata, cork board, and all 39 Photo Wall photos.
+- Tier 2: Polaroid camera, document folder, and coffee cup, loaded after Scene Ready.
+- Tier 3: published audio media, the MacBook Home bundle, and Footprints/Earth assets.
+
+The root bundle now dynamically imports Home. MacBook Focus preloads the Home bundle and the viewport-appropriate full-resolution hero, but Home does not mount until the visible Chrome trigger is clicked. Footprints and its 4096 Earth textures load only after the MacBook site is opened and Footprints is approached. The audio catalogue remains available for the room radio while the unchanged published M4A starts only at Scene Ready or from a playback action. No lower-resolution, lower-DPR, lower-detail, or lossy substitute was introduced.
+
+Final Gate local production-preview results on 2026-08-17:
+
+| Measurement | Scene Ready |
+|---|---:|
+| Cold run 1 | 5.408 s |
+| Cold run 2 | 5.548 s |
+| Cold run 3 | 5.590 s |
+| Cold median | 5.548 s |
+| Warm run | 2.527 s |
+
+The entry gate now reports five requests, the nominal Scene Ready footprint is approximately 78.3 MB, and the main entry JavaScript is approximately 200 KB instead of 363 KB. The three cold runs used isolated local origins so HTTP cache entries were not shared.
+
+Local visual and functional parity passed for the normal room, all Tier 2 props, the complete 39-photo wall, Photo Wall hover/detail/exit, Catalina desktop, visible Chrome icon, Home, native scrolling, Footprints with a 4096-texture WebGPU Earth, Back, Escape, full MacBook leave/revisit, and trusted-gesture audio recovery. Repeated lifecycle checks retained one Portal, one Home instance, one Earth canvas, and one audio resource.
+
+Production performance and live verification will be appended after the Stage 5G.1 checkpoint reaches GitHub Pages. The remaining intentionally unchanged Tier 1 weight is led by approximately 28.47 MB of Photo Wall images plus the room, guitar, and Marshall models.
+
 ## Known non-blocking limitations
 
 - The 3D room is desktop-first and uses a deliberately cropped composition on a narrow mobile viewport, while keeping core entry and exit paths usable.
-- A cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment while loading the large 3D payload from a cold edge cache. The loading UI remained responsive, progress advanced, and subsequent interaction was stable; future asset-weight work remains desirable.
+- Before Stage 5G.1, a cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment while loading the large 3D payload from a cold edge cache. This remains the historical baseline until the optimized production deployment is measured.
 - The current Three.js version emits a `PCFSoftShadowMap` deprecation warning and falls back to `PCFShadowMap`; no visible failure was observed.
 - The generated JavaScript bundle produces Vite's existing large-chunk advisory; it does not block this release.
 

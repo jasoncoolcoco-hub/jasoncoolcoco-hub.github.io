@@ -30,6 +30,7 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
   const [phase, setPhase] = useState(STUDIO_V2_MACBOOK_SITE_PHASES.CLOSED)
   const [siteState, setSiteState] = useState(STUDIO_V2_MACBOOK_SITE_STATES.CLOSED)
   const [sitePrepared, setSitePrepared] = useState(false)
+  const [siteMounted, setSiteMounted] = useState(false)
   const backButtonRef = useRef(null)
   const phaseRef = useRef(phase)
   const siteStateRef = useRef(siteState)
@@ -79,9 +80,12 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
   }, [])
 
   const prepareHome = useCallback(() => {
+    const heroSource = window.matchMedia('(max-width: 700px)').matches
+      ? '/images/hero/jason-li-hero-1440.jpg'
+      : '/images/hero/jason-li-hero-2400.jpg'
     preloadPromiseRef.current ??= Promise.all([
       loadHomeModule(),
-      preloadImage('/images/hero/jason-li-hero-1440.jpg'),
+      preloadImage(heroSource),
     ]).then(() => {
       setSitePrepared(true)
       return true
@@ -93,6 +97,7 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
     const cameraState = runtime?.getMacbookFocusState?.()?.state
     if (!runtime || !studioV2MacbookSiteCanOpen(cameraState, siteStateRef.current)) return false
     clearScheduled()
+    setSiteMounted(true)
     if (!updateSiteState(STUDIO_V2_MACBOOK_SITE_STATES.OPENING)) return false
     updatePhase(STUDIO_V2_MACBOOK_SITE_PHASES.LAUNCHING)
     const homeReady = prepareHome()
@@ -152,19 +157,13 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
   }, [clearScheduled, reducedMotion, scheduleTimer, updatePhase, updateSiteState])
 
   useEffect(() => {
-    if (!sceneReady) return undefined
-    let active = true
-    const warm = () => {
-      if (active) prepareHome()
-    }
-    const idleId = window.requestIdleCallback?.(warm, { timeout: 1200 })
-    const timer = idleId === undefined ? window.setTimeout(warm, 180) : null
-    return () => {
-      active = false
-      if (idleId !== undefined) window.cancelIdleCallback?.(idleId)
-      if (timer !== null) window.clearTimeout(timer)
-    }
-  }, [prepareHome, sceneReady])
+    if (!runtime || !sceneReady) return undefined
+    return runtime.subscribeMacbookFocus?.((focusState) => {
+      if (['MACBOOK_FOCUS_TRANSITION', 'MACBOOK_FOCUS'].includes(focusState?.state)) {
+        prepareHome()
+      }
+    })
+  }, [prepareHome, runtime, sceneReady])
 
   useEffect(() => {
     if (!runtime || !sceneReady) return undefined
@@ -188,7 +187,7 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
     runtime?.setMacbookSiteState?.(STUDIO_V2_MACBOOK_SITE_STATES.CLOSED)
   }, [clearScheduled, runtime])
 
-  if (!sitePrepared && siteState === STUDIO_V2_MACBOOK_SITE_STATES.CLOSED) return null
+  if (!siteMounted && siteState === STUDIO_V2_MACBOOK_SITE_STATES.CLOSED) return null
 
   const siteActive = siteState === STUDIO_V2_MACBOOK_SITE_STATES.OPEN
   const style = {

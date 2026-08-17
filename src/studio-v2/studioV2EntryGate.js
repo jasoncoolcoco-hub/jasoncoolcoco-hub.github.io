@@ -1,3 +1,26 @@
+export const STUDIO_V2_ASSET_TIERS = Object.freeze({
+  tier1: Object.freeze([
+    'ROOM_ENVIRONMENT',
+    'MACBOOK_ISLAND_01',
+    'MARSHALL_GUITAR_FLOOR_01',
+    'MARSHALL_AMP',
+    'GIBSON_GUITAR',
+    'MARSHALL_RADIO_PANEL_01',
+    'PHOTO_BOARD_01',
+    'PHOTO_WALL_PHOTOS',
+  ]),
+  tier2: Object.freeze([
+    'POLAROID_CAMERA_01',
+    'DOCUMENT_FOLDER_01',
+    'COFFEE_CUP_01',
+  ]),
+  tier3: Object.freeze([
+    'MACBOOK_HOME_PAGE',
+    'FOOTPRINTS_EARTH',
+    'STUDIO_AUDIO_MEDIA',
+  ]),
+})
+
 export const ENTRY_CRITICAL_ASSETS = Object.freeze([
   Object.freeze({
     id: 'ROOM_ENVIRONMENT',
@@ -41,24 +64,6 @@ export const ENTRY_CRITICAL_ASSETS = Object.freeze([
     kind: 'photo-board-base',
     resourceKey: 'photoBoardUrl',
     semanticIds: Object.freeze(['PHOTO_BOARD_01', 'PHOTO_BOARD_SURFACE', 'PHOTO_BOARD_FRAME']),
-  }),
-  Object.freeze({
-    id: 'POLAROID_CAMERA_01',
-    kind: 'opening-visible-prop',
-    resourceKey: 'polaroidCameraUrl',
-    semanticIds: Object.freeze(['POLAROID_CAMERA_01']),
-  }),
-  Object.freeze({
-    id: 'DOCUMENT_FOLDER_01',
-    kind: 'opening-visible-prop',
-    resourceKey: 'documentFolderUrl',
-    semanticIds: Object.freeze(['DOCUMENT_FOLDER_01']),
-  }),
-  Object.freeze({
-    id: 'COFFEE_CUP_01',
-    kind: 'opening-visible-prop',
-    resourceKey: 'coffeeCupUrl',
-    semanticIds: Object.freeze(['COFFEE_CUP_01']),
   }),
 ])
 
