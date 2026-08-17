@@ -10,7 +10,7 @@ export default function App() {
   const pathname = window.location.pathname.replace(/\/+$/, '')
   const isRoomV1 = pathname === '/room-v1'
   const isStudioV1 = pathname === '/studio-v1'
-  const isStudioV2Import = pathname === '/studio-v2-import-test'
+  const isStudioV2Import = pathname === '' || pathname === '/studio-v2-import-test'
 
   useEffect(() => {
     document.title = isStudioV2Import

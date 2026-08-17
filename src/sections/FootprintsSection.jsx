@@ -16,6 +16,7 @@ export default function FootprintsSection({
   backgroundY,
   chapterProgress,
   globeEntranceY,
+  showProjects = true,
   transitionProgress,
 }) {
   const [sceneState, setSceneState] = useState(
@@ -84,10 +85,12 @@ export default function FootprintsSection({
           </motion.div>
         </motion.div>
 
-        <ProjectsSection
-          progress={projectsTransitionProgress}
-          reducedMotion={reducedMotion}
-        />
+        {showProjects && (
+          <ProjectsSection
+            progress={projectsTransitionProgress}
+            reducedMotion={reducedMotion}
+          />
+        )}
 
         <GlobeScene
           projectsTransitionProgress={projectsTransitionProgress}

@@ -5,8 +5,12 @@ export default function TransitionChapterNavigation({
   projectsProgress,
   progress,
   reducedMotion,
+  visibleChapterIds,
 }) {
   const { chapters, navigation } = siteContent
+  const visibleChapters = visibleChapterIds
+    ? chapters.filter((chapter) => visibleChapterIds.includes(chapter.id))
+    : chapters
   const transitionRange = reducedMotion ? [0.08, 0.2] : [0.12, 0.24]
   const homeColor = useTransform(
     progress,
@@ -95,7 +99,7 @@ export default function TransitionChapterNavigation({
       data-home-directory="true"
     >
       <ol className="transition-chapter-list">
-        {chapters.map((chapter) => {
+        {visibleChapters.map((chapter) => {
           const isHome = chapter.id === 'home'
           const isFootprints = chapter.id === 'footprints'
           const isProjects = chapter.id === 'projects'

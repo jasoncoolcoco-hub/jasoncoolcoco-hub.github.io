@@ -8,29 +8,34 @@ const transitionScrollDistance = 170
 const footprintsScrollDistance = 220
 const projectsTransitionScrollDistance = 180
 const projectsChapterScrollDistance = 120
-const totalScrollDistance =
+const fullScrollDistance =
   transitionScrollDistance +
   footprintsScrollDistance +
   projectsTransitionScrollDistance +
   projectsChapterScrollDistance
-const transitionEnd = transitionScrollDistance / totalScrollDistance
-const footprintsEnd =
-  (transitionScrollDistance + footprintsScrollDistance) /
-  totalScrollDistance
-const projectsTransitionEnd =
-  (transitionScrollDistance +
-    footprintsScrollDistance +
-    projectsTransitionScrollDistance) /
-  totalScrollDistance
 const compactTransitionQuery = '(max-width: 700px)'
+const v09ChapterIds = Object.freeze(['home', 'footprints'])
 
-export default function HomeTransitionShell() {
+export default function HomeTransitionShell({ releaseScope = 'full', scrollContainerRef }) {
   const shellRef = useRef(null)
   const [homeReady, setHomeReady] = useState(false)
   const [compactTransition, setCompactTransition] = useState(() =>
     window.matchMedia(compactTransitionQuery).matches,
   )
   const reducedMotion = Boolean(useReducedMotion())
+  const includeProjects = releaseScope !== 'v0.9'
+  const totalScrollDistance = includeProjects
+    ? fullScrollDistance
+    : transitionScrollDistance + footprintsScrollDistance
+  const transitionEnd = transitionScrollDistance / totalScrollDistance
+  const footprintsEnd =
+    (transitionScrollDistance + footprintsScrollDistance) /
+    totalScrollDistance
+  const projectsTransitionEnd =
+    (transitionScrollDistance +
+      footprintsScrollDistance +
+      projectsTransitionScrollDistance) /
+    totalScrollDistance
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(compactTransitionQuery)
@@ -39,6 +44,7 @@ export default function HomeTransitionShell() {
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
   const { scrollYProgress } = useScroll({
+    container: scrollContainerRef,
     target: shellRef,
     offset: ['start start', 'end end'],
   })
@@ -80,17 +86,23 @@ export default function HomeTransitionShell() {
   const handleHomeReady = useCallback(() => setHomeReady(true), [])
 
   return (
-    <div ref={shellRef} className="home-transition-shell">
+    <div
+      ref={shellRef}
+      className={`home-transition-shell${includeProjects ? '' : ' home-transition-shell--v0-9'}`}
+      data-release-scope={releaseScope}
+    >
       <span
         id="footprints"
         className="footprints-scroll-anchor"
         aria-hidden="true"
       />
-      <span
-        id="projects-anchor"
-        className="projects-scroll-anchor"
-        aria-hidden="true"
-      />
+      {includeProjects && (
+        <span
+          id="projects-anchor"
+          className="projects-scroll-anchor"
+          aria-hidden="true"
+        />
+      )}
 
       <div className="home-transition-shell__sticky">
         <FootprintsSection
@@ -98,6 +110,7 @@ export default function HomeTransitionShell() {
           backgroundY={footprintsBackgroundY}
           chapterProgress={chapterProgress}
           globeEntranceY={globeEntranceY}
+          showProjects={includeProjects}
           transitionProgress={transitionProgress}
         />
 
@@ -110,6 +123,7 @@ export default function HomeTransitionShell() {
 
         {homeReady && (
           <TransitionChapterNavigation
+            visibleChapterIds={includeProjects ? undefined : v09ChapterIds}
             projectsProgress={projectsTransitionProgress}
             progress={transitionProgress}
             reducedMotion={reducedMotion}

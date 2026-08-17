@@ -43,6 +43,10 @@ import {
 } from './studioV2FloorReflection'
 import { createStudioV2CameraDirector } from './studioV2CameraDirector'
 import { createStudioV2MacbookFocus } from './studioV2MacbookFocus'
+import {
+  STUDIO_V2_MACBOOK_SITE_STATES,
+  studioV2MacbookSiteLocksStudio,
+} from './macbook-site/studioV2MacbookPortal'
 import { createStudioV2PhotoWallFocus } from './studioV2PhotoWallFocus'
 import { createStudioV2PhotoHover } from './studioV2PhotoHover'
 import { createStudioV2PhotoDetail } from './studioV2PhotoDetail'
@@ -498,6 +502,7 @@ export function createStudioV2Scene({
   let unsubscribeAudioState = null
   let radioPanel = null
   let macbookFocus = null
+  let macbookSiteState = STUDIO_V2_MACBOOK_SITE_STATES.CLOSED
   let photoWallFocus = null
   let photoHover = null
   let photoDetail = null
@@ -930,11 +935,14 @@ export function createStudioV2Scene({
       cameraDirector,
       domElement: renderer.domElement,
       getRadioState: () => radioPanel?.getState() ?? radioPanelState,
+      isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
       macbookRoot,
       renderSize,
       tableTarget: tableInteractionTarget,
     })
     mount.dataset.macbookFocusTarget = 'MACBOOK_DISPLAY_TARGET'
+    mount.dataset.macbookSiteState = macbookSiteState
+    mount.dataset.macbookSiteMode = 'false'
     const photoBoardRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard)
     photoWallFocus = createStudioV2PhotoWallFocus({
       camera,
@@ -1315,6 +1323,7 @@ export function createStudioV2Scene({
     cameraDirector.update(time)
     photoHover?.update(time)
     photoDetail?.update(time)
+    macbookFocus?.update(time)
     mount.dataset.cameraDirectorState = cameraDirector.getCurrentState()
     mount.dataset.cameraEndpointPhase = cameraDirector.getEndpointPhase()
     mount.dataset.cameraRailProgress = String(cameraDirector.getRailProgress())
@@ -1628,8 +1637,27 @@ export function createStudioV2Scene({
     getMacbookFocusState() {
       return macbookFocus?.getState() ?? null
     },
+    getMacbookSiteMode() {
+      return studioV2MacbookSiteLocksStudio(macbookSiteState)
+    },
+    getMacbookSiteState() {
+      return macbookSiteState
+    },
+    setMacbookSiteState(nextState) {
+      if (!Object.values(STUDIO_V2_MACBOOK_SITE_STATES).includes(nextState)) return macbookSiteState
+      macbookSiteState = nextState
+      const locked = studioV2MacbookSiteLocksStudio(macbookSiteState)
+      renderer.domElement.style.pointerEvents = locked ? 'none' : ''
+      cameraDirector.setPauseReason('MACBOOK_SITE_MODE', locked)
+      mount.dataset.macbookSiteMode = String(locked)
+      mount.dataset.macbookSiteState = macbookSiteState
+      return macbookSiteState
+    },
     subscribeMacbookFocus(listener) {
       return macbookFocus?.subscribe(listener) ?? (() => {})
+    },
+    subscribeMacbookPortalOpenRequest(listener) {
+      return macbookFocus?.subscribePortalOpen(listener) ?? (() => {})
     },
     getMacbookDisplayContract() {
       return macbookFocus?.getContract() ?? null
@@ -1637,8 +1665,14 @@ export function createStudioV2Scene({
     getMacbookDisplayProjection() {
       return macbookFocus?.getProjection() ?? null
     },
+    getMacbookChromeProjection() {
+      return macbookFocus?.getChromeProjection() ?? null
+    },
     requestMacbookFocus(source = 'RUNTIME') {
       return macbookFocus?.requestFocus(source) ?? false
+    },
+    requestMacbookPortalOpen(source = 'RUNTIME') {
+      return macbookFocus?.requestPortalOpen(source) ?? false
     },
     requestTableSkip() {
       return cameraDirector.requestTableSkip()
@@ -1907,6 +1941,8 @@ export function createStudioV2Scene({
       radioPanel?.dispose()
       macbookFocus?.dispose()
       macbookFocus = null
+      macbookSiteState = STUDIO_V2_MACBOOK_SITE_STATES.CLOSED
+      renderer.domElement.style.pointerEvents = ''
       photoWallFocus?.dispose()
       photoWallFocus = null
       photoDetail?.dispose()
@@ -1958,6 +1994,8 @@ export function createStudioV2Scene({
       delete mount.dataset.macbookFocusState
       delete mount.dataset.macbookFocusAudit
       delete mount.dataset.macbookFocusTarget
+      delete mount.dataset.macbookSiteMode
+      delete mount.dataset.macbookSiteState
       delete mount.dataset.photoWallFocusState
       delete mount.dataset.photoWallFocusTarget
       delete mount.dataset.photoHoverId

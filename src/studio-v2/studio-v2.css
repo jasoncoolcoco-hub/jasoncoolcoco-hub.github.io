@@ -669,6 +669,181 @@
   line-height: 1.55;
 }
 
+.macbook-site-portal {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #171717;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.995);
+  transition:
+    opacity var(--macbook-site-transition-duration) ease-in-out,
+    transform var(--macbook-site-transition-duration) ease-in-out;
+  visibility: visible;
+  will-change: opacity, transform;
+}
+
+.macbook-site-portal[data-phase='CLOSED'] {
+  visibility: hidden;
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_TRANSITION_IN'],
+.macbook-site-portal[data-phase='MACBOOK_SITE_MODE'],
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_DARKEN'],
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_COVER'],
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_HOLD'],
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_REVEAL'] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_MODE'] {
+  pointer-events: auto;
+}
+
+.studio-v2__canvas {
+  transform: scale(1);
+  transform-origin: center;
+}
+
+.studio-v2[data-macbook-site-phase='MACBOOK_CHROME_LAUNCHING'] .studio-v2__canvas,
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_TRANSITION_IN'] .studio-v2__canvas,
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_MODE'] .studio-v2__canvas {
+  transition:
+    opacity 280ms ease-in-out,
+    transform 280ms ease-in-out;
+}
+
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_TRANSITION_IN'] .studio-v2__canvas,
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_MODE'] .studio-v2__canvas,
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_EXIT_DARKEN'] .studio-v2__canvas,
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_EXIT_COVER'] .studio-v2__canvas {
+  opacity: 0;
+  transform: scale(0.995);
+}
+
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_EXIT_HOLD'] .studio-v2__canvas,
+.studio-v2[data-macbook-site-phase='MACBOOK_SITE_EXIT_REVEAL'] .studio-v2__canvas {
+  opacity: 1;
+  transform: scale(1);
+  transition: none;
+}
+
+.macbook-site-portal__scroll {
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: #fff;
+  color: #171717;
+  overscroll-behavior: contain;
+  transform: scale(1);
+  transform-origin: center;
+  transition:
+    filter var(--macbook-site-exit-darken-duration) ease-in-out,
+    transform var(--macbook-site-exit-darken-duration) ease-in-out;
+  -webkit-overflow-scrolling: touch;
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_DARKEN'] .macbook-site-portal__scroll,
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_COVER'] .macbook-site-portal__scroll {
+  filter: brightness(0.72);
+  transform: scale(0.997);
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_HOLD'] .macbook-site-portal__scroll,
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_REVEAL'] .macbook-site-portal__scroll {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.macbook-site-portal:not([data-phase='MACBOOK_SITE_MODE']) .macbook-site-portal__scroll {
+  overflow-y: hidden;
+  pointer-events: none;
+}
+
+.macbook-site-portal__exit-veil {
+  position: absolute;
+  z-index: 200;
+  inset: 0;
+  background: #080909;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  will-change: opacity;
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_DARKEN'] .macbook-site-portal__exit-veil,
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_COVER'] .macbook-site-portal__exit-veil,
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_HOLD'] .macbook-site-portal__exit-veil,
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_REVEAL'] .macbook-site-portal__exit-veil {
+  visibility: visible;
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_DARKEN'] .macbook-site-portal__exit-veil {
+  transition: opacity var(--macbook-site-exit-cover-duration) ease-in-out;
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_COVER'] .macbook-site-portal__exit-veil,
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_HOLD'] .macbook-site-portal__exit-veil {
+  opacity: 1;
+  transition: opacity var(--macbook-site-exit-cover-duration) ease-in-out;
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_EXIT_REVEAL'] .macbook-site-portal__exit-veil {
+  opacity: 0;
+  transition: opacity var(--macbook-site-exit-reveal-duration) ease-in-out;
+}
+
+.macbook-site-portal__back {
+  position: fixed;
+  z-index: 120;
+  top: 54px;
+  left: clamp(18px, 1.5vw, 24px);
+  padding: 7px 9px 6px;
+  border: 1px solid rgba(23, 23, 23, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #171717;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 0.13em;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  backdrop-filter: blur(8px);
+}
+
+.macbook-site-portal[data-phase='MACBOOK_SITE_MODE'] .macbook-site-portal__back {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.macbook-site-portal__back:hover {
+  border-color: rgba(23, 23, 23, 0.46);
+}
+
+.macbook-site-portal__back:focus-visible {
+  outline: 2px solid #171717;
+  outline-offset: 3px;
+}
+
+.macbook-site-portal__loading {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  background: #fff;
+  color: rgba(23, 23, 23, 0.55);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+}
+
 @media (max-width: 700px) {
   .studio-v2__header {
     grid-template-columns: 1fr 1fr;

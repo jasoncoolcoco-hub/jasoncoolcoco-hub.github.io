@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { createStudioV2Scene } from './createStudioV2Scene'
 import StudioV2Loading from './StudioV2Loading'
 import StudioV2RadioScreenPlayer from './StudioV2RadioScreenPlayer'
+import MacbookSitePortal from './macbook-site/MacbookSitePortal'
 import {
   createStudioV2DeliveryConfig,
   deliveryRequestFromSearch,
@@ -34,6 +35,8 @@ export default function StudioV2ImportPage() {
   const [entryState, setEntryState] = useState(null)
   const [exploring, setExploring] = useState(false)
   const [loadingVisible, setLoadingVisible] = useState(true)
+  const [macbookSitePhase, setMacbookSitePhase] = useState('CLOSED')
+  const [macbookSiteState, setMacbookSiteState] = useState('CLOSED')
   const [progress, setProgress] = useState(0)
   const [ready, setReady] = useState(false)
   const [runtime, setRuntime] = useState(null)
@@ -144,6 +147,8 @@ export default function StudioV2ImportPage() {
     setError('')
     setExploring(false)
     setLoadingVisible(true)
+    setMacbookSitePhase('CLOSED')
+    setMacbookSiteState('CLOSED')
     setProgress(0)
     setReady(false)
     setRadioPanelState(null)
@@ -257,6 +262,8 @@ export default function StudioV2ImportPage() {
       data-critical-requests={entryState?.requests?.length ?? 0}
       data-photo-wall-review={photoWallReviewEnabled || undefined}
       data-photo-slot-overlay={photoSlotOverlayEnabled || undefined}
+      data-macbook-site-phase={macbookSitePhase}
+      data-macbook-site-state={macbookSiteState}
     >
       <div
         ref={mountRef}
@@ -335,6 +342,12 @@ export default function StudioV2ImportPage() {
         progress={progress}
         visible={loadingVisible || Boolean(error)}
         onRetry={() => setAttempt((value) => value + 1)}
+      />
+      <MacbookSitePortal
+        runtime={runtime}
+        sceneReady={ready}
+        onPhaseChange={setMacbookSitePhase}
+        onStateChange={setMacbookSiteState}
       />
       {debugEnabled && !captureEnabled && !performanceEnabled && photoWallDebugPanelEnabled && (
         <Suspense fallback={null}>

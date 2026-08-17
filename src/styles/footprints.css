@@ -4,6 +4,10 @@
   background: #000;
 }
 
+.home-transition-shell--v0-9 {
+  height: 490svh;
+}
+
 .footprints-scroll-anchor {
   position: absolute;
   top: 170svh;
