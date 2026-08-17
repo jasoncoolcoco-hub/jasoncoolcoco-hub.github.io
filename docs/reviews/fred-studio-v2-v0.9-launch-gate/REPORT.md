@@ -114,10 +114,11 @@ Production cold-cache results did **not** meet the Stage 5G.1 objective:
 |---|---:|---:|
 | Independent cold profile 1 | 53.648 s | 58.600 s |
 | Independent cold profile 2 | 60.586 s | approximately 60.6 s |
-| Two-profile midpoint | 57.117 s | approximately 59.6 s |
+| Independent cold profile 3 | 6.053 s | 12.633 s |
+| Three-profile median | 53.648 s | 58.600 s |
 | Isolated warm run | 2.130 s | 2.711 s |
 
-Only two genuinely independent production cache profiles were available through the supported browser environments. A third run was not fabricated from a normal warm reload; the two independent results already reproduce the 55–60 second unfamiliar-device problem and establish the `>=30s` classification. The startup inventory remained five gate requests and approximately 78.3 MB nominal response-body bytes. Browser-level transferred bytes and per-resource timing were not exposed by the supported inspection surface.
+All three measurements used fresh browser sessions without an existing site cache. The third session ran after the first two cold downloads had populated the GitHub Pages edge cache, explaining its much lower 12.633-second wall time and exposing substantial cold-edge variance. It was not a normal warm reload; the separate isolated warm result was 2.711 seconds. The three-run production median still reproduces the 55–60 second unfamiliar-device problem and establishes the `>=30s` classification. The startup inventory remained five gate requests and approximately 78.3 MB nominal response-body bytes. Browser-level transferred bytes and per-resource timing were not exposed by the supported inspection surface.
 
 Direct no-cache production response samples corroborated the remaining Tier 1 network cost: the 18.42 MB room model took 25.29 seconds, the 9.98 MB Marshall model took 24.01 seconds, the 17.33 MB guitar model took 12.90 seconds, and the 2.45 MB MacBook model took 12.55 seconds in the sampled network conditions. In addition, all 39 generated Photo Wall images remain in Tier 1 at approximately 28 MB. These accepted, visually lossless assets explain why the architectural change produces a 2.71-second warm load but does not solve cold production delivery on this path.
 
@@ -126,7 +127,7 @@ Stage 5G.1 production performance decision: **FAIL / objective not fully achieve
 ## Known non-blocking limitations
 
 - The 3D room is desktop-first and uses a deliberately cropped composition on a narrow mobile viewport, while keeping core entry and exit paths usable.
-- Before Stage 5G.1, a cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment. The optimized deployment reproduced that range in two independent cold profiles (53.648 and 60.586 seconds instrumented), so the production cold-load objective remains open despite the substantial local and warm-cache improvement.
+- Before Stage 5G.1, a cold production browser session took roughly 55–60 seconds to reach Scene Ready in the launch-gate environment. The optimized deployment recorded three independent browser-cold profiles at 53.648, 60.586, and 6.053 seconds instrumented; the 53.648-second median means the production cold-load objective remains open despite the large edge-cache variance and substantial local and warm-cache improvement.
 - The current Three.js version emits a `PCFSoftShadowMap` deprecation warning and falls back to `PCFShadowMap`; no visible failure was observed.
 - The generated JavaScript bundle produces Vite's existing large-chunk advisory; it does not block this release.
 
