@@ -536,7 +536,7 @@ export async function createEarthRenderer({
       delete mount.dataset.selectedRoute
       delete mount.dataset.selectedRouteCount
     }
-    footprintsLabelLayer.setSelectedEntity(entity)
+    footprintsLabelLayer?.setSelectedEntity(entity)
     onSelectionChange?.(entity)
   }
 
@@ -547,30 +547,53 @@ export async function createEarthRenderer({
     setSelectedEntity(isSelectedBase ? null : entity)
   }
 
-  footprintsLabelLayer = createFootprintsLabelLayer({
-    anchors: footprintsRouteLayer.labelAnchors,
-    locations: labelLocations.map((location) => ({
-      ...location,
-      routeGroups:
-        location.kind === 'destination'
-          ? getSecondaryRoutesForDestination(location.id).map(
-              (route) => ({
-                ...route,
-                baseName:
-                  footprintBaseLocationsById.get(route.baseId)
-                    ?.displayName ?? route.baseId,
-              }),
-            )
-          : [],
-    })),
-    mount,
-    onActivate: activateLabelEntity,
-  })
-  pendingLabelUnlocks.forEach((location) => {
-    footprintsLabelLayer.unlock(location)
-  })
+  const createFootprintsAnnotations = () => {
+    if (footprintsLabelLayer) return false
+    footprintsLabelLayer = createFootprintsLabelLayer({
+      anchors: footprintsRouteLayer.labelAnchors,
+      locations: labelLocations.map((location) => ({
+        ...location,
+        routeGroups:
+          location.kind === 'destination'
+            ? getSecondaryRoutesForDestination(location.id).map(
+                (route) => ({
+                  ...route,
+                  baseName:
+                    footprintBaseLocationsById.get(route.baseId)
+                      ?.displayName ?? route.baseId,
+                }),
+              )
+            : [],
+      })),
+      mount,
+      onActivate: activateLabelEntity,
+    })
+    pendingLabelUnlocks.forEach((location) => {
+      footprintsLabelLayer.unlock(location)
+    })
+    footprintsLabelLayer.setSelectedEntity(selectedEntity)
+    mount.dataset.footprintsAnnotations = 'mounted'
+    return true
+  }
+
+  const destroyFootprintsAnnotations = () => {
+    if (!footprintsLabelLayer) return false
+    footprintsLabelLayer.dispose()
+    footprintsLabelLayer = null
+    mount.dataset.footprintsAnnotations = 'detached'
+    return true
+  }
+
+  const setFootprintsAnnotationsActive = (active) => (
+    active
+      ? createFootprintsAnnotations()
+      : destroyFootprintsAnnotations()
+  )
+
+  createFootprintsAnnotations()
 
   const updateLabelPositions = () => {
+    if (!footprintsLabelLayer) return
     scene.updateMatrixWorld(true)
     camera.updateMatrixWorld()
     footprintsLabelLayer.update({
@@ -985,7 +1008,7 @@ export async function createEarthRenderer({
     sphereGeometry.dispose()
     globeMaterial.dispose()
     atmosphereMaterial.dispose()
-    footprintsLabelLayer?.dispose()
+    destroyFootprintsAnnotations()
     footprintsRouteLayer.dispose()
     dayTexture.dispose()
     nightTexture.dispose()
@@ -1008,6 +1031,7 @@ export async function createEarthRenderer({
     prepareFootprintsEntry,
     rotateByKeyboard,
     selectAt,
+    setFootprintsAnnotationsActive,
     setScrollRotation,
     setSize,
     setVisible,

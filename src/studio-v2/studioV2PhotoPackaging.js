@@ -548,6 +548,7 @@ function createSlotMarker(slotNumber, dimensions, shared) {
 }
 
 async function loadDisplayTexture(entry, manifestUrl, textureLoader, renderer) {
+  const resolvedManifestUrl = new URL(manifestUrl, window.location.href)
   const sourcePaths = [
     entry.generatedFilename,
     `source/${entry.filename}`,
@@ -555,7 +556,11 @@ async function loadDisplayTexture(entry, manifestUrl, textureLoader, renderer) {
   let lastError = null
   for (let index = 0; index < sourcePaths.length; index += 1) {
     const sourcePath = sourcePaths[index]
-    const url = new URL(sourcePath, new URL(manifestUrl, window.location.href)).toString()
+    const resolvedSourceUrl = new URL(sourcePath, resolvedManifestUrl)
+    resolvedManifestUrl.searchParams.forEach((value, key) => {
+      resolvedSourceUrl.searchParams.set(key, value)
+    })
+    const url = resolvedSourceUrl.toString()
     try {
       return {
         fallbackUsed: index > 0,

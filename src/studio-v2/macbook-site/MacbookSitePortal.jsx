@@ -232,7 +232,11 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
         }}
       >
         <Suspense fallback={<div className="macbook-site-portal__loading">LOADING HOME</div>}>
-          <HomeTransitionShell releaseScope="v0.9" scrollContainerRef={scrollContainerRef} />
+          <HomeTransitionShell
+            annotationsActive={siteActive}
+            releaseScope="v0.9"
+            scrollContainerRef={scrollContainerRef}
+          />
         </Suspense>
       </div>
       <div className="macbook-site-portal__exit-veil" aria-hidden="true" />

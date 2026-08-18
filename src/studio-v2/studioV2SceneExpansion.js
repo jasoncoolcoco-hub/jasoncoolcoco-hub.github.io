@@ -9,8 +9,6 @@ export const STUDIO_V2_SCENE_EXPANSION_IDS = Object.freeze({
   photoBoardSurface: 'PHOTO_BOARD_SURFACE',
   photoBoardFrame: 'PHOTO_BOARD_FRAME',
   camera: 'POLAROID_CAMERA_01',
-  folder: 'DOCUMENT_FOLDER_01',
-  coffee: 'COFFEE_CUP_01',
 })
 
 const ASSET_CONFIG = Object.freeze({
@@ -32,20 +30,6 @@ const ASSET_CONFIG = Object.freeze({
     targetAxis: 'x',
     targetSize: 0.17,
     role: 'camera',
-  }),
-  folder: Object.freeze({
-    id: STUDIO_V2_SCENE_EXPANSION_IDS.folder,
-    resourceKey: 'documentFolderUrl',
-    targetAxis: 'z',
-    targetSize: 0.34,
-    role: 'folder',
-  }),
-  coffee: Object.freeze({
-    id: STUDIO_V2_SCENE_EXPANSION_IDS.coffee,
-    resourceKey: 'coffeeCupUrl',
-    targetAxis: 'x',
-    targetSize: 0.15,
-    role: 'coffee',
   }),
 })
 
@@ -89,14 +73,6 @@ function tuneMaterial(source, role) {
     if ('roughness' in material) material.roughness = source.name === 'metal' ? 0.38 : Math.max(0.5, material.roughness)
     if ('metalness' in material && source.name !== 'metal') material.metalness = 0
     if ('envMapIntensity' in material) material.envMapIntensity = source.name === 'metal' ? 0.88 : 0.68
-  } else if (role === 'folder') {
-    if ('metalness' in material) material.metalness = 0
-    if ('roughness' in material) material.roughness = source.name === 'Folder_1Shape' ? 0.74 : 0.9
-    if ('envMapIntensity' in material) material.envMapIntensity = 0.52
-  } else if (role === 'coffee') {
-    if ('metalness' in material) material.metalness = 0
-    if ('roughness' in material) material.roughness = 0.34
-    if ('envMapIntensity' in material) material.envMapIntensity = 0.78
   } else if (role === 'photoBoard') {
     const isSurface = source.name.includes('SURFACE')
     if ('metalness' in material) material.metalness = 0
@@ -271,24 +247,6 @@ function createStaticPlacement(gltf, renderer, config, url) {
       STUDIO_V2_SCENE_EXPANSION_IDS.photoBoardFrame,
     )
   }
-  if (config.role === 'folder') {
-    const interactionTarget = new THREE.Group()
-    interactionTarget.name = 'DOCUMENT_FOLDER_INTERACTION_TARGET'
-    interactionTarget.userData.studioV2Id = 'DOCUMENT_FOLDER_INTERACTION_TARGET'
-    const hingeAnchor = new THREE.Group()
-    hingeAnchor.name = 'DOCUMENT_FOLDER_FUTURE_HINGE'
-    hingeAnchor.userData.studioV2Id = 'DOCUMENT_FOLDER_FUTURE_HINGE'
-    hingeAnchor.position.set(0.12, 0, 0)
-    placement.add(interactionTarget, hingeAnchor)
-    placement.userData.futureInteraction = Object.freeze({
-      hingeAxisLocal: Object.freeze([0, 0, 1]),
-      hingeEdge: 'WALL_SIDE_POSITIVE_X',
-      openFromDirectionLocal: Object.freeze([-1, 0, 0]),
-      openTowardDirectionLocal: Object.freeze([1, 0, 0]),
-      sourceAnimationDisabled: true,
-    })
-    semanticIds.push('DOCUMENT_FOLDER_INTERACTION_TARGET', 'DOCUMENT_FOLDER_FUTURE_HINGE')
-  }
   const record = placementRecord({
     anchor,
     config: { ...config, url },
@@ -298,7 +256,6 @@ function createStaticPlacement(gltf, renderer, config, url) {
     resources,
     semanticIds,
   })
-  if (config.role === 'folder') record.futureInteraction = placement.userData.futureInteraction
   if (config.role === 'photoBoard') {
     record.futurePlacementPlane = placement.userData.futurePlacementPlane
     record.scaleAnchor = placement.userData.scaleAnchor
@@ -353,12 +310,18 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   testConfig,
 } = {}) {
   const loaderSupport = await createStudioV2GltfLoader(renderer, deliveryConfig)
+  let disposed = false
   const urls = {
     photoBoard: deliveryConfig.photoBoardUrl,
     camera: deliveryConfig.polaroidCameraUrl,
-    folder: deliveryConfig.documentFolderUrl,
-    coffee: deliveryConfig.coffeeCupUrl,
   }
+  const visualReadyGltfPromise = loadAsset(
+    loaderSupport.loader,
+    urls.camera,
+    STUDIO_V2_SCENE_EXPANSION_IDS.camera,
+    testConfig,
+  )
+  visualReadyGltfPromise.catch(() => {})
   const photoBoardGltf = await loadAsset(
     loaderSupport.loader,
     urls.photoBoard,
@@ -371,31 +334,47 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     ASSET_CONFIG.photoBoard,
     urls.photoBoard,
   )
-  let photoPackaging
-  try {
-    photoPackaging = await createStudioV2PhotoPackagingPreview({
-      boardScale: STUDIO_V2_ANCHORS[ASSET_CONFIG.photoBoard.id].scale,
-      debugCoordinateOverlay: photoBoardGrid,
-      debugSlotOverlay: photoSlotOverlay,
-      manifestUrl: deliveryConfig.photoManifestUrl,
-      renderer,
-    })
-  } catch (error) {
+  const unavailablePhotoPackaging = (error = null) => {
     const emptyGroup = new THREE.Group()
     emptyGroup.name = 'PHOTO_PACKAGING_PREVIEW_UNAVAILABLE'
-    photoPackaging = {
+    return {
       group: emptyGroup,
       records: [],
       report: Object.freeze({
         arbitraryCountSupported: true,
+        bootstrap: false,
         debugCoordinateOverlay: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: error ? (error instanceof Error ? error.message : String(error)) : null,
         positionedCount: 0,
         previewCount: 0,
       }),
     }
   }
+
+  const createFullPhotoPackaging = async () => {
+    try {
+      return await createStudioV2PhotoPackagingPreview({
+        boardScale: STUDIO_V2_ANCHORS[ASSET_CONFIG.photoBoard.id].scale,
+        debugCoordinateOverlay: photoBoardGrid,
+        debugSlotOverlay: photoSlotOverlay,
+        manifestUrl: deliveryConfig.photoManifestUrl,
+        renderer,
+      })
+    } catch (error) {
+      return unavailablePhotoPackaging(error)
+    }
+  }
+
+  const photoPackaging = await createFullPhotoPackaging()
+  const photoWallState = photoPackaging.report.error ? 'error' : 'ready'
   photoBoardPlacement.placement.add(photoPackaging.group)
+  if (photoWallState === 'ready') {
+    onAssetReady?.('PHOTO_WALL_PHOTOS', {
+      positionedCount: photoPackaging.report.positionedCount,
+      semanticIds: photoPackaging.records.map(({ id }) => id),
+      url: deliveryConfig.photoManifestUrl,
+    })
+  }
   photoBoardPlacement.placement.userData.photoPackaging = photoPackaging.report
   photoBoardPlacement.record.photoPackaging = photoPackaging.report
   photoBoardPlacement.record.semanticIds.push(...photoPackaging.records.map(({ id }) => id))
@@ -405,9 +384,8 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   const textureFormats = [...new Set(
     placements.flatMap(({ resources }) => resources.textureFormats),
   )].sort()
-  let deferredPromise = null
-  let deferredState = 'idle'
-  let disposed = false
+  let visualReadyPromise = null
+  let visualReadyState = 'loading'
   const group = new THREE.Group()
   group.name = 'FredStudioV2SceneExpansion'
   group.userData.studioV2Id = 'SCENE_EXPANSION_STAGE5B'
@@ -418,48 +396,42 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     url: record.url,
   }))
 
-  const loadDeferredAssets = () => {
+  const loadVisualReadyAssets = () => {
     if (disposed) return Promise.resolve({ records: [], status: 'disposed' })
-    if (deferredPromise) return deferredPromise
-    deferredState = 'loading'
-    deferredPromise = Promise.all([
-      loadAsset(loaderSupport.loader, urls.camera, STUDIO_V2_SCENE_EXPANSION_IDS.camera, testConfig),
-      loadAsset(loaderSupport.loader, urls.folder, STUDIO_V2_SCENE_EXPANSION_IDS.folder, testConfig),
-      loadAsset(loaderSupport.loader, urls.coffee, STUDIO_V2_SCENE_EXPANSION_IDS.coffee, testConfig),
-    ]).then(([cameraGltf, folderGltf, coffeeGltf]) => {
+    if (visualReadyPromise) return visualReadyPromise
+    visualReadyPromise = visualReadyGltfPromise.then((cameraGltf) => {
       if (disposed) return { records: [], status: 'disposed' }
-      const deferredPlacements = [
+      const visualReadyPlacements = [
         createStaticPlacement(cameraGltf, renderer, ASSET_CONFIG.camera, urls.camera),
-        createStaticPlacement(folderGltf, renderer, ASSET_CONFIG.folder, urls.folder),
-        createStaticPlacement(coffeeGltf, renderer, ASSET_CONFIG.coffee, urls.coffee),
       ]
-      deferredPlacements.forEach(({ placement }) => group.add(placement))
-      deferredPlacements.forEach(({ record }) => onAssetReady?.(record.anchorName, {
-        deferred: true,
+      visualReadyPlacements.forEach(({ placement }) => group.add(placement))
+      visualReadyPlacements.forEach(({ record }) => onAssetReady?.(record.anchorName, {
         semanticIds: record.semanticIds,
         url: record.url,
+        visualReady: true,
       }))
-      placements.push(...deferredPlacements)
-      records.push(...deferredPlacements.map(({ record }) => record))
+      placements.push(...visualReadyPlacements)
+      records.push(...visualReadyPlacements.map(({ record }) => record))
       textureFormats.splice(0, textureFormats.length, ...new Set(
         placements.flatMap(({ resources }) => resources.textureFormats),
       ))
-      deferredState = 'ready'
-      return { records: deferredPlacements.map(({ record }) => record), status: deferredState }
+      visualReadyState = 'ready'
+      return { records: visualReadyPlacements.map(({ record }) => record), status: visualReadyState }
     }).catch((error) => {
-      deferredState = 'error'
+      visualReadyState = 'error'
       throw error
     })
-    return deferredPromise
+    return visualReadyPromise
   }
 
   return {
     group,
     records,
     textureFormats,
-    getDeferredState: () => deferredState,
+    getVisualReadyState: () => visualReadyState,
+    getPhotoWallState: () => photoWallState,
     getMaterialMode: () => 'refined',
-    loadDeferredAssets,
+    loadVisualReadyAssets,
     setMaterialMode: () => 'refined',
     dispose() {
       disposed = true

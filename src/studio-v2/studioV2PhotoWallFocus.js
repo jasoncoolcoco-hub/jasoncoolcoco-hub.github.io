@@ -65,6 +65,11 @@ export function createStudioV2PhotoWallFocus({
   }
 
   function requestFocus(source = 'API') {
+    if (isInteractionLocked()) {
+      lastRequest = 'BLOCKED_PHOTO_ASSETS'
+      publish()
+      return false
+    }
     if (!canEnter()) {
       lastRequest = 'BLOCKED_CAMERA_STATE'
       return false

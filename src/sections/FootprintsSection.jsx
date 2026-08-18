@@ -12,6 +12,7 @@ import { siteContent } from '../data/siteContent'
 import ProjectsSection from './ProjectsSection'
 
 export default function FootprintsSection({
+  annotationsActive = true,
   projectsTransitionProgress,
   backgroundY,
   chapterProgress,
@@ -93,6 +94,7 @@ export default function FootprintsSection({
         )}
 
         <GlobeScene
+          annotationsActive={annotationsActive}
           projectsTransitionProgress={projectsTransitionProgress}
           controlsEnabled={controlsEnabled}
           entranceOpacity={1}

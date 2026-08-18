@@ -16,7 +16,11 @@ const fullScrollDistance =
 const compactTransitionQuery = '(max-width: 700px)'
 const v09ChapterIds = Object.freeze(['home', 'footprints'])
 
-export default function HomeTransitionShell({ releaseScope = 'full', scrollContainerRef }) {
+export default function HomeTransitionShell({
+  annotationsActive = true,
+  releaseScope = 'full',
+  scrollContainerRef,
+}) {
   const shellRef = useRef(null)
   const [homeReady, setHomeReady] = useState(false)
   const [compactTransition, setCompactTransition] = useState(() =>
@@ -106,6 +110,7 @@ export default function HomeTransitionShell({ releaseScope = 'full', scrollConta
 
       <div className="home-transition-shell__sticky">
         <FootprintsSection
+          annotationsActive={annotationsActive}
           projectsTransitionProgress={projectsTransitionProgress}
           backgroundY={footprintsBackgroundY}
           chapterProgress={chapterProgress}

@@ -2,24 +2,32 @@ export const STUDIO_V2_ASSET_TIERS = Object.freeze({
   tier1: Object.freeze([
     'ROOM_ENVIRONMENT',
     'MACBOOK_ISLAND_01',
-    'MARSHALL_GUITAR_FLOOR_01',
-    'MARSHALL_AMP',
-    'GIBSON_GUITAR',
-    'MARSHALL_RADIO_PANEL_01',
     'PHOTO_BOARD_01',
+  ]),
+  visualReady: Object.freeze([
+    'POLAROID_CAMERA_01',
     'PHOTO_WALL_PHOTOS',
   ]),
-  tier2: Object.freeze([
-    'POLAROID_CAMERA_01',
-    'DOCUMENT_FOLDER_01',
-    'COFFEE_CUP_01',
-  ]),
+  tier2: Object.freeze([]),
   tier3: Object.freeze([
     'MACBOOK_HOME_PAGE',
     'FOOTPRINTS_EARTH',
     'STUDIO_AUDIO_MEDIA',
   ]),
 })
+
+export const VISUAL_READY_ASSETS = Object.freeze([
+  Object.freeze({
+    id: 'POLAROID_CAMERA_01',
+    kind: 'accepted-visible-desk-prop',
+    resourceKey: 'polaroidCameraUrl',
+  }),
+  Object.freeze({
+    id: 'PHOTO_WALL_PHOTOS',
+    kind: 'accepted-full-quality-photo-wall',
+    resourceKey: 'photoManifestUrl',
+  }),
+])
 
 export const ENTRY_CRITICAL_ASSETS = Object.freeze([
   Object.freeze({
@@ -33,31 +41,6 @@ export const ENTRY_CRITICAL_ASSETS = Object.freeze([
     kind: 'placement',
     resourceKey: 'macbookUrl',
     semanticIds: Object.freeze(['MACBOOK_ISLAND_01']),
-  }),
-  Object.freeze({
-    id: 'MARSHALL_GUITAR_FLOOR_01',
-    kind: 'placement',
-    dependsOn: Object.freeze(['MARSHALL_AMP', 'GIBSON_GUITAR']),
-    semanticIds: Object.freeze(['MARSHALL_GUITAR_FLOOR_01']),
-  }),
-  Object.freeze({
-    id: 'MARSHALL_AMP',
-    kind: 'prop',
-    resourceKey: 'marshallUrl',
-    fallbackResourceKey: 'musicUrl',
-    semanticIds: Object.freeze(['MARSHALL_AMP']),
-  }),
-  Object.freeze({
-    id: 'GIBSON_GUITAR',
-    kind: 'prop',
-    resourceKey: 'guitarUrl',
-    fallbackResourceKey: 'musicUrl',
-    semanticIds: Object.freeze(['GIBSON_GUITAR']),
-  }),
-  Object.freeze({
-    id: 'MARSHALL_RADIO_PANEL_01',
-    kind: 'opening-visible-world-ui',
-    semanticIds: Object.freeze(['MARSHALL_RADIO_PANEL_01']),
   }),
   Object.freeze({
     id: 'PHOTO_BOARD_01',
@@ -112,6 +95,13 @@ export function resolveStudioV2EntryRequests(deliveryConfig) {
   }))
 }
 
+export function resolveStudioV2VisualReadyManifest(deliveryConfig) {
+  return VISUAL_READY_ASSETS.map((definition) => Object.freeze({
+    ...definition,
+    url: assetUrl(definition, deliveryConfig),
+  }))
+}
+
 function safeDelay(value) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? Math.min(8000, Math.max(0, parsed)) : 0
@@ -119,13 +109,9 @@ function safeDelay(value) {
 
 export function studioV2EntryTestConfig(searchParams, enabled, attempt = 0) {
   if (!enabled) return Object.freeze({ delays: Object.freeze({}), failAsset: null })
-  const musicDelay = safeDelay(searchParams.get('entryDelayMusic'))
   const delays = Object.freeze({
     ROOM_ENVIRONMENT: safeDelay(searchParams.get('entryDelayRoom')),
     MACBOOK_ISLAND_01: safeDelay(searchParams.get('entryDelayMacbook')),
-    MARSHALL_AMP: safeDelay(searchParams.get('entryDelayMarshall') ?? musicDelay),
-    GIBSON_GUITAR: safeDelay(searchParams.get('entryDelayGuitar') ?? musicDelay),
-    MARSHALL_RADIO_PANEL_01: safeDelay(searchParams.get('entryDelayRadioPanel')),
   })
   const requestedFailure = searchParams.get('entryFail')
   const failAsset = attempt === 0
@@ -147,12 +133,16 @@ export function createStudioV2EntryGate({
 } = {}) {
   const manifest = resolveStudioV2EntryManifest(deliveryConfig)
   const assets = statusMap(manifest.map(({ id }) => id), 'pending')
+  const visualManifest = resolveStudioV2VisualReadyManifest(deliveryConfig)
+  const visualAssets = statusMap(visualManifest.map(({ id }) => id), 'pending')
   const conditions = statusMap(ENTRY_READY_CONDITIONS, false)
   const timeline = []
   let error = null
   let phase = 'loading'
   let sceneReady = false
   let sceneReadyAtMs = null
+  let visualReady = false
+  let visualReadyAtMs = null
   let interactionsEnabled = false
 
   const elapsed = () => Number((performance.now() - startedAt).toFixed(1))
@@ -162,6 +152,7 @@ export function createStudioV2EntryGate({
 
   const snapshot = () => {
     const completedAssets = Object.values(assets).filter((value) => value === 'ready').length
+    const completedVisualAssets = Object.values(visualAssets).filter((value) => value === 'ready').length
     const completedConditions = Object.values(conditions).filter(Boolean).length
     const total = Object.keys(assets).length + Object.keys(conditions).length
     const completed = completedAssets + completedConditions
@@ -171,27 +162,33 @@ export function createStudioV2EntryGate({
       completeReadyMs: sceneReadyAtMs,
       conditions: { ...conditions },
       error: error ? { assetId: error.assetId ?? null, message: error.message } : null,
-      guitarReady: assets.GIBSON_GUITAR === 'ready',
       interactionsEnabled,
       macBookReady: assets.MACBOOK_ISLAND_01 === 'ready',
       photoBoardReady: assets.PHOTO_BOARD_01 === 'ready',
-      polaroidCameraReady: assets.POLAROID_CAMERA_01 === 'ready',
-      documentFolderReady: assets.DOCUMENT_FOLDER_01 === 'ready',
-      coffeeCupReady: assets.COFFEE_CUP_01 === 'ready',
+      photoWallReady: visualAssets.PHOTO_WALL_PHOTOS === 'ready',
+      polaroidCameraReady: visualAssets.POLAROID_CAMERA_01 === 'ready',
       manifest,
-      marshallGroupReady: assets.MARSHALL_GUITAR_FLOOR_01 === 'ready',
-      marshallReady: assets.MARSHALL_AMP === 'ready',
-      radioPanelReady: assets.MARSHALL_RADIO_PANEL_01 === 'ready',
       materialsReady: conditions.materialsReady,
       phase,
       progress: total > 0 ? Number((completed / total * 100).toFixed(1)) : 0,
       requests: resolveStudioV2EntryRequests(deliveryConfig),
       roomReady: assets.ROOM_ENVIRONMENT === 'ready',
       sceneReady,
+      sceneReadyAtMs,
       shaderReady: conditions.shaderReady,
       testConfig,
       texturesReady: conditions.texturesReady,
       timeline: timeline.map((entry) => ({ ...entry })),
+      visualAssets: { ...visualAssets },
+      visualManifest,
+      visualProgress: visualManifest.length > 0
+        ? Number((completedVisualAssets / visualManifest.length * 100).toFixed(1))
+        : 100,
+      visualReady,
+      visualReadyAtMs,
+      visualReadyDelayMs: visualReadyAtMs === null || sceneReadyAtMs === null
+        ? null
+        : Number((visualReadyAtMs - sceneReadyAtMs).toFixed(1)),
       warmupReady: conditions.warmupReady,
       worldMatricesReady: conditions.worldMatricesReady,
     }
@@ -203,18 +200,20 @@ export function createStudioV2EntryGate({
 
   return {
     fail(assetId, failure) {
-      if (sceneReady || error) return snapshot()
+      if (visualReady || error) return snapshot()
       error = failure instanceof Error ? failure : new Error(String(failure))
       error.assetId = assetId ?? error.assetId ?? null
       if (assetId && assetId in assets) assets[assetId] = 'error'
+      if (assetId && assetId in visualAssets) visualAssets[assetId] = 'error'
       phase = 'error'
       record('critical-error', { assetId: error.assetId, message: error.message })
       emit()
       return snapshot()
     },
     markAssetReady(assetId, detail = null) {
-      if (!(assetId in assets) || error) return snapshot()
-      assets[assetId] = 'ready'
+      if (error || (!(assetId in assets) && !(assetId in visualAssets))) return snapshot()
+      if (assetId in assets) assets[assetId] = 'ready'
+      if (assetId in visualAssets) visualAssets[assetId] = 'ready'
       record('asset-ready', { assetId, ...detail })
       emit()
       return snapshot()
@@ -235,9 +234,22 @@ export function createStudioV2EntryGate({
       }
       sceneReady = true
       sceneReadyAtMs = elapsed()
+      phase = 'scene-ready'
+      record('scene-ready')
+      emit()
+      return snapshot()
+    },
+    markVisualReady(detail = null) {
+      if (error || !sceneReady) return snapshot()
+      const missingAssets = Object.entries(visualAssets).filter(([, status]) => status !== 'ready')
+      if (missingAssets.length) {
+        return this.fail(null, new Error('Visual Ready completed before all accepted visible props were ready.'))
+      }
+      visualReady = true
+      visualReadyAtMs = elapsed()
       interactionsEnabled = true
       phase = 'ready'
-      record('scene-ready')
+      record('visual-ready', detail)
       emit()
       return snapshot()
     },

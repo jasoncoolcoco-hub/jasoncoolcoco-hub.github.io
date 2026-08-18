@@ -60,12 +60,9 @@ function InspectorRow({ label, value }) {
 }
 
 const PLACED_OBJECT_ANCHOR_NAMES = Object.freeze([
-  'MARSHALL_GUITAR_FLOOR_01',
   'MACBOOK_ISLAND_01',
   'PHOTO_BOARD_01',
   'POLAROID_CAMERA_01',
-  'DOCUMENT_FOLDER_01',
-  'COFFEE_CUP_01',
 ])
 
 const placedObjectAnchorText = PLACED_OBJECT_ANCHOR_NAMES
@@ -111,8 +108,6 @@ export default function StudioV2DebugPanel({
   entryState,
   runtime,
   audioController,
-  radioTransitionSpeed = 1,
-  onRadioTransitionSpeedChange,
 }) {
   const [helpers, setHelpers] = useState({ lights: false })
   const [assetMaterialMode, setAssetMaterialMode] = useState('refined')
@@ -120,8 +115,6 @@ export default function StudioV2DebugPanel({
   const [, setVisualRevision] = useState(0)
   const [anchorName, setAnchorName] = useState(STUDIO_V2_ANCHOR_NAMES[0])
   const [audioState, setAudioState] = useState(() => audioController?.getState?.() ?? {})
-  const [marshallInteraction, setMarshallInteraction] = useState(() => runtime?.getMarshallInteractionState?.() ?? {})
-  const [radioPanel, setRadioPanel] = useState(() => runtime?.getRadioPanelState?.() ?? {})
   const visual = diagnostics?.visual ?? runtime?.getVisualConfig?.() ?? {}
   const safety = diagnostics?.safety ?? runtime?.getCameraSafety?.() ?? {}
   const cameraDirector = diagnostics?.cameraDirector ?? runtime?.getCameraDirectorState?.() ?? {}
@@ -138,14 +131,6 @@ export default function StudioV2DebugPanel({
   useEffect(() => (
     audioController?.subscribe?.(setAudioState) ?? undefined
   ), [audioController])
-
-  useEffect(() => (
-    runtime?.subscribeMarshallInteraction?.(setMarshallInteraction) ?? undefined
-  ), [runtime, entry.sceneReady])
-
-  useEffect(() => (
-    runtime?.subscribeRadioPanel?.(setRadioPanel) ?? undefined
-  ), [runtime, entry.sceneReady])
 
   if (!runtime) return null
 
@@ -200,14 +185,9 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="TOTAL PROGRESS" value={Number.isFinite(entry.progress) ? `${Math.round(entry.progress)}%` : null} />
           <InspectorRow label="ROOM READY" value={readinessText(entry.roomReady)} />
           <InspectorRow label="MACBOOK READY" value={readinessText(entry.macBookReady)} />
-          <InspectorRow label="MARSHALL READY" value={readinessText(entry.marshallReady)} />
-          <InspectorRow label="GUITAR READY" value={readinessText(entry.guitarReady)} />
-          <InspectorRow label="MUSIC GROUP READY" value={readinessText(entry.marshallGroupReady)} />
-          <InspectorRow label="RADIO PANEL READY" value={readinessText(entry.radioPanelReady)} />
           <InspectorRow label="PHOTO BOARD READY" value={readinessText(entry.photoBoardReady)} />
+          <InspectorRow label="PHOTO WALL READY" value={readinessText(entry.photoWallReady)} />
           <InspectorRow label="POLAROID CAMERA READY" value={readinessText(entry.polaroidCameraReady)} />
-          <InspectorRow label="DOCUMENT FOLDER READY" value={readinessText(entry.documentFolderReady)} />
-          <InspectorRow label="COFFEE CUP READY" value={readinessText(entry.coffeeCupReady)} />
           <InspectorRow label="TEXTURES READY" value={readinessText(entry.texturesReady)} />
           <InspectorRow label="MATERIALS READY" value={readinessText(entry.materialsReady)} />
           <InspectorRow label="ANCHORS READY" value={readinessText(entry.anchorsReady)} />
@@ -222,94 +202,7 @@ export default function StudioV2DebugPanel({
       </section>
 
       <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
-        <h2>RADIO PANEL</h2>
-        <dl>
-          <InspectorRow label="SEMANTIC ID" value={radioPanel.semanticId} />
-          <InspectorRow label="POSITION" value={vectorText(radioPanel.position)} />
-          <InspectorRow label="ROTATION RAD" value={vectorText(radioPanel.rotation)} />
-          <InspectorRow label="ROTATION DEG" value={vectorText(radioPanel.rotationDegrees)} />
-          <InspectorRow label="COMPACT W/H/D" value={vectorText(radioPanel.compactDimensions)} />
-          <InspectorRow label="WORLD MODE" value={radioPanel.worldMode} />
-          <InspectorRow label="PANEL STATE" value={radioPanel.panelState} />
-          <InspectorRow label="COMPACT VISIBILITY" value={radioPanel.compactVisibilityMode} />
-          <InspectorRow label="TRANSITION PROXY" value={radioPanel.transitionProxyActive ? 'ACTIVE' : 'INACTIVE'} />
-          <InspectorRow label="FORMAL SURFACE" value={radioPanel.formalPlayerOpen ? 'OPEN' : 'CLOSED'} />
-          <InspectorRow label="OUTSIDE CLICK" value={radioPanel.outsideClickState} />
-          <InspectorRow label="COMPACT READY" value={radioPanel.compactReadiness} />
-          <InspectorRow label="PROJECTED BOUNDS" value={radioPanel.projectedScreenBounds ? JSON.stringify(radioPanel.projectedScreenBounds) : '—'} />
-          <InspectorRow label="SCREEN PLAYER" value={radioPanel.screenPlayerOpen ? 'OPEN' : 'CLOSED'} />
-          <InspectorRow label="TRANSITION" value={radioPanel.transitionState} />
-          <InspectorRow label="TRANSITION SPEED" value={`${radioTransitionSpeed}×`} />
-          <InspectorRow label="HANDOFF MODE" value={radioPanel.handoffMode} />
-          <InspectorRow label="WORLD COMPACT READY" value={readinessText(radioPanel.worldCompactReady)} />
-          <InspectorRow label="WORLD FACE OPACITY" value={radioPanel.worldLayerOpacity?.face?.toFixed?.(3) ?? '—'} />
-          <InspectorRow label="WORLD GLASS OPACITY" value={radioPanel.worldLayerOpacity?.glass?.toFixed?.(3) ?? '—'} />
-          <InspectorRow label="HANDOFF TIMING" value={radioPanel.handoffFrameTiming ? JSON.stringify(radioPanel.handoffFrameTiming) : '—'} />
-          <InspectorRow label="PROJECTED START" value={radioPanel.projectedStartBounds ? JSON.stringify(radioPanel.projectedStartBounds) : '—'} />
-          <InspectorRow label="FINAL DOM BOUNDS" value={radioPanel.finalDomBounds ? JSON.stringify(radioPanel.finalDomBounds) : '—'} />
-          <InspectorRow label="PROJECTED RETURN" value={radioPanel.projectedReturnBounds ? JSON.stringify(radioPanel.projectedReturnBounds) : '—'} />
-          <InspectorRow label="SELECTED TRACK" value={radioPanel.selectedTrackTitle ?? radioPanel.selectedTrackId} />
-          <InspectorRow label="SELECTED ARTIST" value={radioPanel.selectedTrackArtist} />
-          <InspectorRow label="TRACK COUNT" value={radioPanel.catalogueTrackCount} />
-          <InspectorRow label="HOVER HIT" value={radioPanel.hover ? 'YES' : 'NO'} />
-          <InspectorRow label="DEBUG FIXTURE" value={radioPanel.catalogueFixtureCount ?? 'OFF'} />
-          <InspectorRow label="PANEL READY" value={readinessText(radioPanel.panelReady)} />
-          <InspectorRow label="METADATA READY" value={readinessText(radioPanel.catalogueMetadataReady)} />
-          <InspectorRow label="CATALOGUE ERROR" value={radioPanel.catalogueError ?? 'NONE'} />
-          <InspectorRow label="DRAW CALLS" value={radioPanel.panelDrawCalls} />
-          <InspectorRow label="TRIANGLES" value={radioPanel.panelTriangles} />
-          <InspectorRow label="METADATA TIME" value={radioPanel.metadataReadyAtMs ? `${radioPanel.metadataReadyAtMs} MS` : '—'} />
-          <InspectorRow label="UI READY TIME" value={radioPanel.uiReadyAtMs ? `${radioPanel.uiReadyAtMs} MS` : '—'} />
-          <InspectorRow label="TEXTURE COMPACT" value={vectorText(radioPanel.textureResolution?.compact)} />
-          <InspectorRow label="TEXTURE REDRAWS" value={radioPanel.textureRedraws} />
-          <InspectorRow label="AUDIO ELEMENTS" value={audioState.audioElementCount} />
-        </dl>
-        <div className="studio-v2__debug-actions">
-          {[1, 0.5, 0.25].map((speed) => (
-            <button
-              type="button"
-              key={`radio-transition-speed-${speed}`}
-              aria-pressed={radioTransitionSpeed === speed}
-              onClick={() => onRadioTransitionSpeedChange?.(speed)}
-            >{speed}× TRANSITION</button>
-          ))}
-          <button type="button" onClick={() => runtime.closeRadioScreen({ immediate: true })}>FORCE WORLD COMPACT</button>
-          <button type="button" onClick={() => runtime.openRadioScreen()}>FORCE SCREEN PLAYER</button>
-          <button type="button" onClick={() => {
-            runtime.closeRadioScreen({ immediate: true })
-            window.setTimeout(() => runtime.openRadioScreen(), 50)
-          }}>REPLAY OPEN</button>
-          <button type="button" onClick={() => runtime.closeRadioScreen()}>REPLAY CLOSE</button>
-          <button type="button" onClick={() => runtime.resetRadioPanelTransform()}>RESET TRANSFORM</button>
-        </div>
-        <h3>WORLD POSITION</h3>
-        <div className="studio-v2__debug-number-grid">
-          {['X', 'Y', 'Z'].map((axis, index) => (
-            <SpatialNumber
-              key={`radio-position-${axis}`}
-              label={axis}
-              value={radioPanel.position?.[index] ?? 0}
-              step={0.01}
-              onChange={(value) => runtime.setRadioPanelPosition(index, value)}
-            />
-          ))}
-        </div>
-        <h3>WORLD ROTATION / DEGREES</h3>
-        <div className="studio-v2__debug-number-grid">
-          {['X', 'Y', 'Z'].map((axis, index) => (
-            <SpatialNumber
-              key={`radio-rotation-${axis}`}
-              label={axis}
-              value={radioPanel.rotationDegrees?.[index] ?? 0}
-              step={1}
-              onChange={(value) => runtime.setRadioPanelRotationDegrees(index, value)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
-        <h2>MARSHALL AUDIO</h2>
+        <h2>GLOBAL AUDIO</h2>
         <dl>
           <InspectorRow label="CATALOGUE" value={audioState.catalogueStatus?.toUpperCase?.()} />
           <InspectorRow label="CATALOGUE URL" value={audioState.catalogueUrl} />
@@ -333,61 +226,13 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="VOLUME RAMP" value={audioState.activeVolumeRamp ? 'ACTIVE' : 'IDLE'} />
           <InspectorRow label="MANUAL INTENT" value={audioState.manualIntentState?.toUpperCase?.()} />
           <InspectorRow label="LOOP" value={audioState.loop ? 'ON' : 'OFF'} />
-          <InspectorRow label="MARSHALL HIT" value={marshallInteraction.pointerOver ? 'YES' : 'NO'} />
-          <InspectorRow label="POINTER MOVE" value={`${Number(marshallInteraction.pointerMovement ?? 0).toFixed(2)} PX`} />
-          <InspectorRow label="LAST RESULT" value={marshallInteraction.lastInteractionResult} />
           <InspectorRow label="LAST ERROR" value={audioState.errorCode ?? audioState.error ?? 'NONE'} />
           <InspectorRow label="MEDIA ERROR" value={audioState.latestMediaError ?? 'NONE'} />
-          <InspectorRow label="ROUTE ACTIVE" value={marshallInteraction.routeActive ? 'YES' : 'NO'} />
         </dl>
-        <div className="studio-v2__debug-actions">
-          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.play()}>PLAY</button>
-          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.pause()}>PAUSE</button>
-          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.stop()}>STOP</button>
-          <button type="button" disabled={!entry.sceneReady} onClick={() => audioController?.loadCatalogue({ force: true })}>RELOAD CATALOGUE</button>
-        </div>
-        {audioState.tracks?.filter(({ enabled }) => enabled).length > 1 && (
-          <label className="studio-v2__debug-select">
-            <span>ENABLED TRACK</span>
-            <select
-              value={audioState.trackId ?? ''}
-              onChange={(event) => audioController?.setTrack(event.currentTarget.value)}
-            >
-              <option value="" disabled>SELECT TRACK</option>
-              {audioState.tracks.filter(({ enabled }) => enabled).map((track) => (
-                <option key={track.id} value={track.id}>{track.title}</option>
-              ))}
-            </select>
-          </label>
-        )}
       </section>
 
       <section className="studio-v2__debug-section studio-v2__debug-section--delivery">
         <h2>ASSET DELIVERY</h2>
-        <h3>GUITAR</h3>
-        <div className="studio-v2__debug-actions">
-          {STUDIO_V2_DERIVATIVE_OPTIONS.guitar.map((value) => (
-            <ToggleButton
-              key={value}
-              active={(delivery.guitar ?? 'source') === value}
-              onClick={() => setDeliverySearchParam('guitar', value, STUDIO_V2_OFFICIAL_DELIVERY.guitar)}
-            >
-              {value.toUpperCase()}
-            </ToggleButton>
-          ))}
-        </div>
-        <h3>MARSHALL</h3>
-        <div className="studio-v2__debug-actions">
-          {STUDIO_V2_DERIVATIVE_OPTIONS.marshall.map((value) => (
-            <ToggleButton
-              key={value}
-              active={(delivery.marshall ?? 'source') === value}
-              onClick={() => setDeliverySearchParam('marshall', value, STUDIO_V2_OFFICIAL_DELIVERY.marshall)}
-            >
-              {value.toUpperCase()}
-            </ToggleButton>
-          ))}
-        </div>
         <h3>TEXTURES</h3>
         <div className="studio-v2__debug-actions">
           {STUDIO_V2_DERIVATIVE_OPTIONS.textures.map((value) => (
@@ -439,8 +284,6 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="GPU TEXTURE FORMAT" value={delivery.selectedGpuTextureFormat} />
           <InspectorRow label="ROOM" value={delivery.roomUrl} />
           <InspectorRow label="MACBOOK" value={delivery.macbookUrl} />
-          <InspectorRow label="MARSHALL" value={delivery.marshallUrl ?? delivery.musicUrl} />
-          <InspectorRow label="GUITAR" value={delivery.guitarUrl ?? delivery.musicUrl} />
         </dl>
       </section>
 
@@ -470,11 +313,6 @@ export default function StudioV2DebugPanel({
           />
           <InspectorRow label="MAC ALUMINIUM" value={materialValueText(materialOverrideById['macbook-aluminium-deck'])} />
           <InspectorRow label="MAC SCREEN" value={materialValueText(materialOverrideById['macbook-display-glass'])} />
-          <InspectorRow label="MARSHALL CABINET" value={materialValueText(materialOverrideById['marshall-cabinet-tolex-grille-atlas'])} />
-          <InspectorRow label="MARSHALL PANEL" value={materialValueText(materialOverrideById['marshall-control-panel'])} />
-          <InspectorRow label="GUITAR BODY" value={materialValueText(materialOverrideById['guitar-lacquered-body'])} />
-          <InspectorRow label="GUITAR FRETBOARD" value={materialValueText(materialOverrideById['guitar-fretboard'])} />
-          <InspectorRow label="GUITAR STRINGS" value={materialValueText(materialOverrideById['guitar-strings-hardware'])} />
           <InspectorRow label="NORMAL CORRECTIONS" value="NONE REQUIRED" />
         </dl>
       </section>
