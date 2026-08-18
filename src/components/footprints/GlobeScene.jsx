@@ -3,6 +3,7 @@ import EarthCanvas from './EarthCanvas'
 import { footprintsSceneStates } from './footprintsSceneState'
 
 export default function GlobeScene({
+  annotationsActive = true,
   projectsTransitionProgress,
   controlsEnabled,
   entranceOpacity,
@@ -41,6 +42,7 @@ export default function GlobeScene({
           style={{ y: exitY, scale: exitScale }}
         >
           <EarthCanvas
+            annotationsActive={annotationsActive}
             projectsTransitionProgress={projectsTransitionProgress}
             controlsEnabled={controlsEnabled}
             entryProgress={entryProgress}

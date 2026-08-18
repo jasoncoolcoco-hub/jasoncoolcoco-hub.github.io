@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { footprintsEntryThresholds } from '../../data/footprintsView'
 import FallbackEarthPoster from './FallbackEarthPoster'
 import { footprintsSceneStates } from './footprintsSceneState'
@@ -14,6 +14,7 @@ const sectionTransitionStart = 0.002
 const offscreenZoomResetProgress = 0.4
 
 export default function EarthCanvas({
+  annotationsActive = true,
   projectsTransitionProgress,
   controlsEnabled,
   entryProgress,
@@ -27,6 +28,7 @@ export default function EarthCanvas({
 }) {
   const hostRef = useRef(null)
   const runtimeRef = useRef(null)
+  const annotationsActiveRef = useRef(annotationsActive)
   const scrollRotationRef = useRef(
     reducedMotion ? 0 : scrollRotation.get(),
   )
@@ -57,6 +59,11 @@ export default function EarthCanvas({
   const [desktopZoomAvailable, setDesktopZoomAvailable] = useState(() =>
     window.matchMedia(desktopZoomQuery).matches,
   )
+
+  useLayoutEffect(() => {
+    annotationsActiveRef.current = annotationsActive
+    runtimeRef.current?.setFootprintsAnnotationsActive(annotationsActive)
+  }, [annotationsActive])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(desktopZoomQuery)
@@ -295,6 +302,9 @@ export default function EarthCanvas({
         }
 
         runtimeRef.current = runtime
+        runtime.setFootprintsAnnotationsActive(
+          annotationsActiveRef.current,
+        )
         host.dataset.renderer = runtime.backend
         host.dataset.textureQuality = runtime.textureQuality
         host.dataset.zoomDefault = String(runtime.zoomLimits.default)

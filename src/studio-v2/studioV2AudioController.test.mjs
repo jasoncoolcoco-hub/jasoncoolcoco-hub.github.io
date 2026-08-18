@@ -2,6 +2,29 @@ import assert from 'node:assert/strict'
 import { createStudioV2AudioController } from './studioV2AudioController.js'
 import { resolveStudioV2AudioCatalogueForMode } from './studioV2AudioCatalogue.js'
 
+globalThis.requestAnimationFrame ??= (callback) => setTimeout(() => callback(performance.now() + 5000), 0)
+globalThis.cancelAnimationFrame ??= clearTimeout
+
+class FakeGestureTarget {
+  constructor() {
+    this.listeners = new Map()
+  }
+
+  addEventListener(name, listener) {
+    const listeners = this.listeners.get(name) ?? new Set()
+    listeners.add(listener)
+    this.listeners.set(name, listeners)
+  }
+
+  removeEventListener(name, listener) {
+    this.listeners.get(name)?.delete(listener)
+  }
+
+  emit(name) {
+    this.listeners.get(name)?.forEach((listener) => listener({ type: name }))
+  }
+}
+
 class FakeAudio {
   constructor() {
     FakeAudio.instances += 1
@@ -113,20 +136,34 @@ const catalogue = {
 }
 
 let deferredEntryAudio
+const deferredEntryGestures = new FakeGestureTarget()
 const deferredEntryController = createStudioV2AudioController({
   createAudioElement: () => {
     deferredEntryAudio = new FakeAudio()
     return deferredEntryAudio
   },
   fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
+  gestureTarget: deferredEntryGestures,
 })
 await deferredEntryController.prepareEntry()
 assert.equal(deferredEntryAudio.preload, 'none')
 assert.equal(deferredEntryAudio.loadCalls, 0)
 assert.equal(deferredEntryController.getState().entryStatus, 'prepared')
-await deferredEntryController.startEntryExperience()
-assert.equal(deferredEntryAudio.preload, 'auto')
+deferredEntryController.startEntryExperience()
+assert.equal(deferredEntryAudio.preload, 'none')
+assert.equal(deferredEntryAudio.playCalls, 0)
+assert.equal(deferredEntryController.getState().fallbackArmed, true)
+deferredEntryGestures.emit('click')
+await new Promise((resolve) => setTimeout(resolve, 0))
 assert.equal(deferredEntryAudio.playCalls, 1)
+assert.equal(deferredEntryController.getState().status, 'playing')
+assert.equal(deferredEntryController.getState().entryStatus, 'playing-after-gesture')
+assert.equal(deferredEntryController.getState().fallbackArmed, false)
+deferredEntryAudio.currentTime = 12
+deferredEntryGestures.emit('click')
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.equal(deferredEntryAudio.playCalls, 1)
+assert.equal(deferredEntryAudio.currentTime, 12)
 deferredEntryController.destroy()
 FakeAudio.instances = 0
 

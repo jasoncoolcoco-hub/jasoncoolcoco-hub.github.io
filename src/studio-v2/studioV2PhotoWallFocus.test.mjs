@@ -21,6 +21,7 @@ assert.match(interaction, /raycaster\.intersectObject\(photoBoardRoot, true\)/)
 assert.match(interaction, /event\.key === 'Escape'/)
 assert.match(interaction, /isInteractionLocked\(\)/)
 assert.match(interaction, /BLOCKED_PHOTO_DETAIL/)
+assert.match(interaction, /BLOCKED_PHOTO_ASSETS/)
 assert.match(interaction, /orbit: false, yaw: false, pitch: false, pan: false, zoom: false/)
 
 assert.match(director, /state = STUDIO_V2_CAMERA_STATES\.PHOTO_WALL_FOCUS_TRANSITION/)

@@ -34,13 +34,6 @@ export const STUDIO_V2_ANCHORS = Object.freeze({
     surfaceNormal: Object.freeze([0, 1, 0]),
     note: 'A4 folder at the seated-left of the MacBook, rotated 90° clockwise from the accepted Pass 1 follow-up pose while preserving seated reach and future opening clearance.',
   }),
-  COFFEE_CUP_01: Object.freeze({
-    position: Object.freeze([1.02, 1.417, 0.38]),
-    rotation: Object.freeze([0, -2.861593, 0]),
-    scale: 1,
-    surfaceNormal: Object.freeze([0, 1, 0]),
-    note: 'Static coffee cup to the seated-right of the MacBook, rotated 180° clockwise from its Pass 1 pose with placement and clearances unchanged.',
-  }),
   POLAROID_WALL_DISPLAY_GROUP: null,
   MACBOOK_DESK: null,
   PHOTO_WALL_01: null,

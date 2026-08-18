@@ -685,84 +685,21 @@ async function loadEntryAsset(loader, url, assetIds, testConfig, onAssetReady) {
 export async function loadStudioV2PlacedObjects(scene, renderer, deliveryConfig, {
   onAssetReady,
   onPlacementReady,
-  parallel = true,
   testConfig,
 } = {}) {
   const loaderSupport = await createStudioV2GltfLoader(renderer, deliveryConfig)
   const loader = loaderSupport.loader
-  let placements
-  if (deliveryConfig.usesCombinedSource) {
-    const loadMusic = () => loadEntryAsset(
-      loader,
-      deliveryConfig.musicUrl,
-      ['MARSHALL_AMP', 'GIBSON_GUITAR'],
-      testConfig,
-      onAssetReady,
-    )
-    const loadMacbook = () => loadEntryAsset(
-      loader,
-      deliveryConfig.macbookUrl,
-      ['MACBOOK_ISLAND_01'],
-      testConfig,
-      onAssetReady,
-    )
-    const gltfs = parallel
-      ? await Promise.all([loadMusic(), loadMacbook()])
-      : [await loadMusic(), await loadMacbook()]
-    placements = [
-      createPlacedObject({
-        ...STUDIO_V2_PLACED_OBJECTS.MARSHALL_GUITAR,
-        url: deliveryConfig.musicUrl,
-      }, gltfs[0], renderer),
-      createPlacedObject({
-        ...STUDIO_V2_PLACED_OBJECTS.MACBOOK_PRO_2021,
-        url: deliveryConfig.macbookUrl,
-      }, gltfs[1], renderer),
-    ]
-  } else {
-    const loadMacbook = () => loadEntryAsset(
-      loader,
-      deliveryConfig.macbookUrl,
-      ['MACBOOK_ISLAND_01'],
-      testConfig,
-      onAssetReady,
-    )
-    const loadMarshall = () => loadEntryAsset(
-      loader,
-      deliveryConfig.marshallUrl,
-      ['MARSHALL_AMP'],
-      testConfig,
-      onAssetReady,
-    )
-    const loadGuitar = () => loadEntryAsset(
-      loader,
-      deliveryConfig.guitarUrl,
-      ['GIBSON_GUITAR'],
-      testConfig,
-      onAssetReady,
-    )
-    let macbookGltf
-    let marshallGltf
-    let guitarGltf
-    if (parallel) {
-      [macbookGltf, marshallGltf, guitarGltf] = await Promise.all([
-        loadMacbook(),
-        loadMarshall(),
-        loadGuitar(),
-      ])
-    } else {
-      macbookGltf = await loadMacbook()
-      marshallGltf = await loadMarshall()
-      guitarGltf = await loadGuitar()
-    }
-    placements = [
-      createSplitMusicPlacement(deliveryConfig, marshallGltf, guitarGltf, renderer),
-      createPlacedObject({
-        ...STUDIO_V2_PLACED_OBJECTS.MACBOOK_PRO_2021,
-        url: deliveryConfig.macbookUrl,
-      }, macbookGltf, renderer),
-    ]
-  }
+  const macbookGltf = await loadEntryAsset(
+    loader,
+    deliveryConfig.macbookUrl,
+    ['MACBOOK_ISLAND_01'],
+    testConfig,
+    onAssetReady,
+  )
+  const placements = [createPlacedObject({
+    ...STUDIO_V2_PLACED_OBJECTS.MACBOOK_PRO_2021,
+    url: deliveryConfig.macbookUrl,
+  }, macbookGltf, renderer)]
   const group = new THREE.Group()
   group.name = 'FredStudioV2PlacedObjects'
   placements.forEach((placement) => group.add(placement.group))

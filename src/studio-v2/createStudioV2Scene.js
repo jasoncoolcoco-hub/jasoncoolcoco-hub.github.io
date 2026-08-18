@@ -34,9 +34,10 @@ import { acquireStudioV2Model } from './studioV2ModelResource'
 import { loadStudioV2PlacedObjects } from './studioV2PlacedObjects'
 import { createStudioV2DeliveryConfig } from './studioV2DerivativeConfig'
 import { createStudioV2GltfLoader } from './studioV2GltfLoader'
-import { createStudioV2EntryGate } from './studioV2EntryGate'
-import { createStudioV2MarshallInteraction } from './createStudioV2MarshallInteraction'
-import { createStudioV2RadioPanel } from './createStudioV2RadioPanel'
+import {
+  createStudioV2EntryGate,
+  VISUAL_READY_ASSETS,
+} from './studioV2EntryGate'
 import {
   createStudioV2FloorReflection,
   STUDIO_V2_SELECTED_FLOOR_ARCHITECTURE,
@@ -60,13 +61,32 @@ import {
   STUDIO_V2_ROOM_WIDE_START_POSE,
   STUDIO_V2_TABLE_OVERVIEW_CANDIDATES,
 } from './studioV2CameraPoses'
-import {
-  STUDIO_V2_RADIO_PANEL_ID,
-  STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
-} from './studioV2RadioPanelConfig'
 
 function roundedVector(vector) {
   return vector.toArray().map((value) => Number(value.toFixed(3)))
+}
+
+function capturePhotoWallVisualState(photoBoardRoot) {
+  photoBoardRoot?.updateMatrixWorld(true)
+  const cards = []
+  photoBoardRoot?.traverse((object) => {
+    if (!Number.isFinite(object.userData?.photoPackaging?.slotNumber)) return
+    const materials = []
+    object.traverse((child) => {
+      const childMaterials = Array.isArray(child.material)
+        ? child.material
+        : child.material
+          ? [child.material]
+          : []
+      childMaterials.forEach((material) => materials.push(material.uuid))
+    })
+    cards.push({
+      id: object.userData.studioV2Id,
+      materials: [...new Set(materials)].sort(),
+      matrixWorld: object.matrixWorld.elements.map((value) => Number(value.toFixed(7))),
+    })
+  })
+  return cards.sort((a, b) => a.id.localeCompare(b.id))
 }
 
 function cameraConfigForPreset(presetName) {
@@ -190,8 +210,6 @@ export function createStudioV2Scene({
   onEntryState,
   onError,
   onProgress,
-  onRadioPanelCloseRequest,
-  onRadioPanelOpenRequest,
   onReady,
   onRoomReady,
   onStudioV2Ready,
@@ -201,7 +219,6 @@ export function createStudioV2Scene({
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
   initialAmbientProgress,
   initialAmbientCandidate = 'B',
-  forceAutoplayBlocked = false,
   initialAssetMaterialMode = 'refined',
   initialLightingCandidate,
   initialToneMapping,
@@ -498,16 +515,13 @@ export function createStudioV2Scene({
   let disposed = false
   let modelRoot = null
   let floorReflection = null
-  let marshallInteraction = null
   let unsubscribeAudioState = null
-  let radioPanel = null
   let macbookFocus = null
   let macbookSiteState = STUDIO_V2_MACBOOK_SITE_STATES.CLOSED
   let photoWallFocus = null
   let photoHover = null
   let photoDetail = null
   let tableInteractionTarget = null
-  let unsubscribeRadioPanel = null
   let spatialDebug = null
   let modelAudit = null
   let environmentRenderTarget = null
@@ -523,19 +537,7 @@ export function createStudioV2Scene({
   let modelResource = null
   let roomLoaderSupport = null
   let roomTextureFormats = []
-  let deferredAssetsIdleId = null
-  let deferredAssetsTimer = null
-  let radioMetadataReadyMs = null
-  let radioPanelReadyMs = null
-  let radioPanelState = null
-  const radioPanelSubscribers = new Set()
-  const publishRadioPanelState = (nextState) => {
-    radioPanelState = nextState
-    cameraDirector.setPauseReason('RADIO_PANEL', Boolean(nextState?.screenPlayerOpen), {
-      resumeDelayMs: 2000,
-    })
-    radioPanelSubscribers.forEach((listener) => listener(nextState))
-  }
+  let visualReadyAssetsPromise = null
   const visualState = {
     ibl: true,
     shadows: true,
@@ -649,12 +651,21 @@ export function createStudioV2Scene({
     onChange: (state) => {
       mount.dataset.entryPhase = state.phase
       mount.dataset.sceneReady = String(state.sceneReady)
+      mount.dataset.visualReady = String(state.visualReady)
+      if (state.sceneReadyAtMs !== null) mount.dataset.sceneReadyMs = state.sceneReadyAtMs.toFixed(1)
+      if (state.visualReadyAtMs !== null) mount.dataset.visualReadyMs = state.visualReadyAtMs.toFixed(1)
+      if (state.visualReadyDelayMs !== null) {
+        mount.dataset.visualReadyDelayMs = state.visualReadyDelayMs.toFixed(1)
+      }
       onEntryState?.(state)
     },
     startedAt: loadStartedAt,
     testConfig: entryTestConfig,
   })
   mount.dataset.interactionsEnabled = 'false'
+  const visualReadyDatasetKeys = Object.fromEntries(VISUAL_READY_ASSETS.map(({ id }) => [id, {
+    POLAROID_CAMERA_01: 'polaroidCameraVisibleMs',
+  }[id]]))
 
   function textureFormatsFor(root) {
     const formats = new Set()
@@ -790,7 +801,6 @@ export function createStudioV2Scene({
         if (assetId !== 'MACBOOK_ISLAND_01') entryGate.markAssetReady(assetId, detail)
       },
       onPlacementReady: (anchorName, detail) => entryGate.markAssetReady(anchorName, detail),
-      parallel: parallelEntryLoading,
       testConfig: entryTestConfig,
     },
   )
@@ -800,7 +810,13 @@ export function createStudioV2Scene({
     renderer,
     activeDeliveryConfig,
     {
-      onAssetReady: (assetId, detail) => entryGate.markAssetReady(assetId, detail),
+      onAssetReady: (assetId, detail) => {
+        entryGate.markAssetReady(assetId, detail)
+        const datasetKey = visualReadyDatasetKeys[assetId]
+        if (datasetKey && !mount.dataset[datasetKey]) {
+          mount.dataset[datasetKey] = (performance.now() - loadStartedAt).toFixed(1)
+        }
+      },
       photoBoardGrid,
       photoSlotOverlay,
       testConfig: entryTestConfig,
@@ -811,42 +827,6 @@ export function createStudioV2Scene({
     entryGate.setPhase('loading-entry-assets')
     const placedObjectsPromise = parallelEntryLoading ? loadPlacedObjects() : null
     const sceneExpansionPromise = parallelEntryLoading ? loadSceneExpansion() : null
-    const radioPanelPromise = (async () => {
-      const metadataState = audioController
-        ? await audioController.loadCatalogue({
-          timeoutMs: STUDIO_V2_RADIO_PANEL_METADATA_TIMEOUT_MS,
-        })
-        : null
-      radioMetadataReadyMs = Number((performance.now() - loadStartedAt).toFixed(1))
-      if (disposed) return null
-      const panel = createStudioV2RadioPanel({
-        audioController,
-        controls,
-        domElement: renderer.domElement,
-        orbitController: {
-          getEnabled: cameraDirector.isOrbitEnabled,
-          setEnabled: (enabled) => cameraDirector.setOrbitEnabled(enabled, { owner: 'RADIO_PANEL' }),
-        },
-        onOpenRequest: onRadioPanelOpenRequest,
-        parent: entryRoot,
-        renderer,
-        metadataReadyAtMs: radioMetadataReadyMs,
-        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        startedAt: loadStartedAt,
-      })
-      panel.setCamera(camera)
-      cameraInteractionTargets.push(panel.group)
-      unsubscribeRadioPanel = panel.subscribe(publishRadioPanelState)
-      radioPanelReadyMs = Number((performance.now() - loadStartedAt).toFixed(1))
-      await waitForEntryAsset(STUDIO_V2_RADIO_PANEL_ID, Promise.resolve(panel))
-      entryGate.markAssetReady(STUDIO_V2_RADIO_PANEL_ID, {
-        catalogueStatus: metadataState?.catalogueStatus ?? 'unavailable',
-        fallback: metadataState?.catalogueStatus !== 'ready',
-        metadataReadyMs: radioMetadataReadyMs,
-        panelReadyMs: radioPanelReadyMs,
-      })
-      return panel
-    })()
     roomLoaderSupport = await createStudioV2GltfLoader(renderer, activeDeliveryConfig)
     modelResource = acquireStudioV2Model(
       activeDeliveryConfig.roomUrl,
@@ -859,18 +839,16 @@ export function createStudioV2Scene({
     ).then(prepareRoom)
     let roomPreparation
     if (parallelEntryLoading) {
-      [roomPreparation, placedObjectsResource, sceneExpansionResource, radioPanel] = await Promise.all([
+      [roomPreparation, placedObjectsResource, sceneExpansionResource] = await Promise.all([
         roomPreparationPromise,
         placedObjectsPromise,
         sceneExpansionPromise,
-        radioPanelPromise,
       ])
     } else {
       roomPreparation = await roomPreparationPromise
       await new Promise((resolve) => requestAnimationFrame(() => resolve()))
       placedObjectsResource = await loadPlacedObjects()
       sceneExpansionResource = await loadSceneExpansion()
-      radioPanel = await radioPanelPromise
     }
     if (!roomPreparation || disposed) {
       placedObjectsResource?.dispose()
@@ -879,6 +857,16 @@ export function createStudioV2Scene({
       sceneExpansionResource = null
       return null
     }
+
+    if (sceneExpansionResource.getPhotoWallState() !== 'ready') {
+      const photoWallError = new Error(
+        'Full-quality Photo Wall was not ready before the visual gate.',
+      )
+      photoWallError.assetId = 'PHOTO_WALL_PHOTOS'
+      throw photoWallError
+    }
+
+    visualReadyAssetsPromise = sceneExpansionResource.loadVisualReadyAssets()
 
     const { environment, firstRoomFrameMs, gltf, tuned } = roomPreparation
     placedObjectsResource.setMaterialMode(initialAssetMaterialMode)
@@ -903,10 +891,7 @@ export function createStudioV2Scene({
       ),
     })
     entryGate.markCondition('anchorsReady', {
-      anchors: [
-        ...placedObjectRecords.map(({ anchorName }) => anchorName),
-        STUDIO_V2_RADIO_PANEL_ID,
-      ],
+      anchors: placedObjectRecords.map(({ anchorName }) => anchorName),
     })
     floorReflection = createStudioV2FloorReflection({
       architecture: initialFloorArchitecture,
@@ -936,7 +921,6 @@ export function createStudioV2Scene({
       camera,
       cameraDirector,
       domElement: renderer.domElement,
-      getRadioState: () => radioPanel?.getState() ?? radioPanelState,
       isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
       macbookRoot,
       renderSize,
@@ -946,27 +930,34 @@ export function createStudioV2Scene({
     mount.dataset.macbookSiteState = macbookSiteState
     mount.dataset.macbookSiteMode = 'false'
     const photoBoardRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard)
+    const photoWallVisualStateBeforeWarmup = capturePhotoWallVisualState(photoBoardRoot)
     photoWallFocus = createStudioV2PhotoWallFocus({
       camera,
       cameraDirector,
       domElement: renderer.domElement,
-      isInteractionLocked: () => photoDetail?.isOpen() ?? false,
+      isInteractionLocked: () => (
+        (photoDetail?.isOpen() ?? false)
+      ),
       photoBoardRoot,
     })
     mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
-    photoHover = createStudioV2PhotoHover({
-      camera,
-      cameraDirector,
-      domElement: renderer.domElement,
-      photoBoardRoot,
-    })
-    photoDetail = createStudioV2PhotoDetail({
-      camera,
-      cameraDirector,
-      domElement: renderer.domElement,
-      photoBoardRoot,
-      photoHover,
-    })
+    const createPhotoCardInteractions = () => {
+      if (photoHover || photoDetail) return
+      photoHover = createStudioV2PhotoHover({
+        camera,
+        cameraDirector,
+        domElement: renderer.domElement,
+        photoBoardRoot,
+      })
+      photoDetail = createStudioV2PhotoDetail({
+        camera,
+        cameraDirector,
+        domElement: renderer.domElement,
+        photoBoardRoot,
+        photoHover,
+      })
+    }
+    createPhotoCardInteractions()
     entryGate.markCondition('worldMatricesReady')
     entryGate.markCondition('shadowsReady')
 
@@ -977,8 +968,6 @@ export function createStudioV2Scene({
     const openingGroupsPresent = [
       'ROOM_ENVIRONMENT',
       'MACBOOK_ISLAND_01',
-      'MARSHALL_GUITAR_FLOOR_01',
-      STUDIO_V2_RADIO_PANEL_ID,
       STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard,
     ].every((semanticId) => openingSemanticIds.has(semanticId))
     if (!openingGroupsPresent) {
@@ -1031,6 +1020,36 @@ export function createStudioV2Scene({
     if (disposed) return null
     entryGate.markCondition('warmupReady', { hiddenFrames: 2, warmupRender: true })
     const entry = entryGate.markSceneReady()
+    mount.dataset.photoWallAssets = sceneExpansionResource.getPhotoWallState()
+    const visualReadyResult = await visualReadyAssetsPromise
+    if (disposed || visualReadyResult.status !== 'ready') return null
+    placedObjectRecords.push(...visualReadyResult.records)
+    entryRoot.updateMatrixWorld(true)
+    if (typeof renderer.compileAsync === 'function') await renderer.compileAsync(scene, camera)
+    else renderer.compile(scene, camera)
+    if (floorReflection) {
+      floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
+    }
+    renderer.render(scene, camera)
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()))
+    if (disposed) return null
+    const photoWallVisualStateAtRelease = capturePhotoWallVisualState(photoBoardRoot)
+    const photoWallVisualAudit = {
+      cardCount: photoWallVisualStateAtRelease.length,
+      materialsStable: photoWallVisualStateAtRelease.every((card, index) => (
+        JSON.stringify(card.materials)
+          === JSON.stringify(photoWallVisualStateBeforeWarmup[index]?.materials)
+      )),
+      transformsStable: photoWallVisualStateAtRelease.every((card, index) => (
+        JSON.stringify(card.matrixWorld)
+          === JSON.stringify(photoWallVisualStateBeforeWarmup[index]?.matrixWorld)
+      )),
+    }
+    mount.dataset.photoWallVisualAudit = JSON.stringify(photoWallVisualAudit)
+    const visualReadyEntry = entryGate.markVisualReady({
+      acceptedVisibleProps: visualReadyResult.records.map(({ anchorName }) => anchorName),
+      hiddenWarmupFrame: true,
+    })
     cameraDirector.setOrbitEnabled(exploreEnabled)
     if (!capture) {
       const entryStartedAt = performance.now()
@@ -1041,24 +1060,10 @@ export function createStudioV2Scene({
           startedAt: entryStartedAt,
         })
       }
-      audioController?.startEntryExperience({
-        timestamp: entryStartedAt,
-        forcePolicyBlocked: forceAutoplayBlocked,
-      })
       mount.dataset.entryExperienceStartedAt = entryStartedAt.toFixed(3)
     }
     mount.dataset.interactionsEnabled = String(cameraDirector.isOrbitEnabled())
     if (audioController) {
-      marshallInteraction = createStudioV2MarshallInteraction({
-        audioController,
-        camera,
-        controls,
-        domElement: renderer.domElement,
-        root: entryRoot,
-        sceneReady: () => entryGate.snapshot().sceneReady,
-        criticalError: () => Boolean(entryGate.snapshot().error),
-        blockers: [radioPanel?.group].filter(Boolean),
-      })
       unsubscribeAudioState = audioController.subscribe((audioState) => {
         mount.dataset.audioState = audioState.status
         mount.dataset.audioCurrentTime = Number(audioState.currentTime ?? 0).toFixed(3)
@@ -1109,6 +1114,7 @@ export function createStudioV2Scene({
         ])],
       },
       entry,
+      visualReady: visualReadyEntry,
       environment,
       maximumAnisotropy,
       materialTuningReport,
@@ -1117,7 +1123,6 @@ export function createStudioV2Scene({
       windowDecorationRemoval,
       placedObjects: placedObjectRecords,
       cameraSafety: cameraSafety.record(),
-      radioPanel: radioPanel?.getState() ?? null,
       floorReflection: floorReflection?.getState() ?? null,
       root: {
         position: STUDIO_V2_MODEL_TRANSFORM.position,
@@ -1128,31 +1133,10 @@ export function createStudioV2Scene({
     mount.dataset.modelReady = 'true'
     onStudioV2Ready?.(audit)
     onReady?.(audit)
-    const loadDeferredSceneAssets = () => {
-      deferredAssetsIdleId = null
-      if (disposed) return
-      mount.dataset.deferredAssets = 'loading'
-      sceneExpansionResource.loadDeferredAssets().then((result) => {
-        if (disposed) return
-        placedObjectRecords.push(...result.records)
-        entryRoot.updateMatrixWorld(true)
-        mount.dataset.deferredAssets = result.status
-      }).catch(() => {
-        if (!disposed) mount.dataset.deferredAssets = 'error'
-      })
-    }
-    deferredAssetsTimer = window.setTimeout(() => {
-      deferredAssetsTimer = null
-      if (disposed) return
-      if (window.requestIdleCallback) {
-        deferredAssetsIdleId = window.requestIdleCallback(loadDeferredSceneAssets, { timeout: 1800 })
-      } else {
-        loadDeferredSceneAssets()
-      }
-    }, 700)
     return audit
   })().catch((error) => {
     if (!disposed) {
+      mount.dataset.entryError = error instanceof Error ? error.message : String(error)
       cameraDirector.setOrbitEnabled(false)
       mount.dataset.interactionsEnabled = 'false'
       entryGate.fail(error.assetId ?? null, error)
@@ -1428,7 +1412,6 @@ export function createStudioV2Scene({
           stabilizations: orbitStabilizations,
         },
         spatial: spatialDebug?.getState() ?? null,
-        radioPanel: radioPanel?.getState() ?? radioPanelState,
         entry: entryGate.snapshot(),
         viewport: [renderSize().width, renderSize().height],
       })
@@ -1867,66 +1850,6 @@ export function createStudioV2Scene({
     getSceneReadyState() {
       return entryGate.snapshot()
     },
-    getMarshallInteractionState() {
-      return marshallInteraction?.getState() ?? null
-    },
-    subscribeMarshallInteraction(listener) {
-      return marshallInteraction?.subscribe(listener) ?? (() => {})
-    },
-    toggleMarshallAudio(source = 'runtime') {
-      return marshallInteraction?.toggle(source) ?? Promise.resolve(audioController?.getState?.())
-    },
-    getRadioPanelState() {
-      return radioPanel?.getState() ?? radioPanelState
-    },
-    subscribeRadioPanel(listener) {
-      radioPanelSubscribers.add(listener)
-      if (radioPanelState) listener(radioPanelState)
-      return () => radioPanelSubscribers.delete(listener)
-    },
-    toggleRadioPanel() {
-      return radioPanel?.openScreenPlayer() ?? null
-    },
-    setRadioPanelExpanded(expanded, options) {
-      if (expanded) return radioPanel?.openScreenPlayer() ?? null
-      onRadioPanelCloseRequest?.({ immediate: Boolean(options?.immediate) })
-      return radioPanel?.getState() ?? null
-    },
-    openRadioScreen() {
-      return radioPanel?.openScreenPlayer() ?? null
-    },
-    closeRadioScreen(options) {
-      onRadioPanelCloseRequest?.(options ?? {})
-      return radioPanel?.getState() ?? null
-    },
-    setRadioScreenState(state) {
-      return radioPanel?.setScreenPlayerState(state) ?? null
-    },
-    getRadioPanelScreenBounds() {
-      return radioPanel?.getProjectedBounds() ?? null
-    },
-    prepareRadioPanelCompactSurface() {
-      return radioPanel?.prepareCompactTexture() ?? null
-    },
-    animateRadioPanelWorldLayers(options) {
-      return radioPanel?.animateWorldLayers(options) ?? null
-    },
-    selectRadioTrack(trackId) {
-      const track = audioController?.getState?.().tracks?.find(({ id }) => id === trackId)
-      return radioPanel?.selectTrack(track) ?? Promise.resolve(null)
-    },
-    setRadioPanelPosition(axis, value) {
-      if (!debug) return radioPanel?.getState() ?? null
-      return radioPanel?.setDebugPosition(axis, value) ?? null
-    },
-    setRadioPanelRotationDegrees(axis, value) {
-      if (!debug) return radioPanel?.getState() ?? null
-      return radioPanel?.setDebugRotationDegrees(axis, value) ?? null
-    },
-    resetRadioPanelTransform() {
-      if (!debug) return radioPanel?.getState() ?? null
-      return radioPanel?.resetDebugTransform() ?? null
-    },
     getAssetMaterialMode() {
       return placedObjectsResource?.getMaterialMode() ?? 'refined'
     },
@@ -1955,13 +1878,8 @@ export function createStudioV2Scene({
       if (disposed) return
       disposed = true
       cancelAnimationFrame(animationFrame)
-      if (deferredAssetsTimer !== null) window.clearTimeout(deferredAssetsTimer)
-      if (deferredAssetsIdleId !== null) window.cancelIdleCallback?.(deferredAssetsIdleId)
       resizeObserver.disconnect()
-      marshallInteraction?.dispose()
       unsubscribeAudioState?.()
-      unsubscribeRadioPanel?.()
-      radioPanel?.dispose()
       macbookFocus?.dispose()
       macbookFocus = null
       macbookSiteState = STUDIO_V2_MACBOOK_SITE_STATES.CLOSED
@@ -1976,7 +1894,6 @@ export function createStudioV2Scene({
       tableInteractionTarget?.material.dispose()
       tableInteractionTarget?.removeFromParent()
       tableInteractionTarget = null
-      radioPanelSubscribers.clear()
       cameraDirector.dispose()
       controls.dispose()
       placedObjectsResource?.dispose()
@@ -1999,8 +1916,12 @@ export function createStudioV2Scene({
       delete mount.dataset.criticalRequests
       delete mount.dataset.firstVisibleFrameMs
       delete mount.dataset.interactionsEnabled
-      delete mount.dataset.deferredAssets
       delete mount.dataset.sceneReady
+      delete mount.dataset.sceneReadyMs
+      delete mount.dataset.visualReady
+      delete mount.dataset.visualReadyMs
+      delete mount.dataset.visualReadyDelayMs
+      delete mount.dataset.polaroidCameraVisibleMs
       delete mount.dataset.audioState
       delete mount.dataset.audioCurrentTime
       delete mount.dataset.audioTrackId
@@ -2022,6 +1943,9 @@ export function createStudioV2Scene({
       delete mount.dataset.macbookSiteState
       delete mount.dataset.photoWallFocusState
       delete mount.dataset.photoWallFocusTarget
+      delete mount.dataset.photoWallAssets
+      delete mount.dataset.photoWallVisualAudit
+      delete mount.dataset.entryError
       delete mount.dataset.photoHoverId
       delete mount.dataset.photoDetailState
       delete mount.dataset.floorReflectionEnabled
