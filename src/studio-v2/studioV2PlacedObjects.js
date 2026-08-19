@@ -665,8 +665,17 @@ function entryDelay(testConfig, assetIds) {
   return Math.max(...assetIds.map((assetId) => testConfig?.delays?.[assetId] ?? 0), 0)
 }
 
-async function loadEntryAsset(loader, url, assetIds, testConfig, onAssetReady) {
-  const request = loader.loadAsync(url)
+async function loadEntryAsset(
+  loader,
+  url,
+  assetIds,
+  testConfig,
+  onAssetReady,
+  onAssetProgress,
+) {
+  const request = loader.loadAsync(url, (event) => {
+    assetIds.forEach((assetId) => onAssetProgress?.(assetId, event))
+  })
   const delay = entryDelay(testConfig, assetIds)
   const [gltf] = await Promise.all([
     request,
@@ -683,6 +692,7 @@ async function loadEntryAsset(loader, url, assetIds, testConfig, onAssetReady) {
 }
 
 export async function loadStudioV2PlacedObjects(scene, renderer, deliveryConfig, {
+  onAssetProgress,
   onAssetReady,
   onPlacementReady,
   testConfig,
@@ -695,6 +705,7 @@ export async function loadStudioV2PlacedObjects(scene, renderer, deliveryConfig,
     ['MACBOOK_ISLAND_01'],
     testConfig,
     onAssetReady,
+    onAssetProgress,
   )
   const placements = [createPlacedObject({
     ...STUDIO_V2_PLACED_OBJECTS.MACBOOK_PRO_2021,

@@ -269,10 +269,10 @@ function entryDelay(testConfig, id) {
   return Number.isFinite(delay) ? Math.max(0, delay) : 0
 }
 
-async function loadAsset(loader, url, id, testConfig) {
+async function loadAsset(loader, url, id, testConfig, onAssetProgress) {
   const delay = entryDelay(testConfig, id)
   const [gltf] = await Promise.all([
-    loader.loadAsync(url),
+    loader.loadAsync(url, (event) => onAssetProgress?.(id, event)),
     delay > 0 ? new Promise((resolve) => window.setTimeout(resolve, delay)) : Promise.resolve(),
   ])
   if (testConfig?.failAsset === id) {
@@ -304,6 +304,7 @@ function disposeGroup(group, additionalMaterials) {
 }
 
 export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig, {
+  onAssetProgress,
   onAssetReady,
   photoBoardGrid = false,
   photoSlotOverlay = false,
@@ -320,6 +321,7 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     urls.photoBoard,
     STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard,
     testConfig,
+    onAssetProgress,
   )
   const photoBoardPlacement = createStaticPlacement(
     photoBoardGltf,
@@ -378,6 +380,7 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     urls.camera,
     STUDIO_V2_SCENE_EXPANSION_IDS.camera,
     testConfig,
+    onAssetProgress,
   )
   visualReadyGltfPromise.catch(() => {})
 

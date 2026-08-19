@@ -61,6 +61,21 @@ export const ENTRY_READY_CONDITIONS = Object.freeze([
   'warmupReady',
 ])
 
+export const STUDIO_V2_ENTRY_PROGRESS_WEIGHTS = Object.freeze({
+  assets: Object.freeze({
+    ROOM_ENVIRONMENT: 49,
+    MACBOOK_ISLAND_01: 7,
+    PHOTO_BOARD_01: 1,
+  }),
+  visualAssets: Object.freeze({
+    POLAROID_CAMERA_01: 34,
+    PHOTO_WALL_PHOTOS: 3,
+  }),
+  conditions: Object.freeze(Object.fromEntries(
+    ENTRY_READY_CONDITIONS.map((condition) => [condition, 0.75]),
+  )),
+})
+
 export const ENTRY_FUTURE_ASSET_KINDS = Object.freeze([
   'photos',
   'map',
@@ -125,6 +140,30 @@ function statusMap(keys, initialValue) {
   return Object.fromEntries(keys.map((key) => [key, initialValue]))
 }
 
+function normalizedProgress(value) {
+  const numericValue = typeof value === 'object' && value !== null
+    ? Number(value.total) > 0
+      ? Number(value.loaded) / Number(value.total) * 100
+      : 0
+    : Number(value)
+  return Number.isFinite(numericValue) ? Math.min(100, Math.max(0, numericValue)) : 0
+}
+
+function weightedEntryProgress(assetProgress, visualAssetProgress, conditions) {
+  const weightedProgress = [
+    ...Object.entries(STUDIO_V2_ENTRY_PROGRESS_WEIGHTS.assets).map(([id, weight]) => (
+      weight * normalizedProgress(assetProgress[id]) / 100
+    )),
+    ...Object.entries(STUDIO_V2_ENTRY_PROGRESS_WEIGHTS.visualAssets).map(([id, weight]) => (
+      weight * normalizedProgress(visualAssetProgress[id]) / 100
+    )),
+    ...Object.entries(STUDIO_V2_ENTRY_PROGRESS_WEIGHTS.conditions).map(([id, weight]) => (
+      conditions[id] ? weight : 0
+    )),
+  ].reduce((total, value) => total + value, 0)
+  return Number(Math.min(100, weightedProgress).toFixed(1))
+}
+
 export function createStudioV2EntryGate({
   deliveryConfig,
   onChange,
@@ -133,8 +172,10 @@ export function createStudioV2EntryGate({
 } = {}) {
   const manifest = resolveStudioV2EntryManifest(deliveryConfig)
   const assets = statusMap(manifest.map(({ id }) => id), 'pending')
+  const assetProgress = statusMap(manifest.map(({ id }) => id), 0)
   const visualManifest = resolveStudioV2VisualReadyManifest(deliveryConfig)
   const visualAssets = statusMap(visualManifest.map(({ id }) => id), 'pending')
+  const visualAssetProgress = statusMap(visualManifest.map(({ id }) => id), 0)
   const conditions = statusMap(ENTRY_READY_CONDITIONS, false)
   const timeline = []
   let error = null
@@ -151,13 +192,10 @@ export function createStudioV2EntryGate({
   }
 
   const snapshot = () => {
-    const completedAssets = Object.values(assets).filter((value) => value === 'ready').length
     const completedVisualAssets = Object.values(visualAssets).filter((value) => value === 'ready').length
-    const completedConditions = Object.values(conditions).filter(Boolean).length
-    const total = Object.keys(assets).length + Object.keys(conditions).length
-    const completed = completedAssets + completedConditions
     return {
       anchorsReady: conditions.anchorsReady,
+      assetProgress: { ...assetProgress },
       assets: { ...assets },
       completeReadyMs: sceneReadyAtMs,
       conditions: { ...conditions },
@@ -170,7 +208,7 @@ export function createStudioV2EntryGate({
       manifest,
       materialsReady: conditions.materialsReady,
       phase,
-      progress: total > 0 ? Number((completed / total * 100).toFixed(1)) : 0,
+      progress: weightedEntryProgress(assetProgress, visualAssetProgress, conditions),
       requests: resolveStudioV2EntryRequests(deliveryConfig),
       roomReady: assets.ROOM_ENVIRONMENT === 'ready',
       sceneReady,
@@ -180,6 +218,7 @@ export function createStudioV2EntryGate({
       texturesReady: conditions.texturesReady,
       timeline: timeline.map((entry) => ({ ...entry })),
       visualAssets: { ...visualAssets },
+      visualAssetProgress: { ...visualAssetProgress },
       visualManifest,
       visualProgress: visualManifest.length > 0
         ? Number((completedVisualAssets / visualManifest.length * 100).toFixed(1))
@@ -212,9 +251,29 @@ export function createStudioV2EntryGate({
     },
     markAssetReady(assetId, detail = null) {
       if (error || (!(assetId in assets) && !(assetId in visualAssets))) return snapshot()
-      if (assetId in assets) assets[assetId] = 'ready'
-      if (assetId in visualAssets) visualAssets[assetId] = 'ready'
+      if (assetId in assets) {
+        assets[assetId] = 'ready'
+        assetProgress[assetId] = 100
+      }
+      if (assetId in visualAssets) {
+        visualAssets[assetId] = 'ready'
+        visualAssetProgress[assetId] = 100
+      }
       record('asset-ready', { assetId, ...detail })
+      emit()
+      return snapshot()
+    },
+    markAssetProgress(assetId, progress) {
+      if (error) return snapshot()
+      const progressMap = assetId in assetProgress
+        ? assetProgress
+        : assetId in visualAssetProgress
+          ? visualAssetProgress
+          : null
+      if (!progressMap) return snapshot()
+      const nextProgress = normalizedProgress(progress)
+      if (nextProgress <= progressMap[assetId]) return snapshot()
+      progressMap[assetId] = nextProgress
       emit()
       return snapshot()
     },

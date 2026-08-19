@@ -30,6 +30,7 @@ function readableLoadError(error) {
 export default function StudioV2ImportPage() {
   const mountRef = useRef(null)
   const fadeTimerRef = useRef(null)
+  const revealFrameRef = useRef(null)
   const [attempt, setAttempt] = useState(0)
   const [audit, setAudit] = useState(null)
   const [diagnostics, setDiagnostics] = useState(null)
@@ -37,6 +38,7 @@ export default function StudioV2ImportPage() {
   const [entryState, setEntryState] = useState(null)
   const [exploring, setExploring] = useState(false)
   const [loadingVisible, setLoadingVisible] = useState(true)
+  const [loadingExiting, setLoadingExiting] = useState(false)
   const [macbookSitePhase, setMacbookSitePhase] = useState('CLOSED')
   const [macbookSiteState, setMacbookSiteState] = useState('CLOSED')
   const [progress, setProgress] = useState(0)
@@ -133,6 +135,7 @@ export default function StudioV2ImportPage() {
     setError('')
     setExploring(false)
     setLoadingVisible(true)
+    setLoadingExiting(false)
     setMacbookSitePhase('CLOSED')
     setMacbookSiteState('CLOSED')
     setProgress(0)
@@ -199,7 +202,10 @@ export default function StudioV2ImportPage() {
         setEntryState(modelAudit.visualReady ?? modelAudit.entry)
         setProgress(100)
         setReady(true)
-        fadeTimerRef.current = window.setTimeout(() => setLoadingVisible(false), 700)
+        revealFrameRef.current = window.requestAnimationFrame(() => {
+          setLoadingExiting(true)
+          fadeTimerRef.current = window.setTimeout(() => setLoadingVisible(false), 520)
+        })
       },
     })
     setRuntime(scene)
@@ -208,6 +214,7 @@ export default function StudioV2ImportPage() {
 
     return () => {
       window.clearTimeout(fadeTimerRef.current)
+      window.cancelAnimationFrame(revealFrameRef.current)
       scene.dispose()
       controller.destroy()
       setRuntime(null)
@@ -271,7 +278,9 @@ export default function StudioV2ImportPage() {
 
       <StudioV2Loading
         error={error}
+        exiting={loadingExiting}
         progress={progress}
+        ready={ready}
         visible={loadingVisible || Boolean(error)}
         onRetry={() => setAttempt((value) => value + 1)}
       />

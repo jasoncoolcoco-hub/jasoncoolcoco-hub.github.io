@@ -801,6 +801,9 @@ export function createStudioV2Scene({
     renderer,
     activeDeliveryConfig,
     {
+      onAssetProgress: (assetId, progressEvent) => {
+        entryGate.markAssetProgress(assetId, progressEvent)
+      },
       onAssetReady: (assetId, detail) => {
         if (assetId !== 'MACBOOK_ISLAND_01') entryGate.markAssetReady(assetId, detail)
       },
@@ -814,6 +817,9 @@ export function createStudioV2Scene({
     renderer,
     activeDeliveryConfig,
     {
+      onAssetProgress: (assetId, progressEvent) => {
+        entryGate.markAssetProgress(assetId, progressEvent)
+      },
       onAssetReady: (assetId, detail) => {
         entryGate.markAssetReady(assetId, detail)
         const datasetKey = visualReadyDatasetKeys[assetId]
@@ -834,7 +840,10 @@ export function createStudioV2Scene({
     roomLoaderSupport = await createStudioV2GltfLoader(renderer, activeDeliveryConfig)
     modelResource = acquireStudioV2Model(
       activeDeliveryConfig.roomUrl,
-      onProgress,
+      (progressValue) => {
+        entryGate.markAssetProgress('ROOM_ENVIRONMENT', progressValue)
+        onProgress?.(progressValue)
+      },
       roomLoaderSupport.loader,
     )
     const roomPreparationPromise = waitForEntryAsset(
