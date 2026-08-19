@@ -25,6 +25,7 @@ import { auditStudioV2Model } from './studioV2ModelAudit'
 import {
   applyStudioV2MaterialTuning,
   findStudioV2EnvironmentMesh,
+  tuneStudioV2ExteriorDaylight,
 } from './studioV2MaterialTuning'
 import {
   removeStudioV2DiningSet,
@@ -688,6 +689,8 @@ export function createStudioV2Scene({
   function configureEnvironment() {
     const candidate = findStudioV2EnvironmentMesh(modelRoot, modelAudit)
     if (candidate) candidate.object.visible = true
+    const exteriorDaylight = tuneStudioV2ExteriorDaylight(candidate)
+    mount.dataset.exteriorDaylight = exteriorDaylight ? 'tuned' : 'unavailable'
     pmremGenerator = new THREE.PMREMGenerator(renderer)
     const neutralRoomEnvironment = new RoomEnvironment()
     environmentRenderTarget = pmremGenerator.fromScene(neutralRoomEnvironment, 0.04)
@@ -707,6 +710,7 @@ export function createStudioV2Scene({
         dynamicRange: 'procedural float scene converted by PMREM',
         intensity: initialLighting.environmentIntensity,
       },
+      exteriorDaylight,
     }
   }
 
@@ -860,7 +864,7 @@ export function createStudioV2Scene({
 
     if (sceneExpansionResource.getPhotoWallState() !== 'ready') {
       const photoWallError = new Error(
-        'Full-quality Photo Wall was not ready before the visual gate.',
+        'Room-quality Photo Wall was not ready before the visual gate.',
       )
       photoWallError.assetId = 'PHOTO_WALL_PHOTOS'
       throw photoWallError
@@ -932,13 +936,19 @@ export function createStudioV2Scene({
     const photoBoardRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard)
     const photoWallVisualStateBeforeWarmup = capturePhotoWallVisualState(photoBoardRoot)
     photoWallFocus = createStudioV2PhotoWallFocus({
+      activateFocusQuality: () => sceneExpansionResource.activatePhotoWallFocusQuality(),
+      activateRoomQuality: () => sceneExpansionResource.activatePhotoWallRoomQuality(),
       camera,
       cameraDirector,
       domElement: renderer.domElement,
+      focusQualityReady: () => (
+        sceneExpansionResource.getPhotoWallTextureState()?.focusStatus === 'ready'
+      ),
       isInteractionLocked: () => (
         (photoDetail?.isOpen() ?? false)
       ),
       photoBoardRoot,
+      preloadFocusQuality: () => sceneExpansionResource.preloadPhotoWallFocusQuality(),
     })
     mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
     const createPhotoCardInteractions = () => {
@@ -950,11 +960,14 @@ export function createStudioV2Scene({
         photoBoardRoot,
       })
       photoDetail = createStudioV2PhotoDetail({
+        activateDetailQuality: (id) => sceneExpansionResource.activatePhotoDetailQuality(id),
         camera,
         cameraDirector,
         domElement: renderer.domElement,
         photoBoardRoot,
         photoHover,
+        prepareDetailQuality: (id) => sceneExpansionResource.preparePhotoDetailQuality(id),
+        restoreDetailQuality: (id) => sceneExpansionResource.restorePhotoDetailQuality(id),
       })
     }
     createPhotoCardInteractions()
@@ -1049,6 +1062,14 @@ export function createStudioV2Scene({
     const visualReadyEntry = entryGate.markVisualReady({
       acceptedVisibleProps: visualReadyResult.records.map(({ anchorName }) => anchorName),
       hiddenWarmupFrame: true,
+    })
+    mount.dataset.photoWallTextureTier = 'room'
+    mount.dataset.photoWallFocusQuality = 'loading'
+    sceneExpansionResource.preloadPhotoWallFocusQuality().then((ready) => {
+      if (disposed) return
+      mount.dataset.photoWallFocusQuality = ready ? 'ready' : 'error'
+    }).catch(() => {
+      if (!disposed) mount.dataset.photoWallFocusQuality = 'error'
     })
     cameraDirector.setOrbitEnabled(exploreEnabled)
     if (!capture) {
@@ -1329,17 +1350,25 @@ export function createStudioV2Scene({
     photoHover?.update(time)
     photoDetail?.update(time)
     macbookFocus?.update(time)
-    mount.dataset.cameraDirectorState = cameraDirector.getCurrentState()
+    const cameraState = cameraDirector.getCurrentState()
+    mount.dataset.cameraDirectorState = cameraState
     mount.dataset.cameraEndpointPhase = cameraDirector.getEndpointPhase()
     mount.dataset.cameraRailProgress = String(cameraDirector.getRailProgress())
     mount.dataset.macbookFocusState = macbookFocus?.getState().state ?? 'UNAVAILABLE'
     mount.dataset.photoWallFocusState = photoWallFocus?.getState().state ?? 'UNAVAILABLE'
     mount.dataset.photoHoverId = photoHover?.getState().hoveredId ?? 'NONE'
-    mount.dataset.photoDetailState = photoDetail?.getState().interactionState ?? 'UNAVAILABLE'
+    const photoDetailState = photoDetail?.getState().interactionState ?? 'IDLE'
+    mount.dataset.photoDetailState = photoDetailState
+    const photoWallTextureState = sceneExpansionResource?.getPhotoWallTextureState()
+    mount.dataset.photoWallTextureTier = photoWallTextureState?.visibleTier ?? 'UNAVAILABLE'
+    mount.dataset.photoWallFocusQuality = photoWallTextureState?.focusStatus ?? 'UNAVAILABLE'
     lightHelpers.forEach((helper) => helper.update())
     if (performanceSample?.updateBaseline) renderer.info.reset()
-    if (floorReflection) floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
-    else renderer.render(scene, camera)
+    if (floorReflection) {
+      floorReflection.renderFrame(renderer, scene, camera, cameraDirector.getReflectionCadence())
+    } else {
+      renderer.render(scene, camera)
+    }
     if (performanceSample?.updateBaseline) {
       if (performanceSample.lastFrameAt !== null) {
         performanceSample.frameTimes.push(time - performanceSample.lastFrameAt)
@@ -1912,6 +1941,7 @@ export function createStudioV2Scene({
       delete mount.dataset.modelReady
       delete mount.dataset.roomReady
       delete mount.dataset.entryPhase
+      delete mount.dataset.exteriorDaylight
       delete mount.dataset.completeReadyMs
       delete mount.dataset.criticalRequests
       delete mount.dataset.firstVisibleFrameMs
@@ -1944,6 +1974,8 @@ export function createStudioV2Scene({
       delete mount.dataset.photoWallFocusState
       delete mount.dataset.photoWallFocusTarget
       delete mount.dataset.photoWallAssets
+      delete mount.dataset.photoWallTextureTier
+      delete mount.dataset.photoWallFocusQuality
       delete mount.dataset.photoWallVisualAudit
       delete mount.dataset.entryError
       delete mount.dataset.photoHoverId

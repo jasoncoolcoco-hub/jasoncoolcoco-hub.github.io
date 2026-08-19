@@ -20,8 +20,12 @@ export function createStudioV2PhotoWallFocus({
   camera,
   cameraDirector,
   domElement,
+  activateFocusQuality = () => true,
+  activateRoomQuality = () => true,
+  focusQualityReady = () => true,
   isInteractionLocked = () => false,
   photoBoardRoot,
+  preloadFocusQuality = () => Promise.resolve(true),
 }) {
   if (!photoBoardRoot) throw new Error('PHOTO_BOARD_01 interaction target was not found.')
   const raycaster = new THREE.Raycaster()
@@ -29,6 +33,8 @@ export function createStudioV2PhotoWallFocus({
   let pointerIntent = null
   let disposed = false
   let lastRequest = 'NONE'
+  let pendingFocusRequest = null
+  let requestSequence = 0
   let reducedMotionOverride = 'AUTO'
   const listeners = new Set()
 
@@ -40,6 +46,7 @@ export function createStudioV2PhotoWallFocus({
       ...cameraDirector.getPhotoWallFocusState(),
       semanticTarget: 'PHOTO_WALL_FOCUS_TARGET',
       lastRequest,
+      pendingFocusRequest: pendingFocusRequest?.source ?? null,
       reducedMotionOverride,
     }
   }
@@ -64,6 +71,24 @@ export function createStudioV2PhotoWallFocus({
     return studioV2PhotoWallFocusCanEnter(cameraDirector.getCurrentState())
   }
 
+  function startFocusTransition(source) {
+    if (!activateFocusQuality()) {
+      lastRequest = 'BLOCKED_FOCUS_QUALITY'
+      publish()
+      return false
+    }
+    const accepted = cameraDirector.requestPhotoWallFocus(STUDIO_V2_PHOTO_WALL_FOCUS_POSE, {
+      duration: STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG.durationMs,
+      intermediatePosition: STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG.intermediatePosition,
+      reducedMotionOverride,
+      source,
+    })
+    if (!accepted) activateRoomQuality()
+    lastRequest = accepted ? `ENTER:${source}` : 'REJECTED_BY_DIRECTOR'
+    publish()
+    return accepted
+  }
+
   function requestFocus(source = 'API') {
     if (isInteractionLocked()) {
       lastRequest = 'BLOCKED_PHOTO_ASSETS'
@@ -74,18 +99,42 @@ export function createStudioV2PhotoWallFocus({
       lastRequest = 'BLOCKED_CAMERA_STATE'
       return false
     }
-    const accepted = cameraDirector.requestPhotoWallFocus(STUDIO_V2_PHOTO_WALL_FOCUS_POSE, {
-      duration: STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG.durationMs,
-      intermediatePosition: STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG.intermediatePosition,
-      reducedMotionOverride,
-      source,
-    })
-    lastRequest = accepted ? `ENTER:${source}` : 'REJECTED_BY_DIRECTOR'
+    if (focusQualityReady()) return startFocusTransition(source)
+    if (pendingFocusRequest) {
+      lastRequest = 'FOCUS_QUALITY_ALREADY_QUEUED'
+      publish()
+      return true
+    }
+    const token = ++requestSequence
+    pendingFocusRequest = { source, token }
+    lastRequest = `WAITING_FOCUS_QUALITY:${source}`
     publish()
-    return accepted
+    Promise.resolve(preloadFocusQuality()).then((ready) => {
+      if (disposed || !pendingFocusRequest || pendingFocusRequest.token !== token) return
+      pendingFocusRequest = null
+      if (!ready || !canEnter()) {
+        lastRequest = ready ? 'CANCELLED_CAMERA_STATE_CHANGED' : 'FOCUS_QUALITY_FAILED'
+        publish()
+        return
+      }
+      startFocusTransition(source)
+    }).catch(() => {
+      if (disposed || !pendingFocusRequest || pendingFocusRequest.token !== token) return
+      pendingFocusRequest = null
+      lastRequest = 'FOCUS_QUALITY_FAILED'
+      publish()
+    })
+    return true
   }
 
   function closeFocus(source = 'API') {
+    if (pendingFocusRequest) {
+      pendingFocusRequest = null
+      requestSequence += 1
+      lastRequest = `CANCELLED_PENDING:${source}`
+      publish()
+      return true
+    }
     if (isInteractionLocked()) {
       lastRequest = 'BLOCKED_PHOTO_DETAIL'
       publish()
@@ -97,7 +146,10 @@ export function createStudioV2PhotoWallFocus({
       reducedMotionOverride,
       source,
     })
-    if (accepted) lastRequest = `EXIT:${source}`
+    if (accepted) {
+      activateRoomQuality()
+      lastRequest = `EXIT:${source}`
+    }
     publish()
     return accepted
   }
@@ -160,6 +212,8 @@ export function createStudioV2PhotoWallFocus({
     dispose() {
       if (disposed) return
       disposed = true
+      pendingFocusRequest = null
+      requestSequence += 1
       domElement.removeEventListener('pointerdown', onPointerDown, true)
       domElement.removeEventListener('pointermove', onPointerMove, true)
       window.removeEventListener('pointerup', onPointerUp, true)

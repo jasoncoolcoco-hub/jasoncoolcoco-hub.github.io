@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 export const STUDIO_V2_PHOTO_DETAIL_STATES = Object.freeze({
   IDLE: 'IDLE',
+  LOADING: 'PHOTO_DETAIL_LOADING',
   OPENING: 'PHOTO_DETAIL_OPENING',
   OPEN: 'PHOTO_DETAIL',
   CLOSING: 'PHOTO_DETAIL_CLOSING',
@@ -73,12 +74,15 @@ function applyTransform(object, transform) {
 }
 
 export function createStudioV2PhotoDetail({
+  activateDetailQuality = () => true,
   camera,
   cameraDirector,
   domElement,
   now = () => performance.now(),
   photoBoardRoot,
   photoHover,
+  prepareDetailQuality = null,
+  restoreDetailQuality = () => true,
 }) {
   if (!photoBoardRoot) throw new Error('PHOTO_BOARD_01 detail root was not found.')
   const raycaster = new THREE.Raycaster()
@@ -97,6 +101,8 @@ export function createStudioV2PhotoDetail({
   let pointerIntent = null
   let lastExit = 'NONE'
   let disposed = false
+  let pendingDetail = null
+  let detailLoadToken = 0
 
   photoBoardRoot.traverse((object) => {
     if (!object.userData?.photoPackaging) return
@@ -182,10 +188,14 @@ export function createStudioV2PhotoDetail({
   }
 
   function restoreImmediately() {
-    if (!selected) return
-    applyTransform(selected.state.rigidCard, selected.state.base)
-    restoreRenderOrder(selected.state)
-    restoreContactShadow(selected.state)
+    detailLoadToken += 1
+    pendingDetail = null
+    if (selected) {
+      applyTransform(selected.state.rigidCard, selected.state.base)
+      restoreRenderOrder(selected.state)
+      restoreContactShadow(selected.state)
+      restoreDetailQuality(selected.card.userData?.studioV2Id)
+    }
     selected = null
     transition = null
     interactionState = STUDIO_V2_PHOTO_DETAIL_STATES.IDLE
@@ -194,10 +204,8 @@ export function createStudioV2PhotoDetail({
     domElement.style.cursor = ''
   }
 
-  function requestDetail(card, source = 'API') {
-    if (disposed || isOpen() || cameraDirector.getCurrentState() !== 'PHOTO_WALL_FOCUS') return false
-    const cardState = cardStates.get(card)
-    if (!cardState) return false
+  function beginDetail(card, cardState, source) {
+    if (!cardState || cameraDirector.getCurrentState() !== 'PHOTO_WALL_FOCUS') return false
     const openingSource = cloneTransform(cardState.rigidCard)
     photoHover?.setInteractionLocked(true)
     applyTransform(cardState.rigidCard, openingSource)
@@ -218,7 +226,57 @@ export function createStudioV2PhotoDetail({
     return true
   }
 
+  function requestDetail(card, source = 'API') {
+    if (disposed || isOpen() || cameraDirector.getCurrentState() !== 'PHOTO_WALL_FOCUS') return false
+    const cardState = cardStates.get(card)
+    if (!cardState) return false
+    const id = card.userData?.studioV2Id
+    if (activateDetailQuality(id) || typeof prepareDetailQuality !== 'function') {
+      return beginDetail(card, cardState, source)
+    }
+    const token = ++detailLoadToken
+    pendingDetail = { card, cardState, id, source, token }
+    interactionState = STUDIO_V2_PHOTO_DETAIL_STATES.LOADING
+    lastExit = 'NONE'
+    photoHover?.setInteractionLocked(true)
+    domElement.style.cursor = 'progress'
+    Promise.resolve(prepareDetailQuality(id)).then((ready) => {
+      if (disposed || !pendingDetail || pendingDetail.token !== token) return
+      const pending = pendingDetail
+      pendingDetail = null
+      if (
+        !ready
+        || cameraDirector.getCurrentState() !== 'PHOTO_WALL_FOCUS'
+        || !activateDetailQuality(id)
+      ) {
+        interactionState = STUDIO_V2_PHOTO_DETAIL_STATES.IDLE
+        lastExit = 'DETAIL_QUALITY_FAILED'
+        photoHover?.setInteractionLocked(false)
+        domElement.style.cursor = ''
+        return
+      }
+      beginDetail(pending.card, pending.cardState, pending.source)
+    }).catch(() => {
+      if (disposed || !pendingDetail || pendingDetail.token !== token) return
+      pendingDetail = null
+      interactionState = STUDIO_V2_PHOTO_DETAIL_STATES.IDLE
+      lastExit = 'DETAIL_QUALITY_FAILED'
+      photoHover?.setInteractionLocked(false)
+      domElement.style.cursor = ''
+    })
+    return true
+  }
+
   function closeDetail(source = 'API') {
+    if (interactionState === STUDIO_V2_PHOTO_DETAIL_STATES.LOADING) {
+      detailLoadToken += 1
+      pendingDetail = null
+      interactionState = STUDIO_V2_PHOTO_DETAIL_STATES.IDLE
+      lastExit = source
+      photoHover?.setInteractionLocked(false)
+      domElement.style.cursor = ''
+      return true
+    }
     if (!selected || interactionState === STUDIO_V2_PHOTO_DETAIL_STATES.CLOSING) return false
     transition = {
       from: cloneTransform(selected.state.rigidCard),
@@ -308,7 +366,7 @@ export function createStudioV2PhotoDetail({
         fit: selected?.fit ?? null,
         interactionState,
         lastExit,
-        selectedId: selected?.card.userData?.studioV2Id ?? null,
+        selectedId: selected?.card.userData?.studioV2Id ?? pendingDetail?.id ?? null,
       }
     },
     isOpen,
@@ -368,6 +426,7 @@ export function createStudioV2PhotoDetail({
       }
       restoreRenderOrder(selected.state)
       restoreContactShadow(selected.state)
+      restoreDetailQuality(selected.card.userData?.studioV2Id)
       selected = null
       interactionState = STUDIO_V2_PHOTO_DETAIL_STATES.IDLE
       photoHover?.setInteractionLocked(false)

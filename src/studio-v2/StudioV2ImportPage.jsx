@@ -10,6 +10,7 @@ import {
 import { studioV2EntryTestConfig } from './studioV2EntryGate'
 import { createStudioV2AudioController } from './studioV2AudioController'
 import { resolveStudioV2AudioCatalogue } from './studioV2AudioCatalogue'
+import StudioV2MusicControl from './StudioV2MusicControl'
 import {
   studioV2PhotoBoardGridEnabled,
   studioV2PhotoSlotOverlayEnabled,
@@ -280,6 +281,9 @@ export default function StudioV2ImportPage() {
         onPhaseChange={setMacbookSitePhase}
         onStateChange={setMacbookSiteState}
       />
+      {ready && audioController && !captureEnabled && !performanceEnabled && (
+        <StudioV2MusicControl audioController={audioController} />
+      )}
       {debugEnabled && !captureEnabled && !performanceEnabled && photoWallDebugPanelEnabled && (
         <Suspense fallback={null}>
           <StudioV2DebugPanel

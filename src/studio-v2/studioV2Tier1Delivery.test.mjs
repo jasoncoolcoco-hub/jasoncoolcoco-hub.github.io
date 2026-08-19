@@ -117,9 +117,22 @@ const fullPhotoBytes = activePhotos.reduce((total, { generatedFilename }) => (
 assert.equal(activePhotos.length, 39)
 assert.equal(fullPhotoBytes, 28_468_604)
 
+const tierPath = (photo, tier) => {
+  const stem = photo.generatedFilename.split('/').pop().replace(/\.[^.]+$/, '')
+  return `${photoManifest.qualityTiers[tier].directory}/${stem}.jpg`
+}
+const roomPhotoBytes = activePhotos.reduce((total, photo) => (
+  total + fs.statSync(`public/studio-v2/photo-wall/${tierPath(photo, 'room')}`).size
+), 0)
+const focusPhotoBytes = activePhotos.reduce((total, photo) => (
+  total + fs.statSync(`public/studio-v2/photo-wall/${tierPath(photo, 'focus')}`).size
+), 0)
+assert.equal(roomPhotoBytes, 552_111)
+assert.equal(focusPhotoBytes, 5_562_687)
+
 const activeRuntimePaths = [
   ...STUDIO_V2_CDN_ASSET_PATHS,
-  ...activePhotos.map(({ generatedFilename }) => `studio-v2/photo-wall/${generatedFilename}`),
+  ...activePhotos.map((photo) => `studio-v2/photo-wall/${tierPath(photo, 'room')}`),
 ]
 const activeRuntimeBytes = activeRuntimePaths.reduce(
   (total, path) => total + fs.statSync(`public/${path}`).size,
@@ -128,7 +141,7 @@ const activeRuntimeBytes = activeRuntimePaths.reduce(
 assert.equal(activeRuntimePaths.length, 44)
 assert.equal(
   activeRuntimeBytes,
-  62_820_624,
+  34_904_406,
 )
 
 const sceneSource = fs.readFileSync('src/studio-v2/createStudioV2Scene.js', 'utf8')
@@ -136,14 +149,15 @@ const expansionSource = fs.readFileSync('src/studio-v2/studioV2SceneExpansion.js
 const readyIndex = sceneSource.indexOf('entryGate.markSceneReady()')
 const visualReadyIndex = sceneSource.indexOf('entryGate.markVisualReady(', readyIndex)
 const readyCallbackIndex = sceneSource.indexOf('onReady?.(audit)', visualReadyIndex)
-const fullPhotoIndex = expansionSource.indexOf('const photoPackaging = await createFullPhotoPackaging()')
-const photoReadyIndex = expansionSource.indexOf("onAssetReady?.('PHOTO_WALL_PHOTOS'", fullPhotoIndex)
+const roomPhotoIndex = expansionSource.indexOf('const photoPackaging = await createRoomPhotoPackaging()')
+const photoReadyIndex = expansionSource.indexOf("onAssetReady?.('PHOTO_WALL_PHOTOS'", roomPhotoIndex)
 assert.equal(readyIndex > -1, true)
 assert.equal(visualReadyIndex > readyIndex, true)
 assert.equal(readyCallbackIndex > visualReadyIndex, true)
-assert.equal(fullPhotoIndex > -1, true)
-assert.equal(photoReadyIndex > fullPhotoIndex, true)
+assert.equal(roomPhotoIndex > -1, true)
+assert.equal(photoReadyIndex > roomPhotoIndex, true)
 assert.equal(sceneSource.includes('sceneExpansionResource.loadVisualReadyAssets()'), true)
+assert.equal(sceneSource.includes('sceneExpansionResource.preloadPhotoWallFocusQuality()'), true)
 assert.equal(sceneSource.includes('sceneExpansionResource.loadDeferredAssets()'), false)
 assert.equal(sceneSource.includes('loadFullPhotoWall'), false)
 assert.equal(expansionSource.includes('createStudioV2PhotoWallBootstrap'), false)

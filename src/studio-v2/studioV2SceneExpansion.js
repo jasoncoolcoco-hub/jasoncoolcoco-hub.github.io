@@ -315,13 +315,6 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     photoBoard: deliveryConfig.photoBoardUrl,
     camera: deliveryConfig.polaroidCameraUrl,
   }
-  const visualReadyGltfPromise = loadAsset(
-    loaderSupport.loader,
-    urls.camera,
-    STUDIO_V2_SCENE_EXPANSION_IDS.camera,
-    testConfig,
-  )
-  visualReadyGltfPromise.catch(() => {})
   const photoBoardGltf = await loadAsset(
     loaderSupport.loader,
     urls.photoBoard,
@@ -351,7 +344,7 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     }
   }
 
-  const createFullPhotoPackaging = async () => {
+  const createRoomPhotoPackaging = async () => {
     try {
       return await createStudioV2PhotoPackagingPreview({
         boardScale: STUDIO_V2_ANCHORS[ASSET_CONFIG.photoBoard.id].scale,
@@ -365,12 +358,13 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     }
   }
 
-  const photoPackaging = await createFullPhotoPackaging()
+  const photoPackaging = await createRoomPhotoPackaging()
   const photoWallState = photoPackaging.report.error ? 'error' : 'ready'
   photoBoardPlacement.placement.add(photoPackaging.group)
   if (photoWallState === 'ready') {
     onAssetReady?.('PHOTO_WALL_PHOTOS', {
       positionedCount: photoPackaging.report.positionedCount,
+      qualityTier: 'room',
       semanticIds: photoPackaging.records.map(({ id }) => id),
       url: deliveryConfig.photoManifestUrl,
     })
@@ -378,6 +372,14 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   photoBoardPlacement.placement.userData.photoPackaging = photoPackaging.report
   photoBoardPlacement.record.photoPackaging = photoPackaging.report
   photoBoardPlacement.record.semanticIds.push(...photoPackaging.records.map(({ id }) => id))
+
+  const visualReadyGltfPromise = loadAsset(
+    loaderSupport.loader,
+    urls.camera,
+    STUDIO_V2_SCENE_EXPANSION_IDS.camera,
+    testConfig,
+  )
+  visualReadyGltfPromise.catch(() => {})
 
   const placements = [photoBoardPlacement]
   const records = placements.map(({ record }) => record)
@@ -430,11 +432,31 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
     textureFormats,
     getVisualReadyState: () => visualReadyState,
     getPhotoWallState: () => photoWallState,
+    getPhotoWallTextureState: () => photoPackaging.textureTiers?.getState() ?? null,
     getMaterialMode: () => 'refined',
+    activatePhotoDetailQuality: (id) => (
+      photoPackaging.textureTiers?.activateDetailQuality(id) ?? false
+    ),
+    activatePhotoWallFocusQuality: () => (
+      photoPackaging.textureTiers?.activateFocusQuality() ?? false
+    ),
+    activatePhotoWallRoomQuality: () => (
+      photoPackaging.textureTiers?.activateRoomQuality() ?? false
+    ),
     loadVisualReadyAssets,
+    preloadPhotoWallFocusQuality: () => (
+      photoPackaging.textureTiers?.preloadFocusQuality() ?? Promise.resolve(false)
+    ),
+    preparePhotoDetailQuality: (id) => (
+      photoPackaging.textureTiers?.prepareDetailQuality(id) ?? Promise.resolve(false)
+    ),
+    restorePhotoDetailQuality: (id) => (
+      photoPackaging.textureTiers?.restoreDetailQuality(id) ?? false
+    ),
     setMaterialMode: () => 'refined',
     dispose() {
       disposed = true
+      photoPackaging.textureTiers?.dispose()
       group.removeFromParent()
       disposeGroup(
         group,

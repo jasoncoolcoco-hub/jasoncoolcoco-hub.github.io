@@ -103,7 +103,6 @@ export function createStudioV2AudioController({
   catalogueUrl = DEFAULT_CATALOGUE_URL,
   fetchImpl = (...args) => globalThis.fetch(...args),
   createAudioElement = () => new globalThis.Audio(),
-  gestureTarget = globalThis.window,
 } = {}) {
   const audio = createAudioElement()
   audio.autoplay = false
@@ -117,9 +116,6 @@ export function createStudioV2AudioController({
   let togglePromise = null
   let destroyed = false
   let fadeFrame = null
-  let fallbackArmed = false
-  let trustedGesturePromise = null
-  let lastFallbackGestureAt = -Infinity
   let manualIntentRevision = 0
   let state = {
     ...INITIAL_STATE,
@@ -378,23 +374,50 @@ export function createStudioV2AudioController({
   }
 
   async function play() {
-    manualIntentRevision += 1
-    publish({ manualIntentState: 'play', playAttemptState: 'attempting', latestPlayPromiseResult: 'pending' })
-    disarmFallback()
     if (destroyed) return snapshot()
+    manualIntentRevision += 1
+    publish({
+      manualIntentState: 'play',
+      playAttemptState: 'attempting',
+      latestPlayPromiseResult: 'pending',
+      error: null,
+      errorCode: null,
+    })
     if (!selectedTrack) await loadDefaultTrack()
-    if (!selectedTrack || state.status === 'error') return snapshot()
+    if (!selectedTrack) return snapshot()
+    const isFirstPlayback = state.entryPlaybackStartedAt === null
     audio.preload = 'auto'
+    if (isFirstPlayback) {
+      audio.volume = 0
+      publish({ volume: 0 })
+    }
     try {
       await audio.play()
-      if (audio.volume === 0) audio.volume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
+      const playbackStartedAt = performance.now()
+      const targetVolume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
+      if (isFirstPlayback) {
+        fadeToEntryVolume(playbackStartedAt)
+      } else if (audio.volume < targetVolume) {
+        fadeToEntryVolume(playbackStartedAt, 900, audio.volume)
+      }
       return publish({
         status: 'playing', paused: false, error: null, errorCode: null,
         playAttemptState: 'playing', latestPlayPromiseResult: 'resolved',
+        entryStatus: 'playing-by-control',
+        entryPlaybackStartedAt: state.entryPlaybackStartedAt ?? playbackStartedAt,
+        autoplayPolicy: 'explicit-control',
       })
     } catch (error) {
-      publish({ playAttemptState: 'failed', latestPlayPromiseResult: `rejected:${error?.name ?? 'Error'}` })
-      return setError(error, 'Audio playback was rejected.', 'AUDIO_PLAYBACK_FAILED')
+      return publish({
+        status: 'paused',
+        paused: true,
+        entryStatus: 'control-ready',
+        autoplayPolicy: 'explicit-control-retry',
+        playAttemptState: 'failed',
+        latestPlayPromiseResult: `rejected:${error?.name ?? 'Error'}`,
+        error: errorMessage(error, 'Audio playback was rejected.'),
+        errorCode: 'AUDIO_PLAYBACK_FAILED',
+      })
     }
   }
 
@@ -402,12 +425,13 @@ export function createStudioV2AudioController({
     if (destroyed || !selectedTrack) return snapshot()
     manualIntentRevision += 1
     publish({ manualIntentState: 'pause' })
-    disarmFallback()
+    cancelVolumeRamp()
     audio.pause()
     return publish({
       status: 'paused',
       paused: true,
       currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+      entryStatus: 'paused-by-control',
     })
   }
 
@@ -415,21 +439,20 @@ export function createStudioV2AudioController({
     if (destroyed || !selectedTrack) return snapshot()
     manualIntentRevision += 1
     publish({ manualIntentState: 'stop' })
-    disarmFallback()
+    cancelVolumeRamp()
     audio.pause()
     try {
       audio.currentTime = 0
     } catch {
       // Some browsers reject currentTime changes before metadata exists.
     }
-    return publish({ status: 'ready', paused: true, currentTime: 0 })
+    return publish({ status: 'ready', paused: true, currentTime: 0, entryStatus: 'control-ready' })
   }
 
   function toggle() {
     if (destroyed) return Promise.resolve(snapshot())
     if (togglePromise) return togglePromise
     togglePromise = (async () => {
-      if (performance.now() - lastFallbackGestureAt < 300) return snapshot()
       if (state.status === 'playing' || !audio.paused) return pause()
       return play()
     })().finally(() => {
@@ -452,8 +475,7 @@ export function createStudioV2AudioController({
   function destroy() {
     if (destroyed) return
     audio.pause()
-    if (fadeFrame !== null) cancelAnimationFrame(fadeFrame)
-    disarmFallback()
+    cancelVolumeRamp()
     destroyed = true
     catalogueAbortController?.abort()
     Object.entries(audioEvents).forEach(([eventName, listener]) => {
@@ -466,11 +488,15 @@ export function createStudioV2AudioController({
     selectedTrack = null
   }
 
-  function fadeToEntryVolume(startedAt, durationMs = 4500) {
-    if (fadeFrame !== null) {
-      cancelAnimationFrame(fadeFrame)
-      fadeFrame = null
-    }
+  function cancelVolumeRamp() {
+    if (fadeFrame === null) return
+    cancelAnimationFrame(fadeFrame)
+    fadeFrame = null
+    publish({ rampOwnerCount: 0 })
+  }
+
+  function fadeToEntryVolume(startedAt, durationMs = 4500, startVolume = 0) {
+    cancelVolumeRamp()
     const targetVolume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
     const tick = (now) => {
       if (destroyed || audio.paused) {
@@ -480,7 +506,7 @@ export function createStudioV2AudioController({
       }
       const progress = Math.min(1, Math.max(0, (now - startedAt) / durationMs))
       const eased = 1 - (1 - progress) ** 3
-      audio.volume = targetVolume * eased
+      audio.volume = startVolume + ((targetVolume - startVolume) * eased)
       publish({ volume: audio.volume, rampOwnerCount: progress < 1 ? 1 : 0 })
       if (progress < 1) fadeFrame = requestAnimationFrame(tick)
       else fadeFrame = null
@@ -489,83 +515,24 @@ export function createStudioV2AudioController({
     publish({ rampOwnerCount: 1 })
   }
 
-  function disarmFallback() {
-    if (!fallbackArmed) return
-    fallbackArmed = false
-    gestureTarget?.removeEventListener?.('click', handleFirstGesture, true)
-    gestureTarget?.removeEventListener?.('touchend', handleFirstGesture, true)
-    gestureTarget?.removeEventListener?.('keydown', handleFirstGesture, true)
-    publish({ fallbackArmed: false })
-  }
-
-  function handleFirstGesture() {
-    if (!fallbackArmed || destroyed || trustedGesturePromise) return trustedGesturePromise
-    trustedGesturePromise = (async () => {
-      lastFallbackGestureAt = performance.now()
-      publish({ fallbackConsumed: true, playAttemptState: 'gesture-attempting', latestPlayPromiseResult: 'pending' })
-      try {
-        if (!selectedTrack) await prepareEntry()
-        if (!selectedTrack) return snapshot()
-        audio.preload = 'auto'
-        await audio.play()
-        disarmFallback()
-        const playbackStartedAt = performance.now()
-        fadeToEntryVolume(playbackStartedAt)
-        return publish({
-          status: 'playing', paused: false, entryStatus: 'playing-after-gesture',
-          entryPlaybackStartedAt: playbackStartedAt, firstGestureFallbackUsed: true,
-          autoplayPolicy: 'trusted-gesture', error: null, errorCode: null,
-          playAttemptState: 'playing', latestPlayPromiseResult: 'resolved',
-        })
-      } catch (error) {
-        if (error?.name === 'NotAllowedError') {
-          publish({
-            status: 'ready', paused: true, entryStatus: 'waiting-for-gesture',
-            autoplayPolicy: 'gesture-retry', fallbackArmed: true,
-            playAttemptState: 'policy-blocked',
-            latestPlayPromiseResult: 'rejected:NotAllowedError',
-            error: null, errorCode: 'AUTOPLAY_POLICY_BLOCKED',
-          })
-          return snapshot()
-        }
-        disarmFallback()
-        publish({ playAttemptState: 'failed', latestPlayPromiseResult: `rejected:${error?.name ?? 'Error'}` })
-        return setError(error, 'Audio playback failed after user interaction.', 'AUDIO_PLAYBACK_FAILED')
-      } finally {
-        trustedGesturePromise = null
-      }
-    })()
-    return trustedGesturePromise
-  }
-
-  function armFallback() {
-    if (fallbackArmed || destroyed) return
-    fallbackArmed = true
-    gestureTarget?.addEventListener?.('click', handleFirstGesture, true)
-    gestureTarget?.addEventListener?.('touchend', handleFirstGesture, true)
-    gestureTarget?.addEventListener?.('keydown', handleFirstGesture, true)
-    publish({ fallbackArmed: true })
-  }
-
   async function prepareEntry() {
     await loadCatalogue()
     if (!catalogue?.defaultTrackId) return snapshot()
     await setTrack(catalogue.defaultTrackId, { preload: false })
     audio.volume = 0
-    return publish({ entryStatus: 'prepared', volume: 0 })
+    return publish({ entryStatus: 'control-ready', volume: 0 })
   }
 
   function startEntryExperience({ timestamp = performance.now() } = {}) {
     if (destroyed || state.status === 'playing' || !audio.paused) return snapshot()
     publish({
-      entryStatus: selectedTrack ? 'waiting-for-gesture' : 'preparing-for-gesture',
+      entryStatus: selectedTrack ? 'control-ready' : 'preparing-control',
       entryStartedAt: state.entryStartedAt ?? timestamp,
-      autoplayPolicy: 'gesture-required',
+      autoplayPolicy: 'explicit-control',
     })
-    armFallback()
     if (!selectedTrack) {
       void prepareEntry().then(() => {
-        if (!destroyed && fallbackArmed && selectedTrack) publish({ entryStatus: 'waiting-for-gesture' })
+        if (!destroyed && selectedTrack) publish({ entryStatus: 'control-ready' })
       })
     }
     return snapshot()

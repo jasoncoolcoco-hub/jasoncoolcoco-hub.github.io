@@ -24,7 +24,7 @@ export const VISUAL_READY_ASSETS = Object.freeze([
   }),
   Object.freeze({
     id: 'PHOTO_WALL_PHOTOS',
-    kind: 'accepted-full-quality-photo-wall',
+    kind: 'accepted-room-quality-photo-wall',
     resourceKey: 'photoManifestUrl',
   }),
 ])

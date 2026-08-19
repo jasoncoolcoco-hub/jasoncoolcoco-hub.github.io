@@ -6,7 +6,10 @@
 2. Run `npm run photos:intake` to scan dimensions and merge new photographs into
    `manifest.json`. Existing IDs and manual configuration are preserved.
 3. Run `python3 scripts/generate-studio-v2-photo-derivatives.py` from the project
-   root to create 1920px, colour-normalized display derivatives in `generated/`.
+   root to create the configured colour-normalized quality tiers: 320px room
+   textures in `room/`, 960px focus textures in `focus/`, and 1920px detail
+   textures in `generated/`. Use repeated `--tier room`, `--tier focus`, or
+   `--tier detail` arguments to limit generation to selected tiers.
    The generator preserves aspect ratio, handles multi-picture JPEG sources,
    and rejects blank or near-solid output. Run it with `--check` to validate
    existing derivatives without changing them. The root-level
@@ -29,5 +32,7 @@
    cannot be enabled on the normal production route.
 
 The runtime reads image dimensions, derives aspect ratio and orientation, and
-generates lightweight Three.js paper geometry. No per-photo GLB is required,
-and the manifest may contain any number of entries.
+generates lightweight Three.js paper geometry once. Room, focus, and selected
+detail textures are swapped on the existing image materials without rebuilding
+or moving cards. No per-photo GLB is required, and the manifest may contain any
+number of entries.
