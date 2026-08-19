@@ -2,6 +2,21 @@
   "version": 1,
   "packagingMode": "all-polaroid",
   "normalizedSize": "medium",
+  "qualityTiers": {
+    "room": {
+      "directory": "room",
+      "maxDimension": 320,
+      "jpegQuality": 72
+    },
+    "focus": {
+      "directory": "focus",
+      "maxDimension": 960,
+      "jpegQuality": 86
+    },
+    "detail": {
+      "source": "generated"
+    }
+  },
   "defaults": {
     "style": "polaroid",
     "size": "medium",

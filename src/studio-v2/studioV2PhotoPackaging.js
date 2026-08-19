@@ -13,6 +13,7 @@ export const STUDIO_V2_PHOTO_STYLES = Object.freeze(['print', 'polaroid'])
 export const STUDIO_V2_PHOTO_SIZES = Object.freeze(['small', 'medium', 'large', 'hero'])
 export const STUDIO_V2_PHOTO_FIT_MODES = Object.freeze(['contain', 'cover', 'smart'])
 export const STUDIO_V2_PHOTO_PACKAGING_MODES = Object.freeze(['mixed', 'all-polaroid'])
+export const STUDIO_V2_PHOTO_TEXTURE_TIERS = Object.freeze(['room', 'focus', 'detail'])
 export const STUDIO_V2_PHOTO_SCALE_PASS = 0.78
 export const STUDIO_V2_PHOTO_CARD_SCALE = 0.702
 export const STUDIO_V2_PHOTO_MATERIAL_PROFILE = Object.freeze({
@@ -76,6 +77,11 @@ const DEFAULTS = Object.freeze({
   x: null,
   y: null,
   zOrder: 0,
+})
+const DEFAULT_QUALITY_TIERS = Object.freeze({
+  room: Object.freeze({ directory: 'room', maxDimension: 320, jpegQuality: 72 }),
+  focus: Object.freeze({ directory: 'focus', maxDimension: 960, jpegQuality: 86 }),
+  detail: Object.freeze({ source: 'generated' }),
 })
 
 function assertChoice(value, choices, field, id) {
@@ -152,6 +158,16 @@ export function resolveStudioV2PhotoManifest(manifest) {
       'normalizedSize',
       'photo-wall',
     )
+  const qualityTiers = Object.freeze({
+    room: Object.freeze({ ...DEFAULT_QUALITY_TIERS.room, ...manifest.qualityTiers?.room }),
+    focus: Object.freeze({ ...DEFAULT_QUALITY_TIERS.focus, ...manifest.qualityTiers?.focus }),
+    detail: Object.freeze({ ...DEFAULT_QUALITY_TIERS.detail, ...manifest.qualityTiers?.detail }),
+  })
+  for (const tier of ['room', 'focus']) {
+    if (!qualityTiers[tier].directory || /[\\/]/.test(qualityTiers[tier].directory)) {
+      throw new Error(`Photo-wall ${tier} quality tier must use one derivative directory.`)
+    }
+  }
   let inferredSlotNumber = 0
   const photos = manifest.photos.map((entry, index) => {
     const placed = Number.isFinite(entry.x) && Number.isFinite(entry.y)
@@ -176,8 +192,20 @@ export function resolveStudioV2PhotoManifest(manifest) {
     normalizedSize,
     photos: Object.freeze(photos),
     previewIds: Object.freeze(Array.isArray(manifest.previewIds) ? [...manifest.previewIds] : []),
+    qualityTiers,
     version: manifest.version,
   })
+}
+
+export function resolveStudioV2PhotoTierPath(entry, qualityTiers, tier) {
+  if (!STUDIO_V2_PHOTO_TEXTURE_TIERS.includes(tier)) {
+    throw new Error(`${entry.id}: unsupported photo texture tier "${tier}".`)
+  }
+  if (tier === 'detail') return entry.generatedFilename
+  const generatedName = String(entry.generatedFilename ?? '').split('/').pop()
+  if (!generatedName) throw new Error(`${entry.id}: generatedFilename is required for texture tiers.`)
+  const stem = generatedName.replace(/\.[^.]+$/, '')
+  return `${qualityTiers[tier].directory}/${stem}.jpg`
 }
 
 function configureDisplayTexture(texture, renderer) {
@@ -315,15 +343,16 @@ function createPrintCard(entry, texture, aspect, shared) {
   rigidCard.name = 'PHOTO_RIGID_CARD'
   group.add(createContactShadow(dimensions.width, dimensions.height, shared))
   rigidCard.add(createPaperBody(dimensions.width, dimensions.height, 0, shared))
-  rigidCard.add(createPhotoSurface(
+  const surface = createPhotoSurface(
     texture,
     Math.max(0.001, dimensions.width - edge * 2),
     Math.max(0.001, dimensions.height - edge * 2),
     shared.paperThickness + 0.00022,
     shared,
-  ))
+  )
+  rigidCard.add(surface)
   group.add(rigidCard)
-  return { dimensions, group, rigidCard, windowAspect: aspect }
+  return { dimensions, group, rigidCard, surface, windowAspect: aspect }
 }
 
 function createPolaroidCard(entry, texture, aspect, shared) {
@@ -349,6 +378,7 @@ function createPolaroidCard(entry, texture, aspect, shared) {
     dimensions: layout.dimensions,
     group,
     rigidCard,
+    surface,
     packagingVariant: layout.variant.id,
     windowAspect: aspect,
   }
@@ -547,15 +577,17 @@ function createSlotMarker(slotNumber, dimensions, shared) {
   return marker
 }
 
-async function loadDisplayTexture(entry, manifestUrl, textureLoader, renderer) {
+async function loadDisplayTexture(entry, manifestUrl, qualityTiers, tier, textureLoader, renderer) {
   const resolvedManifestUrl = new URL(manifestUrl, window.location.href)
-  const sourcePaths = [
-    entry.generatedFilename,
-    `source/${entry.filename}`,
-  ].filter((value, index, values) => value && values.indexOf(value) === index)
+  const sourcePaths = tier === 'detail'
+    ? [entry.generatedFilename, `source/${entry.filename}`]
+    : [resolveStudioV2PhotoTierPath(entry, qualityTiers, tier)]
+  const uniqueSourcePaths = sourcePaths.filter(
+    (value, index, values) => value && values.indexOf(value) === index,
+  )
   let lastError = null
-  for (let index = 0; index < sourcePaths.length; index += 1) {
-    const sourcePath = sourcePaths[index]
+  for (let index = 0; index < uniqueSourcePaths.length; index += 1) {
+    const sourcePath = uniqueSourcePaths[index]
     const resolvedSourceUrl = new URL(sourcePath, resolvedManifestUrl)
     resolvedManifestUrl.searchParams.forEach((value, key) => {
       resolvedSourceUrl.searchParams.set(key, value)
@@ -565,13 +597,168 @@ async function loadDisplayTexture(entry, manifestUrl, textureLoader, renderer) {
       return {
         fallbackUsed: index > 0,
         sourcePath,
+        tier,
         texture: configureDisplayTexture(await textureLoader.loadAsync(url), renderer),
       }
     } catch (error) {
       lastError = error
     }
   }
-  throw new Error(`${entry.id}: generated and original photo texture loads failed.`, { cause: lastError })
+  throw new Error(`${entry.id}: ${tier} photo texture load failed.`, { cause: lastError })
+}
+
+function createPhotoTextureTierController({ cards, manifestUrl, qualityTiers, renderer, textureLoader }) {
+  const focusTextures = new Map()
+  let focusPromise = null
+  let focusStatus = 'idle'
+  let focusError = null
+  let detailRecord = null
+  let detailPromise = null
+  let detailStatus = 'idle'
+  let detailError = null
+  let visibleTier = 'room'
+  let activeDetailId = null
+  let disposed = false
+
+  function applyTexture(card, texture) {
+    card.surface.material.map = texture
+    card.surface.material.needsUpdate = true
+  }
+
+  function preloadFocusQuality() {
+    if (disposed) return Promise.resolve(false)
+    if (focusStatus === 'ready') return Promise.resolve(true)
+    if (focusPromise) return focusPromise
+    focusStatus = 'loading'
+    const pendingFocusTextures = new Map()
+    focusPromise = Promise.all([...cards.values()].map(async (card) => {
+      const loaded = await loadDisplayTexture(
+        card.entry,
+        manifestUrl,
+        qualityTiers,
+        'focus',
+        textureLoader,
+        renderer,
+      )
+      pendingFocusTextures.set(card.entry.id, loaded.texture)
+    })).then(() => {
+      if (disposed) {
+        pendingFocusTextures.forEach((texture) => texture.dispose())
+        return false
+      }
+      pendingFocusTextures.forEach((texture, id) => focusTextures.set(id, texture))
+      focusStatus = 'ready'
+      return true
+    }).catch((error) => {
+      pendingFocusTextures.forEach((texture) => texture.dispose())
+      focusError = error
+      focusStatus = 'error'
+      throw error
+    })
+    return focusPromise
+  }
+
+  function activateFocusQuality() {
+    if (disposed || focusStatus !== 'ready') return false
+    cards.forEach((card, id) => applyTexture(card, focusTextures.get(id)))
+    activeDetailId = null
+    visibleTier = 'focus'
+    return true
+  }
+
+  function activateRoomQuality() {
+    if (disposed) return false
+    cards.forEach((card) => applyTexture(card, card.roomTexture))
+    activeDetailId = null
+    visibleTier = 'room'
+    return true
+  }
+
+  function prepareDetailQuality(id) {
+    if (disposed || !cards.has(id)) return Promise.resolve(false)
+    if (detailRecord?.id === id && detailStatus === 'ready') return Promise.resolve(true)
+    if (detailPromise && detailRecord?.id === id) return detailPromise
+    const card = cards.get(id)
+    detailRecord?.texture?.dispose()
+    const requestRecord = { id, texture: null }
+    detailRecord = requestRecord
+    detailStatus = 'loading'
+    detailPromise = loadDisplayTexture(
+      card.entry,
+      manifestUrl,
+      qualityTiers,
+      'detail',
+      textureLoader,
+      renderer,
+    ).then((loaded) => {
+      if (disposed || detailRecord !== requestRecord) {
+        loaded.texture.dispose()
+        return false
+      }
+      requestRecord.texture = loaded.texture
+      detailStatus = 'ready'
+      return true
+    }).catch((error) => {
+      if (detailRecord === requestRecord) {
+        detailError = error
+        detailStatus = 'error'
+      }
+      throw error
+    }).finally(() => {
+      if (detailRecord === requestRecord) detailPromise = null
+    })
+    return detailPromise
+  }
+
+  function activateDetailQuality(id) {
+    if (disposed || detailStatus !== 'ready' || detailRecord?.id !== id) return false
+    applyTexture(cards.get(id), detailRecord.texture)
+    activeDetailId = id
+    visibleTier = 'detail'
+    return true
+  }
+
+  function restoreDetailQuality(id) {
+    if (disposed || activeDetailId !== id || !cards.has(id)) return false
+    const card = cards.get(id)
+    const texture = focusTextures.get(id) ?? card.roomTexture
+    applyTexture(card, texture)
+    activeDetailId = null
+    visibleTier = focusTextures.has(id) ? 'focus' : 'room'
+    return true
+  }
+
+  return Object.freeze({
+    activateDetailQuality,
+    activateFocusQuality,
+    activateRoomQuality,
+    dispose() {
+      if (disposed) return
+      disposed = true
+      focusTextures.forEach((texture) => texture.dispose())
+      detailRecord?.texture?.dispose()
+      cards.forEach((card) => card.roomTexture.dispose())
+      focusTextures.clear()
+      detailRecord = null
+    },
+    getState() {
+      return Object.freeze({
+        activeDetailId,
+        detailError: detailError?.message ?? null,
+        detailId: detailRecord?.id ?? null,
+        detailStatus,
+        focusError: focusError?.message ?? null,
+        focusLoadedCount: focusTextures.size,
+        focusStatus,
+        idleAutoUpgrade: false,
+        roomLoadedCount: cards.size,
+        visibleTier,
+      })
+    },
+    preloadFocusQuality,
+    prepareDetailQuality,
+    restoreDetailQuality,
+  })
 }
 
 export async function createStudioV2PhotoPackagingPreview({
@@ -598,9 +785,17 @@ export async function createStudioV2PhotoPackagingPreview({
     group.add(createStudioV2PhotoBoardCoordinateOverlay({ boardScale }))
   }
   const records = []
+  const cards = new Map()
 
   await Promise.all(positionedEntries.map(async (entry, index) => {
-    const loadedTexture = await loadDisplayTexture(entry, manifestUrl, textureLoader, renderer)
+    const loadedTexture = await loadDisplayTexture(
+      entry,
+      manifestUrl,
+      manifest.qualityTiers,
+      'room',
+      textureLoader,
+      renderer,
+    )
     const texture = loadedTexture.texture
     const { width: sourceWidth, height: sourceHeight } = imageDimensions(texture)
     const aspect = sourceWidth / sourceHeight
@@ -644,13 +839,27 @@ export async function createStudioV2PhotoPackagingPreview({
     card.group.rotation.z = THREE.MathUtils.degToRad(entry.rotation)
     card.group.scale.setScalar(STUDIO_V2_PHOTO_CARD_SCALE / boardScale)
     group.add(card.group)
+    cards.set(entry.id, {
+      entry,
+      roomTexture: texture,
+      surface: card.surface,
+    })
     records[index] = Object.freeze({ id: entry.id, ...card.group.userData.photoPackaging })
   }))
+
+  const textureTiers = createPhotoTextureTierController({
+    cards,
+    manifestUrl,
+    qualityTiers: manifest.qualityTiers,
+    renderer,
+    textureLoader,
+  })
 
   return {
     group,
     manifestCount: manifest.photos.length,
     records: Object.freeze(records),
+    textureTiers,
     report: Object.freeze({
       arbitraryCountSupported: true,
       boardCoordinates: STUDIO_V2_PHOTO_BOARD_COORDINATES,
@@ -667,6 +876,7 @@ export async function createStudioV2PhotoPackagingPreview({
       normalizedSize: manifest.normalizedSize,
       positionedCount: positionedEntries.length,
       previewCount: positionedEntries.length,
+      qualityTiers: manifest.qualityTiers,
       records: Object.freeze(records),
       supportedFitModes: STUDIO_V2_PHOTO_FIT_MODES,
       supportedSizes: STUDIO_V2_PHOTO_SIZES,

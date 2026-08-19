@@ -1,5 +1,8 @@
 import * as THREE from 'three'
-import { STUDIO_V2_MATERIAL_TUNING } from './studioV2Config'
+import {
+  STUDIO_V2_EXTERIOR_DAYLIGHT,
+  STUDIO_V2_MATERIAL_TUNING,
+} from './studioV2Config'
 
 const TEXTURE_KEYS = [
   'map',
@@ -430,4 +433,26 @@ export function findStudioV2EnvironmentMesh(root, audit) {
   })
 
   return candidates.sort((a, b) => b.score - a.score || b.diagonal - a.diagonal)[0] ?? null
+}
+
+export function tuneStudioV2ExteriorDaylight(candidate) {
+  const material = candidate?.material
+  if (!candidate?.object?.isMesh || !material?.isMaterial) return null
+
+  const previous = preserveOriginal(material)
+  applyTuning(material, STUDIO_V2_EXTERIOR_DAYLIGHT)
+  if (material.emissive?.isColor) material.emissive.set(STUDIO_V2_EXTERIOR_DAYLIGHT.emissive)
+  if (typeof material.emissiveIntensity === 'number') {
+    material.emissiveIntensity = STUDIO_V2_EXTERIOR_DAYLIGHT.emissiveIntensity
+  }
+  material.needsUpdate = true
+  candidate.object.castShadow = false
+  candidate.object.receiveShadow = false
+
+  return {
+    mesh: candidate.object.name,
+    previous,
+    current: materialRecord(material),
+    strategy: 'restrained emissive backdrop with neutral window-side daylight',
+  }
 }

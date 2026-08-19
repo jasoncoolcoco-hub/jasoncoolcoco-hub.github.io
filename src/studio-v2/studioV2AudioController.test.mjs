@@ -148,21 +148,31 @@ const deferredEntryController = createStudioV2AudioController({
 await deferredEntryController.prepareEntry()
 assert.equal(deferredEntryAudio.preload, 'none')
 assert.equal(deferredEntryAudio.loadCalls, 0)
-assert.equal(deferredEntryController.getState().entryStatus, 'prepared')
+assert.equal(deferredEntryController.getState().entryStatus, 'control-ready')
 deferredEntryController.startEntryExperience()
 assert.equal(deferredEntryAudio.preload, 'none')
 assert.equal(deferredEntryAudio.playCalls, 0)
-assert.equal(deferredEntryController.getState().fallbackArmed, true)
+assert.equal(deferredEntryController.getState().fallbackArmed, false)
+assert.equal(deferredEntryGestures.listeners.size, 0)
 deferredEntryGestures.emit('click')
+deferredEntryGestures.emit('touchend')
+deferredEntryGestures.emit('keydown')
 await new Promise((resolve) => setTimeout(resolve, 0))
+assert.equal(deferredEntryAudio.playCalls, 0)
+assert.equal(deferredEntryController.getState().status, 'track-loading')
+await deferredEntryController.toggle()
 assert.equal(deferredEntryAudio.playCalls, 1)
 assert.equal(deferredEntryController.getState().status, 'playing')
-assert.equal(deferredEntryController.getState().entryStatus, 'playing-after-gesture')
+assert.equal(deferredEntryController.getState().entryStatus, 'playing-by-control')
 assert.equal(deferredEntryController.getState().fallbackArmed, false)
 deferredEntryAudio.currentTime = 12
-deferredEntryGestures.emit('click')
-await new Promise((resolve) => setTimeout(resolve, 0))
+await deferredEntryController.toggle()
 assert.equal(deferredEntryAudio.playCalls, 1)
+assert.equal(deferredEntryController.getState().status, 'paused')
+assert.equal(deferredEntryAudio.currentTime, 12)
+await deferredEntryController.toggle()
+assert.equal(deferredEntryAudio.playCalls, 2)
+assert.equal(deferredEntryController.getState().status, 'playing')
 assert.equal(deferredEntryAudio.currentTime, 12)
 deferredEntryController.destroy()
 FakeAudio.instances = 0
@@ -306,13 +316,44 @@ class RejectingAudio extends FakeAudio {
 
 const rejectedPlayback = await controllerForCatalogue(catalogue, RejectingAudio)
 await rejectedPlayback.play()
-assert.equal(rejectedPlayback.getState().status, 'error')
+assert.equal(rejectedPlayback.getState().status, 'paused')
 assert.match(rejectedPlayback.getState().error, /rejected/)
 await rejectedPlayback.loadCatalogue({ force: true })
 assert.equal(rejectedPlayback.getState().status, 'idle')
 assert.equal(rejectedPlayback.getState().trackId, null)
 assert.equal(rejectedPlayback.getState().error, null)
 rejectedPlayback.destroy()
+
+class RetryAudio extends FakeAudio {
+  play() {
+    this.playCalls += 1
+    if (this.playCalls === 1) {
+      this.paused = true
+      return Promise.reject(new Error('Transient play rejection.'))
+    }
+    this.paused = false
+    this.emit('playing')
+    return Promise.resolve()
+  }
+}
+
+let retryAudio = null
+const retryController = createStudioV2AudioController({
+  createAudioElement: () => {
+    retryAudio = new RetryAudio()
+    return retryAudio
+  },
+  fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
+})
+await retryController.prepareEntry()
+await retryController.toggle()
+assert.equal(retryController.getState().status, 'paused')
+assert.equal(retryController.getState().errorCode, 'AUDIO_PLAYBACK_FAILED')
+await retryController.toggle()
+assert.equal(retryController.getState().status, 'playing')
+assert.equal(retryController.getState().errorCode, null)
+assert.equal(retryAudio.playCalls, 2)
+retryController.destroy()
 
 class DeferredAudio extends FakeAudio {
   constructor() {

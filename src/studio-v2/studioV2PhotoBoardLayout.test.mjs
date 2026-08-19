@@ -16,6 +16,7 @@ import {
   calculateStudioV2PrintDimensions,
   calculateStudioV2PolaroidLayout,
   resolveStudioV2PhotoManifest,
+  resolveStudioV2PhotoTierPath,
   resolveStudioV2PolaroidVariant,
   STUDIO_V2_PHOTO_CARD_SCALE,
   STUDIO_V2_PHOTO_MATERIAL_PROFILE,
@@ -152,6 +153,14 @@ for (const photo of realPhotos) {
   const generated = readStudioV2PhotoMetadata(generatedPath)
   assert.ok(Math.max(generated.width, generated.height) <= 1920)
   assert.ok(Math.abs(generated.aspectRatio - photo.aspectRatio) <= 0.002)
+  for (const [tier, maxDimension] of [['room', 320], ['focus', 960]]) {
+    const tierFilename = resolveStudioV2PhotoTierPath(photo, resolvedManifest.qualityTiers, tier)
+    const tierPath = `public/studio-v2/photo-wall/${tierFilename}`
+    assert.ok(fs.existsSync(tierPath))
+    const derivative = readStudioV2PhotoMetadata(tierPath)
+    assert.ok(Math.max(derivative.width, derivative.height) <= maxDimension)
+    assert.ok(Math.abs(derivative.aspectRatio - photo.aspectRatio) <= 0.008)
+  }
 
   const aspect = photo.width / photo.height
   const layout = calculateStudioV2PolaroidLayout(aspect, photo.size, photo.slotNumber)

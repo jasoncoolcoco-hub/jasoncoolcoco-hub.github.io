@@ -21,6 +21,14 @@ export const STUDIO_V2_REMOVED_WINDOW_DECORATION_GROUPS = [
   { name: 'Plane011', role: 'WINDOW HANGING BANNER 5' },
 ]
 
+export const STUDIO_V2_EXTERIOR_DAYLIGHT = Object.freeze({
+  color: '#f8f2f7',
+  emissive: '#f7f0f5',
+  emissiveIntensity: 0.64,
+  metalness: 0,
+  roughness: 1,
+})
+
 export const STUDIO_V2_CAMERA_PRESETS = {
   REFERENCE: {
     position: [-6.42, 1.92, 0.3],
@@ -245,8 +253,8 @@ export const STUDIO_V2_LIGHTING = {
     position: [-5.5, 3.2, 2.8],
   },
   windowFill: {
-    color: '#fff8ef',
-    intensity: 0.42,
+    color: '#f3f7ff',
+    intensity: 0.46,
     position: [-0.4, 1.25, -5.25],
     target: [-3.6, 1.15, 0.8],
     width: 11,
@@ -281,7 +289,7 @@ export const STUDIO_V2_SHADOW_PROFILES = Object.freeze({
     label: 'IMPROVED PCF SOFT',
     shadowType: 'PCFSoftShadowMap',
     keyIntensity: 1.44,
-    windowFillIntensity: 0.42,
+    windowFillIntensity: 0.46,
     ceilingBounceIntensity: 0.08,
     environmentIntensity: 0.55,
     exposure: 0.76,

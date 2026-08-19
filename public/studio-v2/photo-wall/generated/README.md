@@ -5,8 +5,9 @@ fixture set used to validate the packaging system. Original user photographs
 belong in `../source/` and must never be overwritten.
 
 Generate real-photo derivatives with
-`python3 scripts/generate-studio-v2-photo-derivatives.py`. The tool writes
-1920px, quality-90, 4:4:4 progressive JPEGs, normalizes embedded colour
+`python3 scripts/generate-studio-v2-photo-derivatives.py`. This directory is the
+highest-quality per-photo detail tier. The tool writes 1920px, quality-90,
+4:4:4 progressive JPEGs, normalizes embedded colour
 profiles to sRGB, handles multi-picture JPEGs safely, and rejects blank output.
 It never modifies the source files. Each manifest entry's `generatedFilename`
 points at its derivative.
