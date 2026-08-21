@@ -14,6 +14,7 @@ import StudioV2MusicControl from './StudioV2MusicControl'
 import {
   studioV2PhotoBoardGridEnabled,
   studioV2PhotoSlotOverlayEnabled,
+  studioV2PhotoWallAdjustmentEnabled,
   studioV2PhotoWallDebugPanelEnabled,
   studioV2PhotoWallReviewEnabled,
 } from './studioV2PhotoBoardLayout'
@@ -52,6 +53,7 @@ export default function StudioV2ImportPage() {
   const photoBoardGridEnabled = studioV2PhotoBoardGridEnabled(searchParams, debugEnabled)
   const photoSlotOverlayEnabled = studioV2PhotoSlotOverlayEnabled(searchParams, debugEnabled)
   const photoWallReviewEnabled = studioV2PhotoWallReviewEnabled(searchParams, debugEnabled)
+  const photoWallAdjustmentEnabled = studioV2PhotoWallAdjustmentEnabled(searchParams, debugEnabled)
   const photoWallDebugPanelEnabled = studioV2PhotoWallDebugPanelEnabled(searchParams, debugEnabled)
   const initialCameraPreset = photoWallReviewEnabled
     ? 'PHOTO_WALL_REVIEW'
@@ -180,6 +182,7 @@ export default function StudioV2ImportPage() {
       performanceTest,
       photoBoardGrid: photoBoardGridEnabled,
       photoSlotOverlay: photoSlotOverlayEnabled,
+      photoWallAdjustment: photoWallAdjustmentEnabled,
       photoWallReview: photoWallReviewEnabled,
       deliveryConfig,
       entryTestConfig,
@@ -222,7 +225,7 @@ export default function StudioV2ImportPage() {
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
-  }, [attempt, captureEnabled, debugEnabled, initialAmbientCandidate, initialAmbientProgress, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled, photoBoardGridEnabled, photoSlotOverlayEnabled, photoWallReviewEnabled])
+  }, [attempt, captureEnabled, debugEnabled, initialAmbientCandidate, initialAmbientProgress, initialAssetMaterialMode, initialCameraPreset, initialCompositeMode, initialExposure, initialFloorArchitecture, initialFloorReflectionEnabled, initialLightingCandidate, initialReflectionDiagnosticMode, initialShadowProfile, initialToneMapping, pixelRatioCap, deliverySignature, entryTestSignature, forcedViewport?.join('x'), performanceEnabled, photoBoardGridEnabled, photoSlotOverlayEnabled, photoWallAdjustmentEnabled, photoWallReviewEnabled])
 
   const enableExplore = () => {
     setExploring(true)
@@ -250,6 +253,7 @@ export default function StudioV2ImportPage() {
       data-interactions-enabled={entryState?.interactionsEnabled ?? false}
       data-critical-requests={entryState?.requests?.length ?? 0}
       data-photo-wall-review={photoWallReviewEnabled || undefined}
+      data-photo-wall-adjustment={photoWallAdjustmentEnabled || undefined}
       data-photo-slot-overlay={photoSlotOverlayEnabled || undefined}
       data-macbook-site-phase={macbookSitePhase}
       data-macbook-site-state={macbookSiteState}

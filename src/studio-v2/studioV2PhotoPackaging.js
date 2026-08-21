@@ -1,5 +1,4 @@
 import * as THREE from 'three'
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {
   boardCoordinatesToStudioV2Position,
   createStudioV2PhotoBoardCoordinateOverlay,
@@ -8,6 +7,7 @@ import {
   STUDIO_V2_PHOTO_BOARD_DEPTH,
   STUDIO_V2_PHOTO_BOARD_SURFACE,
 } from './studioV2PhotoBoardLayout.js'
+import { resolveStudioV2PhotoDepthRanks } from './studioV2PhotoStacking.js'
 
 export const STUDIO_V2_PHOTO_STYLES = Object.freeze(['print', 'polaroid'])
 export const STUDIO_V2_PHOTO_SIZES = Object.freeze(['small', 'medium', 'large', 'hero'])
@@ -16,16 +16,13 @@ export const STUDIO_V2_PHOTO_PACKAGING_MODES = Object.freeze(['mixed', 'all-pola
 export const STUDIO_V2_PHOTO_TEXTURE_TIERS = Object.freeze(['room', 'focus', 'detail'])
 export const STUDIO_V2_PHOTO_SCALE_PASS = 0.78
 export const STUDIO_V2_PHOTO_CARD_SCALE = 0.702
+export const STUDIO_V2_PHOTO_STACK_DEPTH_STEP_WORLD = 0.00075
 export const STUDIO_V2_PHOTO_MATERIAL_PROFILE = Object.freeze({
   contactShadowBoardLift: 0.00036,
   contactShadowMargin: 0.0155,
   contactShadowOpacity: 0.5,
-  imageBumpScale: 0.000012,
-  imageClearcoat: 0.04,
-  imageClearcoatRoughness: 0.9,
-  imageEnvMapIntensity: 0.17,
-  imageRoughness: 0.64,
-  paperBumpScale: 0.000105,
+  imageEnvMapIntensity: 0.04,
+  imageRoughness: 0.72,
   paperEdgeEnvMapIntensity: 0.045,
   paperEdgeRoughness: 0.96,
   paperEnvMapIntensity: 0.09,
@@ -257,62 +254,70 @@ export function calculateStudioV2PolaroidLayout(aspect, size = 'medium', slotNum
   })
 }
 
-function createPhotoSurface(texture, width, height, z, shared) {
-  const material = new THREE.MeshPhysicalMaterial({
-    bumpMap: shared.photoSurfaceTexture,
-    bumpScale: STUDIO_V2_PHOTO_MATERIAL_PROFILE.imageBumpScale,
-    clearcoat: STUDIO_V2_PHOTO_MATERIAL_PROFILE.imageClearcoat,
-    clearcoatRoughness: STUDIO_V2_PHOTO_MATERIAL_PROFILE.imageClearcoatRoughness,
+function createStableCardMaterial(texture, imageRect, paperColor) {
+  const material = new THREE.MeshBasicMaterial({
     color: 0xffffff,
-    envMapIntensity: STUDIO_V2_PHOTO_MATERIAL_PROFILE.imageEnvMapIntensity,
     map: texture,
-    metalness: 0,
-    roughness: STUDIO_V2_PHOTO_MATERIAL_PROFILE.imageRoughness,
-    roughnessMap: shared.photoSurfaceTexture,
+    toneMapped: true,
   })
+  material.userData.studioV2ImageRect = imageRect.clone()
+  material.userData.studioV2PaperColor = new THREE.Color(paperColor)
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.studioV2ImageRect = { value: material.userData.studioV2ImageRect }
+    shader.uniforms.studioV2PaperColor = { value: material.userData.studioV2PaperColor }
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <map_pars_fragment>',
+        `#include <map_pars_fragment>
+uniform vec4 studioV2ImageRect;
+uniform vec3 studioV2PaperColor;`,
+      )
+      .replace(
+        '#include <map_fragment>',
+        `#ifdef USE_MAP
+  vec2 studioV2ImageSize = max(
+    studioV2ImageRect.zw - studioV2ImageRect.xy,
+    vec2(0.0001)
+  );
+  vec2 studioV2PhotoUv = clamp(
+    (vMapUv - studioV2ImageRect.xy) / studioV2ImageSize,
+    vec2(0.0),
+    vec2(1.0)
+  );
+  vec2 studioV2InnerDistance = min(
+    vMapUv - studioV2ImageRect.xy,
+    studioV2ImageRect.zw - vMapUv
+  );
+  float studioV2EdgeDistance = min(studioV2InnerDistance.x, studioV2InnerDistance.y);
+  float studioV2EdgeWidth = max(fwidth(vMapUv.x), fwidth(vMapUv.y));
+  float studioV2PhotoCoverage = smoothstep(
+    -studioV2EdgeWidth,
+    studioV2EdgeWidth,
+    studioV2EdgeDistance
+  );
+  vec4 studioV2PhotoColor = texture2D(map, studioV2PhotoUv);
+  vec4 sampledDiffuseColor = mix(
+    vec4(studioV2PaperColor, 1.0),
+    studioV2PhotoColor,
+    studioV2PhotoCoverage
+  );
+  diffuseColor *= sampledDiffuseColor;
+#endif`,
+      )
+  }
+  material.customProgramCacheKey = () => 'studio-v2-independent-stable-photo-card-v1'
+  return material
+}
+
+function createStableCardSurface(texture, width, height, imageRect, paperColor, z, shared) {
+  const material = createStableCardMaterial(texture, imageRect, paperColor)
   const mesh = new THREE.Mesh(shared.planeGeometry, material)
   mesh.name = 'PHOTO_IMAGE_SURFACE'
   mesh.position.z = z
   mesh.scale.set(width, height, 1)
   mesh.castShadow = false
-  mesh.receiveShadow = true
+  mesh.receiveShadow = false
   return mesh
-}
-
-function createPaperBody(width, height, variantIndex, shared) {
-  const bevelRadius = Math.min(0.0019, width * 0.01, height * 0.01, shared.paperThickness * 0.32)
-  const geometry = new RoundedBoxGeometry(
-    width,
-    height,
-    shared.paperThickness,
-    2,
-    bevelRadius,
-  )
-  geometry.translate(0, 0, shared.paperThickness / 2)
-  geometry.clearGroups()
-  const normals = geometry.attributes.normal
-  const index = geometry.index
-  const triangleCount = (index?.count ?? normals.count) / 3
-  for (let triangle = 0; triangle < triangleCount; triangle += 1) {
-    const start = triangle * 3
-    const first = index ? index.getX(start) : start
-    const second = index ? index.getX(start + 1) : start + 1
-    const third = index ? index.getX(start + 2) : start + 2
-    const averageNormalZ = (
-      normals.getZ(first)
-      + normals.getZ(second)
-      + normals.getZ(third)
-    ) / 3
-    geometry.addGroup(start, 3, averageNormalZ > 0.72 ? 0 : 1)
-  }
-  const body = new THREE.Mesh(geometry, [
-    shared.paperFaceMaterials[variantIndex],
-    shared.paperEdgeMaterials[variantIndex],
-  ])
-  body.name = 'PHOTO_PAPER_BODY'
-  body.castShadow = true
-  body.receiveShadow = true
-  return body
 }
 
 function createContactShadow(width, height, shared) {
@@ -332,6 +337,7 @@ function createContactShadow(width, height, shared) {
   shadow.castShadow = false
   shadow.receiveShadow = false
   shadow.renderOrder = -1
+  shadow.userData.studioV2BaseLocalZ = shadow.position.z
   return shadow
 }
 
@@ -341,40 +347,53 @@ function createPrintCard(entry, texture, aspect, shared) {
   const group = new THREE.Group()
   const rigidCard = new THREE.Group()
   rigidCard.name = 'PHOTO_RIGID_CARD'
-  group.add(createContactShadow(dimensions.width, dimensions.height, shared))
-  rigidCard.add(createPaperBody(dimensions.width, dimensions.height, 0, shared))
-  const surface = createPhotoSurface(
+  const contactShadow = createContactShadow(dimensions.width, dimensions.height, shared)
+  group.add(contactShadow)
+  const surface = createStableCardSurface(
     texture,
-    Math.max(0.001, dimensions.width - edge * 2),
-    Math.max(0.001, dimensions.height - edge * 2),
+    dimensions.width,
+    dimensions.height,
+    new THREE.Vector4(
+      edge / dimensions.width,
+      edge / dimensions.height,
+      1 - edge / dimensions.width,
+      1 - edge / dimensions.height,
+    ),
+    STUDIO_V2_POLAROID_VARIANTS[0].paperColor,
     shared.paperThickness + 0.00022,
     shared,
   )
   rigidCard.add(surface)
   group.add(rigidCard)
-  return { dimensions, group, rigidCard, surface, windowAspect: aspect }
+  return { contactShadow, dimensions, group, rigidCard, surface, windowAspect: aspect }
 }
 
 function createPolaroidCard(entry, texture, aspect, shared) {
   const layout = calculateStudioV2PolaroidLayout(aspect, entry.size, entry.slotNumber)
-  const variantIndex = STUDIO_V2_POLAROID_VARIANTS.indexOf(layout.variant)
   const group = new THREE.Group()
   const rigidCard = new THREE.Group()
   rigidCard.name = 'PHOTO_RIGID_CARD'
-  group.add(createContactShadow(layout.dimensions.width, layout.dimensions.height, shared))
-  rigidCard.add(createPaperBody(layout.dimensions.width, layout.dimensions.height, variantIndex, shared))
-  const surface = createPhotoSurface(
+  const contactShadow = createContactShadow(layout.dimensions.width, layout.dimensions.height, shared)
+  group.add(contactShadow)
+  const surface = createStableCardSurface(
     texture,
-    layout.windowDimensions.width,
-    layout.windowDimensions.height,
+    layout.dimensions.width,
+    layout.dimensions.height,
+    new THREE.Vector4(
+      layout.side / layout.dimensions.width,
+      layout.bottom / layout.dimensions.height,
+      1 - layout.side / layout.dimensions.width,
+      1 - layout.top / layout.dimensions.height,
+    ),
+    layout.variant.paperColor,
     shared.paperThickness + 0.00022,
     shared,
   )
-  surface.position.y = layout.windowOffsetY
   rigidCard.add(surface)
   group.add(rigidCard)
   return {
     border: Object.freeze({ bottom: layout.bottom, side: layout.side, top: layout.top }),
+    contactShadow,
     dimensions: layout.dimensions,
     group,
     rigidCard,
@@ -382,6 +401,19 @@ function createPolaroidCard(entry, texture, aspect, shared) {
     packagingVariant: layout.variant.id,
     windowAspect: aspect,
   }
+}
+
+export function applyStudioV2PhotoStableDepth(group, depthRank, boardScale = 2) {
+  const baseZ = group.userData.studioV2PhotoBaseZ
+  if (!Number.isFinite(baseZ) || !Number.isInteger(depthRank) || depthRank < 0) return false
+  const stableDepthWorld = depthRank * STUDIO_V2_PHOTO_STACK_DEPTH_STEP_WORLD
+  group.position.z = baseZ + stableDepthWorld / boardScale
+  const contactShadow = group.getObjectByName('PHOTO_CONTACT_SHADOW')
+  const baseShadowZ = contactShadow?.userData?.studioV2BaseLocalZ
+  if (contactShadow && Number.isFinite(baseShadowZ)) {
+    contactShadow.position.z = baseShadowZ - stableDepthWorld / STUDIO_V2_PHOTO_CARD_SCALE
+  }
+  return true
 }
 
 function configureProceduralTexture(canvas, renderer, { color = false, repeat = 1 } = {}) {
@@ -400,88 +432,6 @@ function configureProceduralTexture(canvas, renderer, { color = false, repeat = 
   return texture
 }
 
-function createSeededRandom(seedValue) {
-  let seed = seedValue
-  return () => {
-    seed ^= seed << 13
-    seed ^= seed >>> 17
-    seed ^= seed << 5
-    return (seed >>> 0) / 4294967296
-  }
-}
-
-function createPaperGrainTextures(variant, variantIndex, renderer) {
-  const colorCanvas = document.createElement('canvas')
-  colorCanvas.width = 512
-  colorCanvas.height = 512
-  const colorContext = colorCanvas.getContext('2d')
-  const baseColor = Number.parseInt(variant.paperColor.slice(1), 16)
-  const baseRed = (baseColor >> 16) & 0xff
-  const baseGreen = (baseColor >> 8) & 0xff
-  const baseBlue = baseColor & 0xff
-  const random = createSeededRandom(0x9e3779b9 ^ ((variantIndex + 1) * 0x45d9f3b))
-  const grain = colorContext.createImageData(colorCanvas.width, colorCanvas.height)
-  for (let index = 0; index < grain.data.length; index += 4) {
-    const variation = Math.round((random() - 0.5) * 5)
-    grain.data[index] = baseRed + variation
-    grain.data[index + 1] = baseGreen + variation
-    grain.data[index + 2] = baseBlue + variation
-    grain.data[index + 3] = 255
-  }
-  colorContext.putImageData(grain, 0, 0)
-  colorContext.strokeStyle = 'rgba(112, 101, 82, 0.028)'
-  colorContext.lineWidth = 0.55
-  for (let index = 0; index < 54; index += 1) {
-    const x = random() * colorCanvas.width
-    const y = random() * colorCanvas.height
-    colorContext.beginPath()
-    colorContext.moveTo(x, y)
-    colorContext.quadraticCurveTo(
-      x + (random() - 0.5) * 18,
-      y + (random() - 0.5) * 4,
-      x + 8 + random() * 20,
-      y + (random() - 0.5) * 5,
-    )
-    colorContext.stroke()
-  }
-
-  const bumpCanvas = document.createElement('canvas')
-  bumpCanvas.width = 256
-  bumpCanvas.height = 256
-  const bumpContext = bumpCanvas.getContext('2d')
-  const bump = bumpContext.createImageData(bumpCanvas.width, bumpCanvas.height)
-  for (let index = 0; index < bump.data.length; index += 4) {
-    const value = Math.round(128 + (random() - 0.5) * 18)
-    bump.data[index] = value
-    bump.data[index + 1] = value
-    bump.data[index + 2] = value
-    bump.data[index + 3] = 255
-  }
-  bumpContext.putImageData(bump, 0, 0)
-  return {
-    bump: configureProceduralTexture(bumpCanvas, renderer),
-    color: configureProceduralTexture(colorCanvas, renderer, { color: true }),
-  }
-}
-
-function createPhotoSurfaceTexture(renderer) {
-  const canvas = document.createElement('canvas')
-  canvas.width = 256
-  canvas.height = 256
-  const context = canvas.getContext('2d')
-  const random = createSeededRandom(0x7f4a7c15)
-  const pixels = context.createImageData(canvas.width, canvas.height)
-  for (let index = 0; index < pixels.data.length; index += 4) {
-    const value = Math.round(240 + (random() - 0.5) * 14)
-    pixels.data[index] = value
-    pixels.data[index + 1] = value
-    pixels.data[index + 2] = value
-    pixels.data[index + 3] = 255
-  }
-  context.putImageData(pixels, 0, 0)
-  return configureProceduralTexture(canvas, renderer, { repeat: 4 })
-}
-
 function createContactShadowTexture(renderer) {
   const canvas = document.createElement('canvas')
   canvas.width = 256
@@ -498,9 +448,6 @@ function createContactShadowTexture(renderer) {
 }
 
 function createSharedResources(renderer) {
-  const paperTextures = STUDIO_V2_POLAROID_VARIANTS.map((variant, index) => (
-    createPaperGrainTextures(variant, index, renderer)
-  ))
   const contactShadowTexture = createContactShadowTexture(renderer)
   return {
     contactShadowMaterial: new THREE.MeshBasicMaterial({
@@ -514,23 +461,7 @@ function createSharedResources(renderer) {
       toneMapped: true,
       transparent: true,
     }),
-    paperEdgeMaterials: STUDIO_V2_POLAROID_VARIANTS.map((variant) => new THREE.MeshStandardMaterial({
-      color: variant.edgeColor,
-      envMapIntensity: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperEdgeEnvMapIntensity,
-      metalness: 0,
-      roughness: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperEdgeRoughness,
-    })),
-    paperFaceMaterials: STUDIO_V2_POLAROID_VARIANTS.map((variant, index) => new THREE.MeshStandardMaterial({
-      bumpMap: paperTextures[index].bump,
-      bumpScale: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperBumpScale,
-      color: 0xffffff,
-      envMapIntensity: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperEnvMapIntensity,
-      map: paperTextures[index].color,
-      metalness: 0,
-      roughness: variant.roughness,
-    })),
     paperThickness: STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperThickness,
-    photoSurfaceTexture: createPhotoSurfaceTexture(renderer),
     planeGeometry: new THREE.PlaneGeometry(1, 1),
   }
 }
@@ -806,12 +737,15 @@ export async function createStudioV2PhotoPackagingPreview({
     if (debugSlotOverlay) card.rigidCard.add(createSlotMarker(entry.slotNumber, card.dimensions, shared))
     const coordinates = resolveStudioV2PhotoBoardCoordinates(entry)
     const localPosition = boardCoordinatesToStudioV2Position({
-      ...coordinates,
       boardScale,
+      x: coordinates.x,
+      y: coordinates.y,
+      zOrder: 0,
     })
     card.group.name = entry.id
     card.group.userData.studioV2Id = entry.id
-    card.group.userData.photoPackaging = Object.freeze({
+    card.group.userData.studioV2PhotoBaseZ = localPosition.z
+    const packaging = {
       aspect,
       dimensions: card.dimensions,
       border: card.border ?? null,
@@ -822,9 +756,9 @@ export async function createStudioV2PhotoPackagingPreview({
       packagingMode: manifest.packagingMode,
       packagingVariant: card.packagingVariant ?? null,
       paperThickness: shared.paperThickness,
+      stableCardRepresentation: 'single-opaque-plane-with-analytic-border-aa',
       surfaceMaterial: 'low-gloss-satin-photo',
       boardCoordinates: coordinates,
-      localPosition: Object.freeze(localPosition.toArray().map((value) => Number(value.toFixed(6)))),
       rotation: entry.rotation,
       size: entry.size,
       slotNumber: entry.slotNumber,
@@ -834,18 +768,54 @@ export async function createStudioV2PhotoPackagingPreview({
       style: entry.style,
       textureFallbackUsed: loadedTexture.fallbackUsed,
       windowAspect: card.windowAspect,
-    })
+    }
     card.group.position.copy(localPosition)
     card.group.rotation.z = THREE.MathUtils.degToRad(entry.rotation)
     card.group.scale.setScalar(STUDIO_V2_PHOTO_CARD_SCALE / boardScale)
     group.add(card.group)
     cards.set(entry.id, {
+      contactShadow: card.contactShadow,
+      dimensions: card.dimensions,
       entry,
+      group: card.group,
+      index,
+      packaging,
       roomTexture: texture,
       surface: card.surface,
     })
-    records[index] = Object.freeze({ id: entry.id, ...card.group.userData.photoPackaging })
   }))
+
+  const depthPlan = resolveStudioV2PhotoDepthRanks(
+    [...cards.values()].map(({ dimensions, entry }) => ({
+      height: dimensions.height,
+      id: entry.id,
+      rotation: entry.rotation,
+      slotNumber: entry.slotNumber,
+      width: dimensions.width,
+      x: entry.x,
+      y: entry.y,
+      zOrder: entry.zOrder,
+    })),
+    {
+      boardHeight: STUDIO_V2_PHOTO_BOARD_SURFACE.worldHeight,
+      boardWidth: STUDIO_V2_PHOTO_BOARD_SURFACE.worldWidth,
+      cardScale: STUDIO_V2_PHOTO_CARD_SCALE,
+    },
+  )
+  cards.forEach((card, id) => {
+    const depthRank = depthPlan.ranks.get(id) ?? 0
+    applyStudioV2PhotoStableDepth(card.group, depthRank, boardScale)
+    const photoPackaging = Object.freeze({
+      ...card.packaging,
+      depthRank,
+      localPosition: Object.freeze(
+        card.group.position.toArray().map((value) => Number(value.toFixed(6))),
+      ),
+      stableDepthWorld: depthRank * STUDIO_V2_PHOTO_STACK_DEPTH_STEP_WORLD,
+    })
+    card.group.userData.photoPackaging = photoPackaging
+    records[card.index] = Object.freeze({ id, ...photoPackaging })
+  })
 
   const textureTiers = createPhotoTextureTierController({
     cards,
@@ -865,11 +835,18 @@ export async function createStudioV2PhotoPackagingPreview({
       boardCoordinates: STUDIO_V2_PHOTO_BOARD_COORDINATES,
       boardDepth: STUDIO_V2_PHOTO_BOARD_DEPTH,
       boardSurface: STUDIO_V2_PHOTO_BOARD_SURFACE,
+      depthPlan: Object.freeze({
+        maximumRank: depthPlan.maximumRank,
+        overlappingPairs: depthPlan.overlappingPairs,
+        stepWorld: STUDIO_V2_PHOTO_STACK_DEPTH_STEP_WORLD,
+      }),
       defaultStyle: DEFAULTS.style,
       debugCoordinateOverlay,
       debugSlotOverlay,
       manifestCount: manifest.photos.length,
       materialProfile: STUDIO_V2_PHOTO_MATERIAL_PROFILE,
+      photoCardRepresentation: 'independent-opaque-stable-plane',
+      representationHandoff: false,
       packagingMode: manifest.packagingMode,
       photoCardScale: STUDIO_V2_PHOTO_CARD_SCALE,
       photoScalePass: STUDIO_V2_PHOTO_SCALE_PASS,

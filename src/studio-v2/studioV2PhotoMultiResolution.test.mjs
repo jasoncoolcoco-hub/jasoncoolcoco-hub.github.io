@@ -24,7 +24,7 @@ const manifest = JSON.parse(fs.readFileSync('public/studio-v2/photo-wall/manifes
 const activePhotos = manifest.photos.filter(
   ({ enabled, x, y }) => enabled && Number.isFinite(x) && Number.isFinite(y),
 )
-assert.equal(activePhotos.length, 39)
+assert.equal(activePhotos.length, 70)
 assert.equal(manifest.qualityTiers.room.maxDimension, 320)
 assert.equal(manifest.qualityTiers.focus.maxDimension, 960)
 assert.equal(manifest.qualityTiers.detail.source, 'generated')
@@ -35,7 +35,7 @@ const tierPath = (photo, tier) => {
   return `${manifest.qualityTiers[tier].directory}/${stem}.jpg`
 }
 for (const tier of ['room', 'focus', 'detail']) {
-  assert.equal(new Set(activePhotos.map((photo) => tierPath(photo, tier))).size, 39)
+  assert.equal(new Set(activePhotos.map((photo) => tierPath(photo, tier))).size, 70)
   activePhotos.forEach((photo) => {
     assert.ok(fs.existsSync(`public/studio-v2/photo-wall/${tierPath(photo, tier)}`))
   })
@@ -44,6 +44,7 @@ for (const tier of ['room', 'focus', 'detail']) {
 const packagingSource = fs.readFileSync('src/studio-v2/studioV2PhotoPackaging.js', 'utf8')
 const sceneSource = fs.readFileSync('src/studio-v2/createStudioV2Scene.js', 'utf8')
 const focusSource = fs.readFileSync('src/studio-v2/studioV2PhotoWallFocus.js', 'utf8')
+const derivativeSource = fs.readFileSync('scripts/generate-studio-v2-photo-derivatives.py', 'utf8')
 assert.match(packagingSource, /visibleTier = 'room'/)
 assert.match(packagingSource, /focusTextures\.set\(id, texture\)/)
 assert.match(packagingSource, /card\.surface\.material\.map = texture/)
@@ -56,6 +57,9 @@ assert.match(focusSource, /WAITING_FOCUS_QUALITY/)
 assert.match(focusSource, /Promise\.resolve\(preloadFocusQuality\(\)\)/)
 assert.match(focusSource, /if \(!activateFocusQuality\(\)\)/)
 assert.match(focusSource, /activateRoomQuality\(\)/)
+assert.match(derivativeSource, /ROOM_RESAMPLING = Image\.Resampling\.BOX/)
+assert.match(derivativeSource, /DETAIL_RESAMPLING = Image\.Resampling\.LANCZOS/)
+assert.match(derivativeSource, /ROOM_RESAMPLING if spec\["id"\] == "room" else DETAIL_RESAMPLING/)
 
 const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 100)
 camera.position.set(0, 0, 3)

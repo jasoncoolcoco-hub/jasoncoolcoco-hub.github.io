@@ -27,13 +27,13 @@ export const MACBOOK_MATERIAL_OVERRIDES = Object.freeze([
     refined: {
       anisotropy: 0.16,
       anisotropyRotation: 0,
-      clearcoat: 0.04,
-      clearcoatRoughness: 0.68,
+      clearcoat: 0.02,
+      clearcoatRoughness: 0.76,
       emissiveIntensity: 0.05,
-      envMapIntensity: 0.92,
+      envMapIntensity: 0.68,
       metalness: 0.88,
-      normalScale: 0.48,
-      roughness: 0.36,
+      normalScale: 0.18,
+      roughness: 0.48,
       usePhysicalMaterial: true,
     },
   }),
@@ -43,13 +43,13 @@ export const MACBOOK_MATERIAL_OVERRIDES = Object.freeze([
     refinedMaterialName: 'StudioV2MacBookDisplayGlass',
     reason: 'Keep the embedded Mac desktop readable with a restrained screen surface and minimal environment reflection.',
     refined: {
-      clearcoat: 0.08,
-      clearcoatRoughness: 0.62,
+      clearcoat: 0.02,
+      clearcoatRoughness: 0.78,
       emissiveIntensity: 0.62,
-      envMapIntensity: 0.16,
+      envMapIntensity: 0.1,
       metalness: 0,
-      normalScale: 0.18,
-      roughness: 0.38,
+      normalScale: 0,
+      roughness: 0.46,
       usePhysicalMaterial: true,
     },
   }),
@@ -60,13 +60,19 @@ export const MACBOOK_MATERIAL_OVERRIDES = Object.freeze([
     reason: 'Give the audited hinge mesh a denser metal response without affecting the screen or chassis.',
     refined: {
       emissiveIntensity: 0.02,
-      envMapIntensity: 1,
+      envMapIntensity: 0.62,
       metalness: 0.9,
-      normalScale: 0.4,
-      roughness: 0.32,
+      normalScale: 0.12,
+      roughness: 0.5,
     },
   }),
 ])
+
+export const STUDIO_V2_MACBOOK_STABILITY_PROFILE = Object.freeze({
+  architecture: 'SHADOW_FREE_THIN_OBJECT',
+  castShadow: false,
+  receiveShadow: false,
+})
 
 export const MARSHALL_MATERIAL_OVERRIDES = Object.freeze([
   override({
@@ -398,8 +404,13 @@ function configureObjectMeshes(model, anchorName, renderer, {
     const marshallMicroDetail = assetRole === 'marshall'
       && object.name.includes('Anis_0')
       && (object.geometry?.index?.count ?? 0) <= 6000
-    object.castShadow = !(selectiveShadows && (guitarMicroDetail || marshallMicroDetail))
-    object.receiveShadow = true
+    const isMacbook = anchorName === 'MACBOOK_ISLAND_01'
+    object.castShadow = isMacbook
+      ? STUDIO_V2_MACBOOK_STABILITY_PROFILE.castShadow
+      : !(selectiveShadows && (guitarMicroDetail || marshallMicroDetail))
+    object.receiveShadow = isMacbook
+      ? STUDIO_V2_MACBOOK_STABILITY_PROFILE.receiveShadow
+      : true
     if (!object.castShadow) shadowDisabledMeshes.push(object.name)
     const sourceArray = Array.isArray(object.material) ? object.material : [object.material]
     const pairs = sourceArray.map((source) => {

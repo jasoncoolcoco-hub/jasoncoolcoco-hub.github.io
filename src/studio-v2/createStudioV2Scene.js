@@ -52,6 +52,7 @@ import {
 import { createStudioV2PhotoWallFocus } from './studioV2PhotoWallFocus'
 import { createStudioV2PhotoHover } from './studioV2PhotoHover'
 import { createStudioV2PhotoDetail } from './studioV2PhotoDetail'
+import { createStudioV2PhotoWallAdjustment } from './studioV2PhotoWallAdjustment'
 import {
   loadStudioV2SceneExpansion,
   STUDIO_V2_SCENE_EXPANSION_IDS,
@@ -234,6 +235,7 @@ export function createStudioV2Scene({
   performanceTest = null,
   photoBoardGrid = false,
   photoSlotOverlay = false,
+  photoWallAdjustment = false,
   photoWallReview = false,
 }) {
   const activeDeliveryConfig = deliveryConfig ?? createStudioV2DeliveryConfig({}, false)
@@ -257,6 +259,7 @@ export function createStudioV2Scene({
   const indirectLighting = STUDIO_V2_LIGHTING
   const officialPresentation = !debug && !capture
   const staticPhotoWallReview = debug && photoWallReview
+  const staticPhotoWallAdjustment = staticPhotoWallReview && photoWallAdjustment
   const stableOrbitMode = !capture
   const renderSize = () => ({
     width: forcedViewport?.[0] ?? Math.max(1, mount.clientWidth),
@@ -522,6 +525,7 @@ export function createStudioV2Scene({
   let photoWallFocus = null
   let photoHover = null
   let photoDetail = null
+  let photoWallAdjustmentController = null
   let tableInteractionTarget = null
   let spatialDebug = null
   let modelAudit = null
@@ -944,42 +948,53 @@ export function createStudioV2Scene({
     mount.dataset.macbookSiteMode = 'false'
     const photoBoardRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard)
     const photoWallVisualStateBeforeWarmup = capturePhotoWallVisualState(photoBoardRoot)
-    photoWallFocus = createStudioV2PhotoWallFocus({
-      activateFocusQuality: () => sceneExpansionResource.activatePhotoWallFocusQuality(),
-      activateRoomQuality: () => sceneExpansionResource.activatePhotoWallRoomQuality(),
-      camera,
-      cameraDirector,
-      domElement: renderer.domElement,
-      focusQualityReady: () => (
-        sceneExpansionResource.getPhotoWallTextureState()?.focusStatus === 'ready'
-      ),
-      isInteractionLocked: () => (
-        (photoDetail?.isOpen() ?? false)
-      ),
-      photoBoardRoot,
-      preloadFocusQuality: () => sceneExpansionResource.preloadPhotoWallFocusQuality(),
-    })
-    mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
-    const createPhotoCardInteractions = () => {
-      if (photoHover || photoDetail) return
-      photoHover = createStudioV2PhotoHover({
+    if (staticPhotoWallAdjustment) {
+      photoWallAdjustmentController = await createStudioV2PhotoWallAdjustment({
+        boardScale: photoBoardRoot.scale.x,
+        camera,
+        domElement: renderer.domElement,
+        manifestUrl: activeDeliveryConfig.photoManifestUrl,
+        mount,
+        photoBoardRoot,
+      })
+    } else {
+      photoWallFocus = createStudioV2PhotoWallFocus({
+        activateFocusQuality: () => sceneExpansionResource.activatePhotoWallFocusQuality(),
+        activateRoomQuality: () => sceneExpansionResource.activatePhotoWallRoomQuality(),
         camera,
         cameraDirector,
         domElement: renderer.domElement,
+        focusQualityReady: () => (
+          sceneExpansionResource.getPhotoWallTextureState()?.focusStatus === 'ready'
+        ),
+        isInteractionLocked: () => (
+          (photoDetail?.isOpen() ?? false)
+        ),
         photoBoardRoot,
+        preloadFocusQuality: () => sceneExpansionResource.preloadPhotoWallFocusQuality(),
       })
-      photoDetail = createStudioV2PhotoDetail({
-        activateDetailQuality: (id) => sceneExpansionResource.activatePhotoDetailQuality(id),
-        camera,
-        cameraDirector,
-        domElement: renderer.domElement,
-        photoBoardRoot,
-        photoHover,
-        prepareDetailQuality: (id) => sceneExpansionResource.preparePhotoDetailQuality(id),
-        restoreDetailQuality: (id) => sceneExpansionResource.restorePhotoDetailQuality(id),
-      })
+      mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
+      const createPhotoCardInteractions = () => {
+        if (photoHover || photoDetail) return
+        photoHover = createStudioV2PhotoHover({
+          camera,
+          cameraDirector,
+          domElement: renderer.domElement,
+          photoBoardRoot,
+        })
+        photoDetail = createStudioV2PhotoDetail({
+          activateDetailQuality: (id) => sceneExpansionResource.activatePhotoDetailQuality(id),
+          camera,
+          cameraDirector,
+          domElement: renderer.domElement,
+          photoBoardRoot,
+          photoHover,
+          prepareDetailQuality: (id) => sceneExpansionResource.preparePhotoDetailQuality(id),
+          restoreDetailQuality: (id) => sceneExpansionResource.restorePhotoDetailQuality(id),
+        })
+      }
+      createPhotoCardInteractions()
     }
-    createPhotoCardInteractions()
     entryGate.markCondition('worldMatricesReady')
     entryGate.markCondition('shadowsReady')
 
@@ -1735,6 +1750,9 @@ export function createStudioV2Scene({
     getPhotoWallFocusState() {
       return photoWallFocus?.getState() ?? null
     },
+    getPhotoWallAdjustmentState() {
+      return photoWallAdjustmentController?.getState() ?? null
+    },
     getPhotoWallFocusContract() {
       return photoWallFocus?.getContract() ?? null
     },
@@ -1926,6 +1944,8 @@ export function createStudioV2Scene({
       photoWallFocus = null
       photoDetail?.dispose()
       photoDetail = null
+      photoWallAdjustmentController?.dispose()
+      photoWallAdjustmentController = null
       photoHover?.dispose()
       photoHover = null
       tableInteractionTarget?.geometry.dispose()

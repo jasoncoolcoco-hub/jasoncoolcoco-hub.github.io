@@ -1,15 +1,12 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import * as THREE from 'three'
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {
   calculateStudioV2PolaroidLayout,
-  STUDIO_V2_PHOTO_MATERIAL_PROFILE,
   STUDIO_V2_POLAROID_VARIANTS,
 } from './studioV2PhotoPackaging.js'
 
 const tolerance = 1e-10
-const geometryTolerance = 1e-7
 
 for (const aspect of [0.75, 1, 1.5]) {
   for (let slot = 1; slot <= STUDIO_V2_POLAROID_VARIANTS.length; slot += 1) {
@@ -28,19 +25,6 @@ for (const aspect of [0.75, 1, 1.5]) {
     assert.equal(layout.top, layout.side)
     assert.ok(layout.bottom > layout.top)
 
-    const geometry = new RoundedBoxGeometry(
-      layout.dimensions.width,
-      layout.dimensions.height,
-      STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperThickness,
-      2,
-      0.0019,
-    )
-    geometry.computeBoundingBox()
-    const size = geometry.boundingBox.getSize(new THREE.Vector3())
-    assert.ok(Math.abs(size.x - layout.dimensions.width) < geometryTolerance)
-    assert.ok(Math.abs(size.y - layout.dimensions.height) < geometryTolerance)
-    assert.ok(Math.abs(size.z - STUDIO_V2_PHOTO_MATERIAL_PROFILE.paperThickness) < geometryTolerance)
-    geometry.dispose()
   }
 }
 
@@ -61,8 +45,12 @@ assert.ok(Math.abs(basisY.length() - basisZ.length()) < tolerance)
 
 const packagingSource = fs.readFileSync('src/studio-v2/studioV2PhotoPackaging.js', 'utf8')
 assert.match(packagingSource, /rigidCard\.name = 'PHOTO_RIGID_CARD'/)
-assert.match(packagingSource, /rigidCard\.add\(createPaperBody/)
+assert.match(packagingSource, /createStableCardSurface\(/)
 assert.match(packagingSource, /rigidCard\.add\(surface\)/)
 assert.match(packagingSource, /group\.add\(rigidCard\)/)
+assert.match(packagingSource, /layout\.bottom \/ layout\.dimensions\.height/)
+assert.match(packagingSource, /1 - layout\.top \/ layout\.dimensions\.height/)
+assert.doesNotMatch(packagingSource, /createPaperBody/)
+assert.doesNotMatch(packagingSource, /RoundedBoxGeometry/)
 
-console.log('Studio V2 rectangular Polaroid geometry and rigid transform smoke passed.')
+console.log('Studio V2 rectangular Polaroid stable plane and rigid transform smoke passed.')

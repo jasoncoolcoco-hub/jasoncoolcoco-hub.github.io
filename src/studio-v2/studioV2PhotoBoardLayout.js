@@ -79,12 +79,34 @@ export function boardCoordinatesToStudioV2Position({
   return boardObject.localToWorld(target)
 }
 
+export function studioV2PositionToPhotoBoardCoordinates({ x, y }) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    throw new Error('Photo board local position must use finite x and y values.')
+  }
+  const [centerX, centerY] = STUDIO_V2_PHOTO_BOARD_SURFACE.localOrigin
+  return Object.freeze({
+    x: (
+      centerX + STUDIO_V2_PHOTO_BOARD_SURFACE.width / 2 - x
+    ) / STUDIO_V2_PHOTO_BOARD_SURFACE.width * 100,
+    y: (
+      centerY + STUDIO_V2_PHOTO_BOARD_SURFACE.height / 2 - y
+    ) / STUDIO_V2_PHOTO_BOARD_SURFACE.height * 100,
+  })
+}
+
 export function studioV2PhotoBoardGridEnabled(searchParams, debug = false) {
   return Boolean(debug && searchParams?.get?.('photoGrid') === '1')
 }
 
 export function studioV2PhotoWallReviewEnabled(searchParams, debug = false) {
   return Boolean(debug && searchParams?.get?.('photoWallReview') === '1')
+}
+
+export function studioV2PhotoWallAdjustmentEnabled(searchParams, debug = false) {
+  return Boolean(
+    studioV2PhotoWallReviewEnabled(searchParams, debug)
+    && searchParams?.get?.('photoWallAdjust') === '1',
+  )
 }
 
 export function studioV2PhotoSlotOverlayEnabled(searchParams, debug = false) {

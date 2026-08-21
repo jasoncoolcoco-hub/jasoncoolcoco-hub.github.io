@@ -42,6 +42,31 @@ const TEXTURE_PROPERTIES = Object.freeze([
   'aoMap',
 ])
 
+export const STUDIO_V2_PHOTO_BOARD_SEAM_PROFILE = Object.freeze({
+  architecture: 'TWO_TRIANGLE_CORK_SURFACE_FLUSH_WITH_FRAME',
+  surfaceHeight: 0.94,
+  surfaceWidth: 1.94,
+  surfaceZ: 0.01255,
+})
+
+export const STUDIO_V2_POLAROID_STABILITY_PROFILE = Object.freeze({
+  architecture: 'SHADOW_FREE_BODY_WITH_DEPTH_BIASED_SURFACE_DETAILS',
+  planarDepthThreshold: 0.00025,
+  polygonOffsetFactor: -1,
+  polygonOffsetUnits: -1,
+  receiveShadow: false,
+  castShadow: false,
+})
+
+function createStablePhotoBoardSurfaceGeometry() {
+  const geometry = new THREE.PlaneGeometry(
+    STUDIO_V2_PHOTO_BOARD_SEAM_PROFILE.surfaceWidth,
+    STUDIO_V2_PHOTO_BOARD_SEAM_PROFILE.surfaceHeight,
+  )
+  geometry.translate(0, 0, STUDIO_V2_PHOTO_BOARD_SEAM_PROFILE.surfaceZ)
+  return geometry
+}
+
 function roundedVector(vector, digits = 4) {
   return vector.toArray().map((value) => Number(value.toFixed(digits)))
 }
@@ -70,9 +95,10 @@ function tuneMaterial(source, role) {
     if ('metalness' in material) material.metalness = 0
     if ('roughness' in material) material.roughness = source.name === 'initialShadingGroup' ? 0.48 : 0.72
   } else if (role === 'camera') {
-    if ('roughness' in material) material.roughness = source.name === 'metal' ? 0.38 : Math.max(0.5, material.roughness)
+    if ('roughness' in material) material.roughness = source.name === 'metal' ? 0.56 : Math.max(0.62, material.roughness)
     if ('metalness' in material && source.name !== 'metal') material.metalness = 0
-    if ('envMapIntensity' in material) material.envMapIntensity = source.name === 'metal' ? 0.88 : 0.68
+    if ('envMapIntensity' in material) material.envMapIntensity = source.name === 'metal' ? 0.5 : 0.52
+    if (material.normalScale) material.normalScale.setScalar(0.18)
   } else if (role === 'photoBoard') {
     const isSurface = source.name.includes('SURFACE')
     if ('metalness' in material) material.metalness = 0
@@ -83,24 +109,61 @@ function tuneMaterial(source, role) {
   return material
 }
 
+function isNearPlanarPolaroidSurface(object, role) {
+  if (role !== 'camera' || !object.geometry) return false
+  object.geometry.computeBoundingBox()
+  const size = object.geometry.boundingBox?.getSize(new THREE.Vector3())
+  return Boolean(size && size.z <= STUDIO_V2_POLAROID_STABILITY_PROFILE.planarDepthThreshold)
+}
+
+function stabilizePolaroidSurfaceMaterial(material, object) {
+  const stabilized = material.clone()
+  stabilized.name = `${material.name}_${object.name}_DepthStable`
+  stabilized.polygonOffset = true
+  stabilized.polygonOffsetFactor = STUDIO_V2_POLAROID_STABILITY_PROFILE.polygonOffsetFactor
+  stabilized.polygonOffsetUnits = STUDIO_V2_POLAROID_STABILITY_PROFILE.polygonOffsetUnits
+  stabilized.needsUpdate = true
+  return stabilized
+}
+
 function configureModel(model, role, renderer) {
   const maxAnisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8)
+  const detachedGeometries = new Set()
   const materialMap = new Map()
+  const surfaceMaterials = new Set()
+  const depthBiasedMeshes = []
   const textures = new Set()
   let meshes = 0
   let triangles = 0
   const shadowDisabledMeshes = []
   model.traverse((object) => {
     if (!object.isMesh) return
+    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material]
+    const isPhotoBoardSurface = role === 'photoBoard'
+      && sourceMaterials.some((source) => source.name.includes('SURFACE'))
+    if (isPhotoBoardSurface) {
+      detachedGeometries.add(object.geometry)
+      object.geometry = createStablePhotoBoardSurfaceGeometry()
+    }
     meshes += 1
     triangles += (object.geometry?.index?.count ?? object.geometry?.attributes?.position?.count ?? 0) / 3
-    object.castShadow = role !== 'photo' && role !== 'photoBoard'
-    object.receiveShadow = true
+    const isPolaroidCamera = role === 'camera'
+    object.castShadow = isPolaroidCamera
+      ? STUDIO_V2_POLAROID_STABILITY_PROFILE.castShadow
+      : role !== 'photo' && role !== 'photoBoard'
+    object.receiveShadow = isPolaroidCamera
+      ? STUDIO_V2_POLAROID_STABILITY_PROFILE.receiveShadow
+      : true
     if (!object.castShadow) shadowDisabledMeshes.push(object.name)
-    const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material]
+    const nearPlanarPolaroidSurface = isNearPlanarPolaroidSurface(object, role)
+    if (nearPlanarPolaroidSurface) depthBiasedMeshes.push(object.name)
     const refinedMaterials = sourceMaterials.map((source) => {
       if (!materialMap.has(source)) materialMap.set(source, tuneMaterial(source, role))
-      const refined = materialMap.get(source)
+      const baseRefined = materialMap.get(source)
+      const refined = nearPlanarPolaroidSurface
+        ? stabilizePolaroidSurfaceMaterial(baseRefined, object)
+        : baseRefined
+      if (nearPlanarPolaroidSurface) surfaceMaterials.add(refined)
       TEXTURE_PROPERTIES.forEach((property) => {
         const texture = refined[property]
         if (!texture) return
@@ -113,10 +176,18 @@ function configureModel(model, role, renderer) {
     object.material = Array.isArray(object.material) ? refinedMaterials : refinedMaterials[0]
   })
   return {
-    allMaterials: new Set([...materialMap.keys(), ...materialMap.values()]),
+    allMaterials: new Set([...materialMap.keys(), ...materialMap.values(), ...surfaceMaterials]),
     anisotropy: maxAnisotropy,
+    detachedGeometries,
     materials: materialMap.size,
     meshes,
+    seamStabilization: role === 'photoBoard' ? STUDIO_V2_PHOTO_BOARD_SEAM_PROFILE : null,
+    shimmerStabilization: role === 'camera'
+      ? {
+        ...STUDIO_V2_POLAROID_STABILITY_PROFILE,
+        depthBiasedMeshes,
+      }
+      : null,
     shadowDisabledMeshes,
     textureFormats: [...new Set([...textures].map(textureFormatName).filter(Boolean))].sort(),
     textures: textures.size,
@@ -173,6 +244,7 @@ function placementRecord({ anchor, config, gltf, normalized, placement, resource
       materialOverrides: [],
       materials: resources.materials,
       meshes: resources.meshes,
+      seamStabilization: resources.seamStabilization,
       shadowDisabledMeshes: resources.shadowDisabledMeshes,
       textures: resources.textures,
       textureFormats: resources.textureFormats,
@@ -283,8 +355,8 @@ async function loadAsset(loader, url, id, testConfig, onAssetProgress) {
   return gltf
 }
 
-function disposeGroup(group, additionalMaterials) {
-  const geometries = new Set()
+function disposeGroup(group, additionalMaterials, additionalGeometries = new Set()) {
+  const geometries = new Set(additionalGeometries)
   const materials = new Set(additionalMaterials)
   const textures = new Set()
   group.traverse((object) => {
@@ -464,6 +536,7 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
       disposeGroup(
         group,
         new Set(placements.flatMap(({ resources }) => [...resources.allMaterials])),
+        new Set(placements.flatMap(({ resources }) => [...resources.detachedGeometries])),
       )
       loaderSupport.dispose()
     },
