@@ -22,6 +22,10 @@ function easeInOutCubic(value) {
   return value < 0.5 ? 4 * value ** 3 : 1 - ((-2 * value + 2) ** 3) / 2
 }
 
+function smootherStep(value) {
+  return value * value * value * (value * (value * 6 - 15) + 10)
+}
+
 function roundedVector(vector, digits = 4) {
   return vector.toArray().map((value) => Number(value.toFixed(digits)))
 }
@@ -99,6 +103,8 @@ export function createStudioV2CameraDirector({
   const transitionFromTarget = new THREE.Vector3()
   const transitionToPosition = new THREE.Vector3()
   const transitionToTarget = new THREE.Vector3()
+  const transitionLookDirection = new THREE.Vector3()
+  const transitionQuaternion = new THREE.Quaternion()
   const resolvedPosition = new THREE.Vector3()
   const resolvedTarget = new THREE.Vector3()
   const baseRailPosition = new THREE.Vector3()
@@ -122,10 +128,13 @@ export function createStudioV2CameraDirector({
   let updateCount = 0
   let lastUpdateTime = null
   let experienceStarted = false
-  let automaticDriftArmed = false
   let startDelayRemainingMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.startDelayMs
   let driftElapsedMs = 0
   let railProgress = 0
+  let observationElapsedMs = 0
+  let observationYaw = 0
+  let observationPitch = 0
+  let idleObservationHandoffPending = false
   let frozenProgress = null
   let currentPathDistance = 0
   let baseRailFov = STUDIO_V2_ROOM_WIDE_START_POSE.fov
@@ -265,7 +274,6 @@ export function createStudioV2CameraDirector({
     if (railCompleted) return false
     railCompleted = true
     railConsumedBy = source
-    automaticDriftArmed = false
     finalDriftFramePending = false
     tableArrivalPending = false
     frozenProgress = null
@@ -273,6 +281,7 @@ export function createStudioV2CameraDirector({
     overrideIdleDeadline = null
     pointerCandidate = null
     debugScrubFrozen = false
+    idleObservationHandoffPending = false
     return true
   }
 
@@ -327,18 +336,61 @@ export function createStudioV2CameraDirector({
   function applyHeadLook() {
     headLookDirection.copy(baseRailTarget).sub(baseRailPosition).normalize()
     headLookSpherical.setFromVector3(headLookDirection)
-    headLookSpherical.theta += yawOffset
+    headLookSpherical.theta += observationYaw + yawOffset
     headLookSpherical.phi = THREE.MathUtils.clamp(
-      headLookSpherical.phi + pitchOffset,
+      headLookSpherical.phi + observationPitch + pitchOffset,
       0.15,
       Math.PI - 0.15,
     )
     headLookDirection.setFromSpherical(headLookSpherical).normalize()
     headLookTarget.copy(baseRailPosition).addScaledVector(
       headLookDirection,
-      STUDIO_V2_AMBIENT_CAMERA_CONFIG.headLookDistance,
+      baseRailPosition.distanceTo(baseRailTarget),
     )
     return applyDirectCamera(baseRailPosition, headLookTarget, baseRailFov)
+  }
+
+  function updateIdleObservation(deltaMs) {
+    baseRailPosition.fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.position)
+    baseRailTarget.fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.target)
+    baseRailFov = STUDIO_V2_ROOM_WIDE_START_POSE.fov
+    currentPathDistance = 0
+    if (effectiveReducedMotion()) {
+      observationYaw = 0
+      observationPitch = 0
+      return applyHeadLook()
+    }
+    observationElapsedMs += deltaMs
+    const seconds = observationElapsedMs / 1000
+    const observation = STUDIO_V2_AMBIENT_CAMERA_CONFIG.observation
+    const [yawA, yawB, yawC] = observation.yawPeriodsSeconds
+    const [pitchA, pitchB, pitchC] = observation.pitchPeriodsSeconds
+    const [driftA, driftB, driftC] = observation.targetDriftPeriodsSeconds
+    const entryBlend = 1 - Math.exp(-seconds / observation.entryBlendSeconds)
+    const attentionEnvelope = 0.5 + 0.5 * (
+      Math.sin((seconds / driftA) * Math.PI * 2 + 4.6) * 0.68
+      + Math.sin((seconds / driftC) * Math.PI * 2 + 1.1) * 0.32
+    )
+    baseRailTarget.x += observation.macbookAttentionMeters * entryBlend * attentionEnvelope
+    baseRailTarget.y += observation.targetDriftMeters[0] * entryBlend * (
+      Math.sin((seconds / driftB) * Math.PI * 2 + 2.4) * 0.7
+      + Math.sin((seconds / driftC) * Math.PI * 2 + 5.2) * 0.3
+    )
+    baseRailTarget.z += observation.targetDriftMeters[1] * entryBlend * (
+      Math.sin((seconds / driftA) * Math.PI * 2 + 0.9) * 0.62
+      + Math.sin((seconds / driftC) * Math.PI * 2 + 3.7) * 0.38
+    )
+    observationYaw = observation.maximumYawRadians * entryBlend * (
+      Math.sin((seconds / yawA) * Math.PI * 2 + 0.35) * 0.55
+      + Math.sin((seconds / yawB) * Math.PI * 2 + 1.7) * 0.3
+      + Math.sin((seconds / yawC) * Math.PI * 2 + 4.1) * 0.15
+    )
+    observationPitch = observation.maximumPitchRadians * entryBlend * (
+      Math.sin((seconds / pitchA) * Math.PI * 2 + 2.2) * 0.58
+      + Math.sin((seconds / pitchB) * Math.PI * 2 + 5.0) * 0.27
+      + Math.sin((seconds / pitchC) * Math.PI * 2 + 0.8) * 0.15
+    )
+    return applyHeadLook()
   }
 
   function cancelTransition(reason = 'CANCELLED') {
@@ -371,7 +423,8 @@ export function createStudioV2CameraDirector({
   }
 
   function ambientInputAvailable() {
-    return state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+    return state === STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION
+      || state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
       || state === STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE
   }
 
@@ -469,8 +522,7 @@ export function createStudioV2CameraDirector({
 
   function handleReducedMotionChange() {
     if (reducedMotionOverride !== 'AUTO') return
-    if (effectiveReducedMotion()) resetToRoomWideStart({ automatic: false })
-    else if (experienceStarted && !railCompleted) armAmbientDrift()
+    if (state === STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION) updateIdleObservation(0)
   }
 
   if (debug) {
@@ -515,6 +567,19 @@ export function createStudioV2CameraDirector({
     transitionFromTarget.copy(controls.target)
     transitionToPosition.fromArray(safePose.position)
     transitionToTarget.fromArray(safePose.target)
+    let orientation = null
+    if (options.orientationBlend) {
+      const destinationCamera = camera.clone()
+      destinationCamera.position.copy(transitionToPosition)
+      destinationCamera.lookAt(transitionToTarget)
+      destinationCamera.updateMatrixWorld(true)
+      orientation = {
+        from: camera.quaternion.clone(),
+        to: destinationCamera.quaternion.clone(),
+        fromLookRadius: transitionFromPosition.distanceTo(transitionFromTarget),
+        toLookRadius: transitionToPosition.distanceTo(transitionToTarget),
+      }
+    }
     transition = {
       id: pose.id ?? String(poseOrState),
       fromFov: camera.fov,
@@ -532,6 +597,8 @@ export function createStudioV2CameraDirector({
       intermediatePosition: options.intermediatePosition
         ? new THREE.Vector3().fromArray(options.intermediatePosition)
         : null,
+      easing: options.easing === 'smootherstep' ? 'smootherstep' : 'cubic',
+      orientation,
       onComplete: options.onComplete ?? null,
     }
     inputOwner = 'CAMERA_DIRECTOR'
@@ -548,7 +615,9 @@ export function createStudioV2CameraDirector({
       1,
     )
     transition.progress = progress
-    const eased = easeInOutCubic(progress)
+    const eased = transition.easing === 'smootherstep'
+      ? smootherStep(progress)
+      : easeInOutCubic(progress)
     if (transition.intermediatePosition) {
       const inverse = 1 - eased
       camera.position.copy(transitionFromPosition).multiplyScalar(inverse * inverse)
@@ -557,7 +626,21 @@ export function createStudioV2CameraDirector({
     } else {
       camera.position.lerpVectors(transitionFromPosition, transitionToPosition, eased)
     }
-    controls.target.lerpVectors(transitionFromTarget, transitionToTarget, eased)
+    if (transition.orientation) {
+      transitionQuaternion.copy(transition.orientation.from)
+        .slerp(transition.orientation.to, eased)
+      transitionLookDirection.set(0, 0, -1).applyQuaternion(transitionQuaternion).normalize()
+      controls.target.copy(camera.position).addScaledVector(
+        transitionLookDirection,
+        THREE.MathUtils.lerp(
+          transition.orientation.fromLookRadius,
+          transition.orientation.toLookRadius,
+          eased,
+        ),
+      )
+    } else {
+      controls.target.lerpVectors(transitionFromTarget, transitionToTarget, eased)
+    }
     camera.fov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, eased)
     camera.near = THREE.MathUtils.lerp(transition.fromNear, transition.near, eased)
     camera.far = transition.far
@@ -652,12 +735,14 @@ export function createStudioV2CameraDirector({
   function requestMacbookFocus(pose = macbookFocusSolver?.(), options = {}) {
     const ambientShortcut = [
       STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION,
       STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
       STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
       STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
     ].includes(state)
     if (!pose || (transition && !ambientShortcut) || ![
       STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION,
       STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
       STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
       STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
@@ -700,7 +785,9 @@ export function createStudioV2CameraDirector({
       duration: focusReducedMotion(options.reducedMotionOverride)
         ? 200
         : THREE.MathUtils.clamp(1400 + camera.position.distanceTo(new THREE.Vector3().fromArray(pose.position)) * 95, 1500, 2200),
+      easing: 'smootherstep',
       exactFov: true,
+      orientationBlend: true,
       intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
         ? null
         : options.intermediatePosition,
@@ -728,6 +815,8 @@ export function createStudioV2CameraDirector({
     return transitionTo(STUDIO_V2_TABLE_OVERVIEW_POSE, {
       allowOfficial: true,
       duration: focusReducedMotion(options.reducedMotionOverride) ? 200 : 1300,
+      easing: 'smootherstep',
+      orientationBlend: true,
       onComplete: () => {
         captureEndpointSnapshot('MACBOOK_EXIT_FINAL_TRANSITION')
         endpointPhase = 'TABLE_OVERVIEW'
@@ -769,8 +858,28 @@ export function createStudioV2CameraDirector({
   }
 
   function requestPhotoWallFocus(pose = photoWallFocusPose, options = {}) {
-    if (!pose || transition || state !== STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT) return false
+    const currentPointShortcut = [
+      STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
+      STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
+    ].includes(state)
+    if (!pose || (transition && !currentPointShortcut) || ![
+      STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+      STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
+      STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
+      STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW,
+      STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT,
+      STUDIO_V2_CAMERA_STATES.ROOM_ORBIT,
+    ].includes(state)) return false
+    if (currentPointShortcut && transition) transition = null
     photoWallFocusSourcePose = getCurrentPose()
+    const destination = new THREE.Vector3().fromArray(pose.position)
+    const flightDistance = camera.position.distanceTo(destination)
+    if (currentPointShortcut) consumeAmbientRail('PHOTO_WALL')
     state = STUDIO_V2_CAMERA_STATES.PHOTO_WALL_FOCUS_TRANSITION
     endpointPhase = 'PHOTO_WALL_FOCUS_TRANSITION'
     inputOwner = 'CAMERA_DIRECTOR'
@@ -779,8 +888,14 @@ export function createStudioV2CameraDirector({
       allowOfficial: true,
       duration: focusReducedMotion(options.reducedMotionOverride)
         ? 200
-        : (options.duration ?? 1550),
+        : THREE.MathUtils.clamp(
+          Math.max(options.duration ?? 1550, 1250 + flightDistance * 110),
+          1550,
+          2400,
+        ),
+      easing: 'smootherstep',
       exactFov: true,
+      orientationBlend: true,
       intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
         ? null
         : options.intermediatePosition,
@@ -810,6 +925,8 @@ export function createStudioV2CameraDirector({
       duration: focusReducedMotion(options.reducedMotionOverride)
         ? 200
         : (options.duration ?? 1350),
+      easing: 'smootherstep',
+      orientationBlend: true,
       intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
         ? null
         : options.intermediatePosition,
@@ -883,10 +1000,10 @@ export function createStudioV2CameraDirector({
         returnTransition = null
         frozenProgress = null
         debugScrubFrozen = false
-        state = STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
+        state = STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION
         inputOwner = 'CAMERA_DIRECTOR'
-        inputType = 'RAIL'
-        applyRailPose(railProgress)
+        inputType = 'IDLE_OBSERVATION'
+        updateIdleObservation(0)
       }
       return
     }
@@ -897,51 +1014,9 @@ export function createStudioV2CameraDirector({
     return pauseReasons.size > 0 || time < resumeNotBefore
   }
 
-  function completeRail(time) {
-    railProgress = 1
-    driftElapsedMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
-    applyRailPose(1)
-    endpointPhase = 'FINAL_AMBIENT_DRIFT'
-    captureEndpointSnapshot(endpointPhase, time)
-    inputOwner = 'CAMERA_DIRECTOR'
-    inputType = 'FINAL_RAIL_FRAME'
-    railCompleted = true
-    automaticDriftArmed = false
-    driftWallCompletedAt = time
-    finalDriftFramePending = true
-    controls.enabled = false
-  }
-
   function updateAmbient(time, deltaMs) {
     if (!experienceStarted || transition) return false
     if (debugScrubFrozen && state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT) return false
-    if (finalDriftFramePending) {
-      finalDriftFramePending = false
-      state = STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW
-      endpointPhase = 'TABLE_OVERVIEW'
-      inputType = 'TABLE_ARRIVAL'
-      captureEndpointSnapshot(endpointPhase, time)
-      tableArrivalPending = true
-      return true
-    }
-    if (tableArrivalPending) {
-      tableArrivalPending = false
-      enterTableFreeOrbit()
-      endpointPhase = 'TABLE_FREE_ORBIT'
-      captureEndpointSnapshot(endpointPhase, time)
-      return true
-    }
-    if (state === STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START) {
-      if (!automaticDriftArmed || effectiveReducedMotion() || isPaused(time)) return false
-      startDelayRemainingMs = Math.max(0, startDelayRemainingMs - deltaMs * speedMultiplier)
-      if (startDelayRemainingMs === 0) {
-        state = STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
-        inputOwner = 'CAMERA_DIRECTOR'
-        inputType = 'RAIL'
-        driftWallStartedAt = time
-      }
-      return false
-    }
     if (state === STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) {
       if (isPaused(time)) {
         applyHeadLook()
@@ -950,41 +1025,15 @@ export function createStudioV2CameraDirector({
       updateOverride(time)
       return true
     }
-    if (state !== STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT) return false
-    if (isPaused(time)) {
-      driftPausedFrameMs += deltaMs
-      return false
+    if (state === STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION) {
+      if (isPaused(time)) return true
+      inputOwner = 'CAMERA_DIRECTOR'
+      inputType = 'IDLE_OBSERVATION'
+      updateIdleObservation(idleObservationHandoffPending ? 0 : deltaMs)
+      idleObservationHandoffPending = false
+      return true
     }
-    driftElapsedMs = Math.min(
-      STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs,
-      driftElapsedMs + deltaMs * speedMultiplier,
-    )
-    railProgress = travelProgress(driftElapsedMs)
-    applyRailPose(railProgress)
-    if (firstCameraMotionAt == null && railProgress > 0) firstCameraMotionAt = time
-    if (stoolPlaneCrossedAt == null && baseRailPosition.x >= 0) {
-      stoolPlaneCrossedAt = time
-      stoolPlaneCrossingElapsedMs = driftElapsedMs
-    }
-    const finalSettleThresholdMs = STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs
-      - STUDIO_V2_AMBIENT_CAMERA_CONFIG.endEaseMs
-    if (finalSettleStartedAt == null && driftElapsedMs >= finalSettleThresholdMs) {
-      finalSettleStartedAt = time
-      finalSettleElapsedMs = driftElapsedMs
-    }
-    ;[250, 500, 1000, 2000].forEach((sampleMs) => {
-      if (!firstMotionSamples[sampleMs] && driftElapsedMs >= sampleMs) {
-        firstMotionSamples[sampleMs] = {
-          elapsedMs: rounded(driftElapsedMs, 2),
-          wallTimestamp: rounded(time, 3),
-          railProgress: rounded(railProgress, 8),
-          position: roundedVector(camera.position, 6),
-          target: roundedVector(controls.target, 6),
-        }
-      }
-    })
-    if (driftElapsedMs >= STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs) completeRail(time)
-    return true
+    return false
   }
 
   function resolveManualCamera() {
@@ -1058,13 +1107,6 @@ export function createStudioV2CameraDirector({
     return pauseReasons.size > 0
   }
 
-  function armAmbientDrift({ immediate = false } = {}) {
-    if (railCompleted || effectiveReducedMotion()) return false
-    automaticDriftArmed = true
-    startDelayRemainingMs = immediate ? 0 : STUDIO_V2_AMBIENT_CAMERA_CONFIG.startDelayMs
-    return true
-  }
-
   function startAmbientExperience({ automatic = true, immediate = false, startedAt = performance.now() } = {}) {
     experienceStarted = true
     railCompleted = false
@@ -1072,6 +1114,10 @@ export function createStudioV2CameraDirector({
     tableSkipAudit = null
     clearEndpointAudit()
     driftElapsedMs = 0
+    observationElapsedMs = 0
+    observationYaw = 0
+    observationPitch = 0
+    idleObservationHandoffPending = false
     debugScrubFrozen = false
     driftWallStartedAt = null
     entryStartedAt = startedAt
@@ -1093,15 +1139,13 @@ export function createStudioV2CameraDirector({
     inputOwner = 'CAMERA_DIRECTOR'
     inputType = 'START_HOLD'
     applyResolvedPose(STUDIO_V2_ROOM_WIDE_START_POSE, { legacy: false })
-    automaticDriftArmed = false
-    if (automatic && !effectiveReducedMotion()) {
-      armAmbientDrift({ immediate })
-      if (immediate) {
-        state = STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT
-        inputOwner = 'CAMERA_DIRECTOR'
-        inputType = 'LOCKED_RAIL'
-        driftWallStartedAt = startedAt
-      }
+    if (automatic) {
+      state = STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION
+      inputOwner = 'CAMERA_DIRECTOR'
+      inputType = 'IDLE_OBSERVATION'
+      baseRailPosition.fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.position)
+      baseRailTarget.fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.target)
+      baseRailFov = STUDIO_V2_ROOM_WIDE_START_POSE.fov
     }
     else inputOwner = 'NONE'
     updateOrbitAvailability()
@@ -1126,7 +1170,6 @@ export function createStudioV2CameraDirector({
     pitchOffset = 0
     returnTransition = null
     overrideIdleDeadline = null
-    automaticDriftArmed = false
     debugScrubFrozen = true
     state = railProgress >= 1
       ? STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW
@@ -1159,6 +1202,7 @@ export function createStudioV2CameraDirector({
 
   function requestTableSkip(options = {}) {
     if (![STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+      STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION,
       STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
       STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
     ].includes(state) || transition) return false
@@ -1180,6 +1224,8 @@ export function createStudioV2CameraDirector({
     }, {
       allowOfficial: true,
       duration,
+      easing: 'smootherstep',
+      orientationBlend: true,
       onComplete: () => enterTableFreeOrbit(),
     })
     tableSkipAudit = {
@@ -1191,6 +1237,50 @@ export function createStudioV2CameraDirector({
       railConsumed: true,
     }
     return accepted
+  }
+
+  function requestOpeningReturn(options = {}) {
+    if (transition || ![
+      STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW,
+      STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT,
+    ].includes(state)) return false
+    const destination = new THREE.Vector3().fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.position)
+    const distance = camera.position.distanceTo(destination)
+    const intermediatePosition = camera.position.clone()
+      .lerp(destination, 0.52)
+      .add(new THREE.Vector3(0, THREE.MathUtils.clamp(distance * 0.018, 0.08, 0.18), 0))
+      .toArray()
+    state = STUDIO_V2_CAMERA_STATES.OPENING_RETURN_TRANSITION
+    endpointPhase = 'OPENING_RETURN_TRANSITION'
+    inputOwner = 'CAMERA_DIRECTOR'
+    inputType = 'OPENING_RETURN'
+    return transitionTo(STUDIO_V2_ROOM_WIDE_START_POSE, {
+      allowOfficial: true,
+      duration: focusReducedMotion(options.reducedMotionOverride)
+        ? 200
+        : THREE.MathUtils.clamp(1050 + distance * 80, 1250, 1900),
+      easing: 'smootherstep',
+      exactFov: true,
+      orientationBlend: true,
+      intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
+        ? null
+        : intermediatePosition,
+      onComplete: () => {
+        experienceStarted = true
+        observationElapsedMs = 0
+        observationYaw = 0
+        observationPitch = 0
+        baseRailPosition.fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.position)
+        baseRailTarget.fromArray(STUDIO_V2_ROOM_WIDE_START_POSE.target)
+        baseRailFov = STUDIO_V2_ROOM_WIDE_START_POSE.fov
+        currentPathDistance = 0
+        state = STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION
+        endpointPhase = 'IDLE_OBSERVATION'
+        inputOwner = 'CAMERA_DIRECTOR'
+        inputType = 'IDLE_OBSERVATION'
+        idleObservationHandoffPending = true
+      },
+    })
   }
 
   function enterTableFreeOrbit() {
@@ -1320,7 +1410,6 @@ export function createStudioV2CameraDirector({
       state = pose.state ?? state
       return applyResolvedPose(pose, { legacy: state === STUDIO_V2_CAMERA_STATES.ROOM_ORBIT })
     },
-    armAmbientDrift,
     beginUserInput,
     cancelTransition,
     closeMacbookFocus,
@@ -1376,6 +1465,7 @@ export function createStudioV2CameraDirector({
     },
     getReflectionCadence() {
       if (transition) return 'FAST'
+      if (state === STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION) return 'SLOW'
       if (state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT) return 'SLOW'
       if (state === STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE) return 'HEAD_LOOK'
       if (state === STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT) return 'ORBIT'
@@ -1411,13 +1501,15 @@ export function createStudioV2CameraDirector({
         updateCount,
         ambient: {
           experienceStarted,
-          automaticDriftArmed,
           officialLockedRail: !debug && state === STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
           entryStartedAt: entryStartedAt == null ? null : rounded(entryStartedAt, 3),
           firstMotionSamples: { ...firstMotionSamples },
           railProgress: rounded(railProgress, 6),
           driftElapsedMs: rounded(driftElapsedMs, 1),
           driftDurationMs: STUDIO_V2_AMBIENT_CAMERA_CONFIG.durationMs,
+          observationElapsedMs: rounded(observationElapsedMs, 1),
+          observationYawDegrees: rounded(THREE.MathUtils.radToDeg(observationYaw), 4),
+          observationPitchDegrees: rounded(THREE.MathUtils.radToDeg(observationPitch), 4),
           currentPathDistance: rounded(currentPathDistance),
           totalPathDistance: railSnapshot.totalDistance,
           frozenProgress: frozenProgress == null ? null : rounded(frozenProgress, 6),
@@ -1485,7 +1577,6 @@ export function createStudioV2CameraDirector({
     releaseDebugHeadLook,
     resetToAcceptedOpening(options = {}) {
       experienceStarted = false
-      automaticDriftArmed = false
       railCompleted = false
       state = STUDIO_V2_CAMERA_STATES.ROOM_ORBIT
       if (options.smooth && debug) return transitionTo(STUDIO_V2_CAMERA_POSES.CURRENT_OPENING, { duration: 900 })
@@ -1494,6 +1585,7 @@ export function createStudioV2CameraDirector({
     },
     resetToRoomWideStart,
     requestMacbookFocus,
+    requestOpeningReturn,
     requestPhotoWallFocus,
     requestTableSkip,
     refreshMacbookFocus,
@@ -1515,8 +1607,7 @@ export function createStudioV2CameraDirector({
     setReducedMotionOverride(mode) {
       if (!debug || !['AUTO', 'REDUCE', 'ALLOW'].includes(mode)) return false
       reducedMotionOverride = mode
-      if (effectiveReducedMotion()) resetToRoomWideStart({ automatic: false })
-      else if (experienceStarted && !railCompleted) armAmbientDrift()
+      if (state === STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION) updateIdleObservation(0)
       updateOrbitAvailability()
       return reducedMotionOverride
     },

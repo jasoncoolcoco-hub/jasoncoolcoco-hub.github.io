@@ -374,28 +374,216 @@ class DeferredAudio extends FakeAudio {
   }
 }
 
-let deferredAudio = null
-const rapidController = createStudioV2AudioController({
+let pendingToggleAudio = null
+const pendingToggleController = createStudioV2AudioController({
   createAudioElement: () => {
-    deferredAudio = new DeferredAudio()
-    return deferredAudio
+    pendingToggleAudio = new DeferredAudio()
+    return pendingToggleAudio
   },
   fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
 })
-await rapidController.loadCatalogue()
-const firstToggle = rapidController.toggle()
-const repeatedToggle = rapidController.toggle()
-assert.equal(firstToggle, repeatedToggle)
+await pendingToggleController.loadCatalogue()
+const pendingPlay = pendingToggleController.toggle()
+await pendingToggleController.toggle()
+await pendingPlay
+assert.equal(pendingToggleAudio.playCalls, 0)
+assert.equal(pendingToggleAudio.paused, true)
+assert.equal(pendingToggleController.getState().rampOwnerCount, 0)
+const confirmedPlay = pendingToggleController.toggle()
 await new Promise((resolve) => setTimeout(resolve, 0))
-assert.equal(deferredAudio.playCalls, 1)
-deferredAudio.resolvePlay()
-await firstToggle
+assert.equal(pendingToggleAudio.playCalls, 1)
+pendingToggleAudio.resolvePlay()
+await confirmedPlay
+assert.equal(pendingToggleController.getState().status, 'playing')
+pendingToggleController.destroy()
+
+const originalRequestAnimationFrame = globalThis.requestAnimationFrame
+const originalCancelAnimationFrame = globalThis.cancelAnimationFrame
+const rampFrames = new Map()
+let nextRampFrameId = 1
+globalThis.requestAnimationFrame = (callback) => {
+  const id = nextRampFrameId
+  nextRampFrameId += 1
+  rampFrames.set(id, callback)
+  return id
+}
+globalThis.cancelAnimationFrame = (id) => rampFrames.delete(id)
+const advanceRamp = (milliseconds) => {
+  const frameTime = performance.now() + milliseconds
+  const callbacks = [...rampFrames.values()]
+  rampFrames.clear()
+  callbacks.forEach((callback) => callback(frameTime))
+}
+
+let rapidAudio = null
+const rapidController = createStudioV2AudioController({
+  createAudioElement: () => {
+    rapidAudio = new FakeAudio()
+    return rapidAudio
+  },
+  fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
+})
+await rapidController.prepareEntry()
+assert.equal(rapidAudio.playCalls, 0)
+await rapidController.toggle({ fadeInMs: 1200, fadeOutMs: 850, source: 'marshall-speaker' })
 assert.equal(rapidController.getState().status, 'playing')
-deferredAudio.currentTime = 42
-deferredAudio.duration = 42
-deferredAudio.emit('ended')
-assert.equal(rapidController.getState().status, 'ready')
+assert.equal(rapidController.getState().rampOwnerCount, 1)
+assert.equal(rapidController.getState().rampSource, 'marshall-speaker')
+advanceRamp(600)
+const fadeInVolume = rapidAudio.volume
+assert.ok(fadeInVolume > 0 && fadeInVolume < 0.1)
+rapidAudio.currentTime = 42
+
+const fadeOut = rapidController.toggle({
+  fadeInMs: 1200,
+  fadeOutMs: 850,
+  source: 'marshall-speaker',
+})
+assert.equal(rapidController.getState().status, 'fading-out')
+assert.equal(rapidController.getState().rampOwnerCount, 1)
+assert.equal(rapidAudio.paused, false)
+advanceRamp(425)
+const fadeOutVolume = rapidAudio.volume
+assert.ok(fadeOutVolume > 0 && fadeOutVolume < fadeInVolume)
+
+await rapidController.toggle({ fadeInMs: 1200, fadeOutMs: 850, source: 'marshall-speaker' })
+await fadeOut
+assert.equal(rapidAudio.volume, fadeOutVolume)
+assert.equal(rapidAudio.currentTime, 42)
+assert.equal(rapidAudio.playCalls, 1)
+assert.equal(rapidController.getState().rampOwnerCount, 1)
+advanceRamp(1200)
+assert.equal(rapidAudio.volume, 0.1)
+assert.equal(rapidController.getState().rampOwnerCount, 0)
+
+const completedPause = rapidController.fadePause({
+  durationMs: 1050,
+  source: 'macbook-site-opening',
+})
+assert.equal(rapidAudio.paused, false)
+advanceRamp(1050)
+await completedPause
+assert.equal(rapidAudio.paused, true)
+assert.equal(rapidAudio.currentTime, 42)
+assert.equal(rapidController.getState().entryStatus, 'paused-by-macbook-site')
+assert.equal(rapidController.getState().rampOwnerCount, 0)
+
+await rapidController.toggle({ fadeInMs: 1200, fadeOutMs: 850, source: 'marshall-speaker' })
+assert.equal(rapidAudio.playCalls, 2)
+assert.equal(rapidAudio.currentTime, 42)
+advanceRamp(1200)
+assert.equal(rapidController.getState().status, 'playing')
+assert.equal(rapidController.getState().audioElementCount, 1)
 rapidController.destroy()
+
+let tailAudio = null
+const tailController = createStudioV2AudioController({
+  createAudioElement: () => {
+    tailAudio = new FakeAudio()
+    return tailAudio
+  },
+  fetchImpl: async () => ({ ok: true, json: async () => catalogue }),
+})
+await tailController.prepareEntry()
+await tailController.play({ durationMs: 0, source: 'tail-test' })
+assert.equal(tailAudio.volume, 0.1)
+
+tailAudio.currentTime = 169.9
+tailAudio.emit('timeupdate')
+assert.equal(tailController.getState().tailFadeStarted, false)
+assert.equal(tailController.getState().rampSource, null)
+
+tailAudio.currentTime = 170
+tailAudio.emit('timeupdate')
+assert.equal(tailController.getState().tailFadeStarted, true)
+assert.equal(tailController.getState().tailFadeActive, true)
+assert.equal(tailController.getState().tailFadeStartedAtMediaTime, 170)
+assert.equal(tailController.getState().rampSource, 'track-tail-fade')
+assert.equal(tailController.getState().rampOwnerCount, 1)
+
+advanceRamp(4800)
+const midTailVolume = tailAudio.volume
+assert.ok(midTailVolume > 0 && midTailVolume < 0.1)
+tailAudio.currentTime = 174
+tailAudio.emit('timeupdate')
+assert.equal(tailController.getState().tailFadeStartedAtMediaTime, 170)
+assert.equal(tailController.getState().rampSource, 'track-tail-fade')
+
+advanceRamp(7990)
+tailAudio.currentTime = 177.99
+tailAudio.emit('timeupdate')
+assert.equal(tailController.getState().tailSilenceLocked, false)
+assert.ok(tailAudio.volume >= 0 && tailAudio.volume < 0.001)
+
+tailAudio.currentTime = 178
+tailAudio.emit('timeupdate')
+assert.equal(tailAudio.volume, 0)
+assert.equal(tailController.getState().tailFadeActive, false)
+assert.equal(tailController.getState().tailSilenceLocked, true)
+assert.equal(tailController.getState().rampOwnerCount, 0)
+assert.equal(tailController.getState().rampSource, null)
+
+const silentTailPause = tailController.fadePause({ durationMs: 400, source: 'tail-test' })
+await silentTailPause
+assert.equal(tailAudio.paused, true)
+assert.equal(tailAudio.currentTime, 178)
+assert.equal(tailAudio.volume, 0)
+await tailController.play({ durationMs: 1200, source: 'tail-test' })
+assert.equal(tailAudio.currentTime, 178)
+assert.equal(tailAudio.volume, 0)
+assert.equal(tailController.getState().tailSilenceLocked, true)
+assert.equal(tailController.getState().rampOwnerCount, 0)
+assert.equal(tailController.getState().rampSource, null)
+
+tailController.stop()
+await tailController.play({ durationMs: 0, source: 'tail-test' })
+tailAudio.currentTime = 170
+tailAudio.emit('timeupdate')
+advanceRamp(3000)
+const volumeBeforeTailPause = tailAudio.volume
+assert.ok(volumeBeforeTailPause > 0 && volumeBeforeTailPause < 0.1)
+tailAudio.currentTime = 173
+tailAudio.emit('timeupdate')
+const tailPause = tailController.fadePause({ durationMs: 400, source: 'tail-test' })
+assert.equal(tailController.getState().tailFadeActive, false)
+assert.equal(tailController.getState().rampSource, 'tail-test')
+advanceRamp(400)
+await tailPause
+assert.equal(tailAudio.paused, true)
+assert.equal(tailAudio.currentTime, 173)
+assert.equal(tailAudio.volume, 0)
+
+await tailController.play({ durationMs: 1200, source: 'tail-test' })
+assert.equal(tailAudio.currentTime, 173)
+assert.equal(tailAudio.volume, 0)
+assert.equal(tailController.getState().rampSource, 'track-tail-resume')
+assert.ok(tailController.getState().rampTargetVolume > 0)
+assert.ok(tailController.getState().rampTargetVolume <= volumeBeforeTailPause)
+advanceRamp(300)
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.equal(tailController.getState().rampSource, 'track-tail-fade')
+assert.ok(tailAudio.volume > 0 && tailAudio.volume <= volumeBeforeTailPause)
+advanceRamp(5000)
+await new Promise((resolve) => setTimeout(resolve, 0))
+assert.equal(tailAudio.volume, 0)
+assert.equal(tailController.getState().rampOwnerCount, 0)
+assert.equal(tailController.getState().tailSilenceLocked, true)
+
+await tailController.setTrack('second-track')
+await tailController.play({ durationMs: 0, source: 'tail-test' })
+assert.equal(tailAudio.loop, true)
+tailAudio.currentTime = 170
+tailAudio.emit('timeupdate')
+assert.equal(tailAudio.loop, false)
+assert.equal(tailController.getState().loop, false)
+const playCallsBeforeEnd = tailAudio.playCalls
+tailAudio.emit('ended')
+assert.equal(tailController.getState().status, 'ready')
+assert.equal(tailAudio.volume, 0)
+assert.equal(tailAudio.playCalls, playCallsBeforeEnd)
+tailController.destroy()
+globalThis.requestAnimationFrame = originalRequestAnimationFrame
+globalThis.cancelAnimationFrame = originalCancelAnimationFrame
 
 let routeExitAudio = null
 const routeExitController = createStudioV2AudioController({

@@ -16,6 +16,7 @@ const deliveryConfig = {
   photoBoardUrl: '/board.glb',
   polaroidCameraUrl: '/camera.glb',
   photoManifestUrl: '/photo-wall.json',
+  speakerUrl: '/speaker.glb',
 }
 
 const gate = createStudioV2EntryGate({ deliveryConfig })
@@ -28,6 +29,7 @@ assert.equal(gate.markAssetReady('ROOM_ENVIRONMENT').progress, 49)
 gate.markAssetReady('MACBOOK_ISLAND_01')
 gate.markAssetReady('PHOTO_BOARD_01')
 gate.markAssetReady('POLAROID_CAMERA_01')
+gate.markAssetReady('STANMORE_SPEAKER_01')
 gate.markAssetReady('PHOTO_WALL_PHOTOS')
 ENTRY_READY_CONDITIONS.forEach((condition) => gate.markCondition(condition))
 assert.equal(gate.snapshot().progress, 100)

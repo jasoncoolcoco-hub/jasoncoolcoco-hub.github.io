@@ -9,6 +9,7 @@ import {
   OFFICIAL_VIEW_MIN_AZIMUTH,
   OFFICIAL_VIEW_SECTOR,
   STUDIO_V2_CAMERA_PRESETS,
+  STUDIO_V2_COLLISION_POLICY,
   STUDIO_V2_CONTROLS,
   STUDIO_V2_DEFAULT_CAMERA,
   STUDIO_V2_LIGHTING,
@@ -52,6 +53,10 @@ import {
 import { createStudioV2PhotoWallFocus } from './studioV2PhotoWallFocus'
 import { createStudioV2PhotoHover } from './studioV2PhotoHover'
 import { createStudioV2PhotoDetail } from './studioV2PhotoDetail'
+import { createStudioV2PhotoWallAdjustment } from './studioV2PhotoWallAdjustment'
+import {
+  createStudioV2SpeakerMusicInteraction,
+} from './createStudioV2SpeakerMusicInteraction'
 import {
   loadStudioV2SceneExpansion,
   STUDIO_V2_SCENE_EXPANSION_IDS,
@@ -197,6 +202,19 @@ function createTableInteractionTarget() {
   return target
 }
 
+function findOpeningReturnStoolTargets(root) {
+  const stoolRecord = STUDIO_V2_COLLISION_POLICY.majorFurnitureColliders
+    .find(({ name }) => name === 'KITCHEN STOOLS / ROW')
+  const sourceMeshNames = new Set(stoolRecord?.sourceMeshes ?? [])
+  const targets = []
+  root?.traverse((object) => {
+    if (!object.isMesh || !sourceMeshNames.has(object.name)) return
+    object.userData.studioV2SemanticId = 'RETURN_TO_OPENING'
+    targets.push(object)
+  })
+  return targets
+}
+
 const SHADOW_MAP_TYPES = Object.freeze({
   PCFShadowMap: THREE.PCFShadowMap,
   PCFSoftShadowMap: THREE.PCFSoftShadowMap,
@@ -215,6 +233,7 @@ export function createStudioV2Scene({
   onRoomReady,
   onStudioV2Ready,
   audioController,
+  backgroundMusicManager,
   deliveryConfig,
   entryTestConfig,
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
@@ -234,6 +253,7 @@ export function createStudioV2Scene({
   performanceTest = null,
   photoBoardGrid = false,
   photoSlotOverlay = false,
+  photoWallAdjustment = false,
   photoWallReview = false,
 }) {
   const activeDeliveryConfig = deliveryConfig ?? createStudioV2DeliveryConfig({}, false)
@@ -257,6 +277,7 @@ export function createStudioV2Scene({
   const indirectLighting = STUDIO_V2_LIGHTING
   const officialPresentation = !debug && !capture
   const staticPhotoWallReview = debug && photoWallReview
+  const staticPhotoWallAdjustment = staticPhotoWallReview && photoWallAdjustment
   const stableOrbitMode = !capture
   const renderSize = () => ({
     width: forcedViewport?.[0] ?? Math.max(1, mount.clientWidth),
@@ -522,7 +543,10 @@ export function createStudioV2Scene({
   let photoWallFocus = null
   let photoHover = null
   let photoDetail = null
+  let photoWallAdjustmentController = null
+  let speakerMusicInteraction = null
   let tableInteractionTarget = null
+  let openingReturnStoolTargets = []
   let spatialDebug = null
   let modelAudit = null
   let environmentRenderTarget = null
@@ -666,6 +690,7 @@ export function createStudioV2Scene({
   mount.dataset.interactionsEnabled = 'false'
   const visualReadyDatasetKeys = Object.fromEntries(VISUAL_READY_ASSETS.map(({ id }) => [id, {
     POLAROID_CAMERA_01: 'polaroidCameraVisibleMs',
+    STANMORE_SPEAKER_01: 'speakerVisibleMs',
   }[id]]))
 
   function textureFormatsFor(root) {
@@ -719,8 +744,8 @@ export function createStudioV2Scene({
       'Material.005',
       'Material.007',
       'StudioV2KitchenPainted',
-      'StudioV2KitchenMetal',
       'StudioV2KitchenHandle',
+      'StudioV2KitchenMetal',
       'StudioV2KitchenAppliance',
       'StudioV2KitchenGlass',
       'StudioV2IslandPainted',
@@ -930,12 +955,15 @@ export function createStudioV2Scene({
       entryRoot.add(tableInteractionTarget)
       cameraInteractionTargets.push(tableInteractionTarget)
     }
+    openingReturnStoolTargets = findOpeningReturnStoolTargets(modelRoot)
     macbookFocus = createStudioV2MacbookFocus({
       camera,
       cameraDirector,
       domElement: renderer.domElement,
       isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
+      isPriorityTarget: (event) => speakerMusicInteraction?.hit(event) ?? false,
       macbookRoot,
+      openingReturnTargets: openingReturnStoolTargets,
       renderSize,
       tableTarget: tableInteractionTarget,
     })
@@ -944,42 +972,53 @@ export function createStudioV2Scene({
     mount.dataset.macbookSiteMode = 'false'
     const photoBoardRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.photoBoard)
     const photoWallVisualStateBeforeWarmup = capturePhotoWallVisualState(photoBoardRoot)
-    photoWallFocus = createStudioV2PhotoWallFocus({
-      activateFocusQuality: () => sceneExpansionResource.activatePhotoWallFocusQuality(),
-      activateRoomQuality: () => sceneExpansionResource.activatePhotoWallRoomQuality(),
-      camera,
-      cameraDirector,
-      domElement: renderer.domElement,
-      focusQualityReady: () => (
-        sceneExpansionResource.getPhotoWallTextureState()?.focusStatus === 'ready'
-      ),
-      isInteractionLocked: () => (
-        (photoDetail?.isOpen() ?? false)
-      ),
-      photoBoardRoot,
-      preloadFocusQuality: () => sceneExpansionResource.preloadPhotoWallFocusQuality(),
-    })
-    mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
-    const createPhotoCardInteractions = () => {
-      if (photoHover || photoDetail) return
-      photoHover = createStudioV2PhotoHover({
+    if (staticPhotoWallAdjustment) {
+      photoWallAdjustmentController = await createStudioV2PhotoWallAdjustment({
+        boardScale: photoBoardRoot.scale.x,
+        camera,
+        domElement: renderer.domElement,
+        manifestUrl: activeDeliveryConfig.photoManifestUrl,
+        mount,
+        photoBoardRoot,
+      })
+    } else {
+      photoWallFocus = createStudioV2PhotoWallFocus({
+        activateFocusQuality: () => sceneExpansionResource.activatePhotoWallFocusQuality(),
+        activateRoomQuality: () => sceneExpansionResource.activatePhotoWallRoomQuality(),
         camera,
         cameraDirector,
         domElement: renderer.domElement,
+        focusQualityReady: () => (
+          sceneExpansionResource.getPhotoWallTextureState()?.focusStatus === 'ready'
+        ),
+        isInteractionLocked: () => (
+          (photoDetail?.isOpen() ?? false)
+        ),
         photoBoardRoot,
+        preloadFocusQuality: () => sceneExpansionResource.preloadPhotoWallFocusQuality(),
       })
-      photoDetail = createStudioV2PhotoDetail({
-        activateDetailQuality: (id) => sceneExpansionResource.activatePhotoDetailQuality(id),
-        camera,
-        cameraDirector,
-        domElement: renderer.domElement,
-        photoBoardRoot,
-        photoHover,
-        prepareDetailQuality: (id) => sceneExpansionResource.preparePhotoDetailQuality(id),
-        restoreDetailQuality: (id) => sceneExpansionResource.restorePhotoDetailQuality(id),
-      })
+      mount.dataset.photoWallFocusTarget = 'PHOTO_WALL_FOCUS_TARGET'
+      const createPhotoCardInteractions = () => {
+        if (photoHover || photoDetail) return
+        photoHover = createStudioV2PhotoHover({
+          camera,
+          cameraDirector,
+          domElement: renderer.domElement,
+          photoBoardRoot,
+        })
+        photoDetail = createStudioV2PhotoDetail({
+          activateDetailQuality: (id) => sceneExpansionResource.activatePhotoDetailQuality(id),
+          camera,
+          cameraDirector,
+          domElement: renderer.domElement,
+          photoBoardRoot,
+          photoHover,
+          prepareDetailQuality: (id) => sceneExpansionResource.preparePhotoDetailQuality(id),
+          restoreDetailQuality: (id) => sceneExpansionResource.restorePhotoDetailQuality(id),
+        })
+      }
+      createPhotoCardInteractions()
     }
-    createPhotoCardInteractions()
     entryGate.markCondition('worldMatricesReady')
     entryGate.markCondition('shadowsReady')
 
@@ -1047,6 +1086,21 @@ export function createStudioV2Scene({
     if (disposed || visualReadyResult.status !== 'ready') return null
     placedObjectRecords.push(...visualReadyResult.records)
     entryRoot.updateMatrixWorld(true)
+    const speakerRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.speaker)
+    if (speakerRoot && backgroundMusicManager && !staticPhotoWallReview) {
+      cameraInteractionTargets.push(speakerRoot)
+      speakerMusicInteraction = createStudioV2SpeakerMusicInteraction({
+        backgroundMusicManager,
+        camera,
+        domElement: renderer.domElement,
+        isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
+        onStateChange: (speakerState) => {
+          mount.dataset.speakerMusicTarget = speakerState.id
+          mount.dataset.speakerMusicLastAction = speakerState.lastAction
+        },
+        speakerRoot,
+      })
+    }
     if (typeof renderer.compileAsync === 'function') await renderer.compileAsync(scene, camera)
     else renderer.compile(scene, camera)
     if (floorReflection) {
@@ -1103,6 +1157,8 @@ export function createStudioV2Scene({
         mount.dataset.audioVolume = Number(audioState.volume ?? 0).toFixed(6)
         mount.dataset.audioPaused = String(audioState.paused ?? true)
         mount.dataset.audioRampOwnerCount = String(audioState.rampOwnerCount ?? 0)
+        mount.dataset.audioRampSource = audioState.rampSource ?? ''
+        mount.dataset.audioRampTargetVolume = audioState.rampTargetVolume ?? ''
         mount.dataset.audioFallbackArmed = String(audioState.fallbackArmed ?? false)
         mount.dataset.audioFallbackUsed = String(audioState.firstGestureFallbackUsed ?? false)
         mount.dataset.audioErrorCode = audioState.errorCode ?? ''
@@ -1735,6 +1791,9 @@ export function createStudioV2Scene({
     getPhotoWallFocusState() {
       return photoWallFocus?.getState() ?? null
     },
+    getPhotoWallAdjustmentState() {
+      return photoWallAdjustmentController?.getState() ?? null
+    },
     getPhotoWallFocusContract() {
       return photoWallFocus?.getContract() ?? null
     },
@@ -1918,6 +1977,8 @@ export function createStudioV2Scene({
       cancelAnimationFrame(animationFrame)
       resizeObserver.disconnect()
       unsubscribeAudioState?.()
+      speakerMusicInteraction?.dispose()
+      speakerMusicInteraction = null
       macbookFocus?.dispose()
       macbookFocus = null
       macbookSiteState = STUDIO_V2_MACBOOK_SITE_STATES.CLOSED
@@ -1926,12 +1987,15 @@ export function createStudioV2Scene({
       photoWallFocus = null
       photoDetail?.dispose()
       photoDetail = null
+      photoWallAdjustmentController?.dispose()
+      photoWallAdjustmentController = null
       photoHover?.dispose()
       photoHover = null
       tableInteractionTarget?.geometry.dispose()
       tableInteractionTarget?.material.dispose()
       tableInteractionTarget?.removeFromParent()
       tableInteractionTarget = null
+      openingReturnStoolTargets = []
       cameraDirector.dispose()
       controls.dispose()
       placedObjectsResource?.dispose()
@@ -1961,9 +2025,14 @@ export function createStudioV2Scene({
       delete mount.dataset.visualReadyMs
       delete mount.dataset.visualReadyDelayMs
       delete mount.dataset.polaroidCameraVisibleMs
+      delete mount.dataset.speakerVisibleMs
+      delete mount.dataset.speakerMusicTarget
+      delete mount.dataset.speakerMusicLastAction
       delete mount.dataset.audioState
       delete mount.dataset.audioCurrentTime
       delete mount.dataset.audioTrackId
+      delete mount.dataset.audioRampSource
+      delete mount.dataset.audioRampTargetVolume
       delete mount.dataset.renderFps
       delete mount.dataset.renderCalls
       delete mount.dataset.renderTriangles

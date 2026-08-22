@@ -18,6 +18,8 @@ DETAIL_MAX_DIMENSION = 1920
 DETAIL_JPEG_QUALITY = 90
 MIN_LUMA_RANGE = 4
 MIN_LUMA_STDDEV = 1.0
+ROOM_RESAMPLING = Image.Resampling.BOX
+DETAIL_RESAMPLING = Image.Resampling.LANCZOS
 
 
 def photo_manifest() -> dict:
@@ -131,7 +133,8 @@ def generate_derivative(photo: dict, spec: dict) -> Path:
         raise RuntimeError(f"{photo['filename']}: derivative must be JPEG")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image = first_frame_srgb(source_path)
-    image.thumbnail((spec["maxDimension"], spec["maxDimension"]), Image.Resampling.LANCZOS)
+    resampling = ROOM_RESAMPLING if spec["id"] == "room" else DETAIL_RESAMPLING
+    image.thumbnail((spec["maxDimension"], spec["maxDimension"]), resampling)
     temporary_path = output_path.with_suffix(f"{output_path.suffix}.tmp")
     try:
         image.save(

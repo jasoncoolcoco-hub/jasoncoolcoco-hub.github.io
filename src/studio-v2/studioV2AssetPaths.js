@@ -4,6 +4,7 @@ export const STUDIO_V2_ASSET_PATHS = Object.freeze({
   photoBoard: 'models/fred-studio-v2/objects/cork_board_clean.glb',
   photoManifest: 'studio-v2/photo-wall/manifest.json',
   polaroidCamera: 'models/fred-studio-v2/objects/polaroid_camera.glb',
+  speaker: 'models/fred-studio-v2/objects/marshall_stanmore_iii.glb',
 })
 
 export const STUDIO_V2_TIER1_GLB_PATHS = Object.freeze([

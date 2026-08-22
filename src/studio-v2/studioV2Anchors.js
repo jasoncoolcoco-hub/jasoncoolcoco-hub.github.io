@@ -27,6 +27,13 @@ export const STUDIO_V2_ANCHORS = Object.freeze({
     surfaceNormal: Object.freeze([0, 1, 0]),
     note: 'Static Polaroid camera in the rear wall-side desk zone, visually connected to the photo wall and clear of the MacBook and folder.',
   }),
+  STANMORE_SPEAKER_01: Object.freeze({
+    position: Object.freeze([1.34, 1.417, -1.05]),
+    rotation: Object.freeze([0, -1.570796, 0]),
+    scale: 1,
+    surfaceNormal: Object.freeze([0, 1, 0]),
+    note: 'Static Stanmore III desk prop on the opening-view left of the MacBook, moved inward from the stool edge toward the Polaroid desk band with its front grille facing the main room camera.',
+  }),
   DOCUMENT_FOLDER_01: Object.freeze({
     position: Object.freeze([0.94, 1.417, -0.42]),
     rotation: Object.freeze([0, -1.710796, 0]),

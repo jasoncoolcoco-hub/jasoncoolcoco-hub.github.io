@@ -114,8 +114,8 @@ const activePhotos = photoManifest.photos.filter(
 const fullPhotoBytes = activePhotos.reduce((total, { generatedFilename }) => (
   total + fs.statSync(`public/studio-v2/photo-wall/${generatedFilename}`).size
 ), 0)
-assert.equal(activePhotos.length, 39)
-assert.equal(fullPhotoBytes, 28_468_604)
+assert.equal(activePhotos.length, 70)
+assert.equal(fullPhotoBytes, 46_645_984)
 
 const tierPath = (photo, tier) => {
   const stem = photo.generatedFilename.split('/').pop().replace(/\.[^.]+$/, '')
@@ -127,8 +127,8 @@ const roomPhotoBytes = activePhotos.reduce((total, photo) => (
 const focusPhotoBytes = activePhotos.reduce((total, photo) => (
   total + fs.statSync(`public/studio-v2/photo-wall/${tierPath(photo, 'focus')}`).size
 ), 0)
-assert.equal(roomPhotoBytes, 552_111)
-assert.equal(focusPhotoBytes, 5_562_687)
+assert.equal(roomPhotoBytes, 1_055_932)
+assert.equal(focusPhotoBytes, 10_507_471)
 
 const activeRuntimePaths = [
   ...STUDIO_V2_CDN_ASSET_PATHS,
@@ -138,10 +138,10 @@ const activeRuntimeBytes = activeRuntimePaths.reduce(
   (total, path) => total + fs.statSync(`public/${path}`).size,
   0,
 )
-assert.equal(activeRuntimePaths.length, 44)
+assert.equal(activeRuntimePaths.length, 75)
 assert.equal(
   activeRuntimeBytes,
-  34_904_406,
+  35_423_787,
 )
 
 const sceneSource = fs.readFileSync('src/studio-v2/createStudioV2Scene.js', 'utf8')

@@ -6,6 +6,7 @@ export const STUDIO_V2_ASSET_TIERS = Object.freeze({
   ]),
   visualReady: Object.freeze([
     'POLAROID_CAMERA_01',
+    'STANMORE_SPEAKER_01',
     'PHOTO_WALL_PHOTOS',
   ]),
   tier2: Object.freeze([]),
@@ -21,6 +22,11 @@ export const VISUAL_READY_ASSETS = Object.freeze([
     id: 'POLAROID_CAMERA_01',
     kind: 'accepted-visible-desk-prop',
     resourceKey: 'polaroidCameraUrl',
+  }),
+  Object.freeze({
+    id: 'STANMORE_SPEAKER_01',
+    kind: 'accepted-visible-desk-prop',
+    resourceKey: 'speakerUrl',
   }),
   Object.freeze({
     id: 'PHOTO_WALL_PHOTOS',
@@ -68,7 +74,8 @@ export const STUDIO_V2_ENTRY_PROGRESS_WEIGHTS = Object.freeze({
     PHOTO_BOARD_01: 1,
   }),
   visualAssets: Object.freeze({
-    POLAROID_CAMERA_01: 34,
+    POLAROID_CAMERA_01: 26,
+    STANMORE_SPEAKER_01: 8,
     PHOTO_WALL_PHOTOS: 3,
   }),
   conditions: Object.freeze(Object.fromEntries(
@@ -205,6 +212,7 @@ export function createStudioV2EntryGate({
       photoBoardReady: assets.PHOTO_BOARD_01 === 'ready',
       photoWallReady: visualAssets.PHOTO_WALL_PHOTOS === 'ready',
       polaroidCameraReady: visualAssets.POLAROID_CAMERA_01 === 'ready',
+      speakerReady: visualAssets.STANMORE_SPEAKER_01 === 'ready',
       manifest,
       materialsReady: conditions.materialsReady,
       phase,

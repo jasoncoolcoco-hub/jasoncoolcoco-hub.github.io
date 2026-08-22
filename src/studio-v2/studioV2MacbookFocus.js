@@ -130,10 +130,76 @@ function solvePose(frame, camera, viewport) {
     far: camera.far,
     projection: projectedRecord(frame, probe, viewport),
     distance,
-    intermediatePosition: target.clone()
-      .addScaledVector(frame.normal, Math.max(distance * 1.75, 0.62))
-      .addScaledVector(frame.up, 0.48)
-      .toArray(),
+    intermediatePosition: null,
+  }
+}
+
+function createMacbookDistanceMaterialStabilizer(macbookRoot, camera, displayMesh) {
+  const materials = new Set()
+  macbookRoot.traverse((object) => {
+    if (!object.isMesh) return
+    const objectMaterials = Array.isArray(object.material) ? object.material : [object.material]
+    objectMaterials.forEach((material) => {
+      if (material?.isMeshStandardMaterial) materials.add(material)
+    })
+  })
+  const records = [...materials].map((material) => ({
+    material,
+    baseline: {
+      anisotropy: Number.isFinite(material.anisotropy) ? material.anisotropy : null,
+      clearcoat: Number.isFinite(material.clearcoat) ? material.clearcoat : null,
+      envMapIntensity: Number.isFinite(material.envMapIntensity) ? material.envMapIntensity : null,
+      normalScale: material.normalScale?.clone() ?? null,
+      roughness: Number.isFinite(material.roughness) ? material.roughness : null,
+    },
+  }))
+  displayMesh.geometry.computeBoundingBox()
+  const localDisplayCenter = displayMesh.geometry.boundingBox.getCenter(new THREE.Vector3())
+  const displayCenter = new THREE.Vector3()
+  let blend = 0
+  let distance = 0
+
+  function update() {
+    displayMesh.updateWorldMatrix(true, false)
+    displayCenter.copy(localDisplayCenter).applyMatrix4(displayMesh.matrixWorld)
+    distance = camera.position.distanceTo(displayCenter)
+    blend = THREE.MathUtils.smoothstep(distance, 0.45, 1.15)
+    records.forEach(({ baseline, material }) => {
+      const isDisplay = material.name === 'StudioV2MacBookDisplayGlass'
+      if (baseline.roughness !== null) {
+        const stableRoughness = Math.max(baseline.roughness, isDisplay ? 0.52 : 0.58)
+        material.roughness = THREE.MathUtils.lerp(baseline.roughness, stableRoughness, blend)
+      }
+      if (baseline.envMapIntensity !== null) {
+        const stableEnvMap = Math.min(baseline.envMapIntensity, isDisplay ? 0.04 : 0.46)
+        material.envMapIntensity = THREE.MathUtils.lerp(baseline.envMapIntensity, stableEnvMap, blend)
+      }
+      if (baseline.clearcoat !== null) {
+        material.clearcoat = THREE.MathUtils.lerp(baseline.clearcoat, Math.min(baseline.clearcoat, 0.01), blend)
+      }
+      if (baseline.anisotropy !== null) {
+        material.anisotropy = THREE.MathUtils.lerp(baseline.anisotropy, Math.min(baseline.anisotropy, 0.06), blend)
+      }
+      if (baseline.normalScale && material.normalScale) {
+        const normalFactor = THREE.MathUtils.lerp(1, isDisplay ? 0 : 0.4, blend)
+        material.normalScale.copy(baseline.normalScale).multiplyScalar(normalFactor)
+      }
+    })
+    return { blend, distance }
+  }
+
+  return {
+    dispose() {
+      records.forEach(({ baseline, material }) => {
+        if (baseline.roughness !== null) material.roughness = baseline.roughness
+        if (baseline.envMapIntensity !== null) material.envMapIntensity = baseline.envMapIntensity
+        if (baseline.clearcoat !== null) material.clearcoat = baseline.clearcoat
+        if (baseline.anisotropy !== null) material.anisotropy = baseline.anisotropy
+        if (baseline.normalScale && material.normalScale) material.normalScale.copy(baseline.normalScale)
+      })
+    },
+    getState: () => ({ blend, distance }),
+    update,
   }
 }
 
@@ -360,13 +426,16 @@ export function createStudioV2MacbookFocus({
   domElement,
   getRadioState = () => null,
   isInteractionLocked = () => false,
+  isPriorityTarget = () => false,
   macbookRoot,
+  openingReturnTargets = [],
   renderSize,
   tableTarget,
 }) {
   const displayMesh = findDisplayMesh(macbookRoot)
   if (!displayMesh) throw new Error('MACBOOK_DISPLAY_TARGET semantic mesh Object_6 was not found.')
   displayMesh.userData.studioV2SemanticId = 'MACBOOK_DISPLAY_TARGET'
+  const distanceMaterialStabilizer = createMacbookDistanceMaterialStabilizer(macbookRoot, camera, displayMesh)
   const chromeDock = createChromeDockInteraction(displayMesh)
   const raycaster = new THREE.Raycaster()
   const pointer = new THREE.Vector2()
@@ -408,6 +477,7 @@ export function createStudioV2MacbookFocus({
       meshName: displayMesh.name,
       lastRequest,
       reducedMotionOverride,
+      materialStability: distanceMaterialStabilizer.getState(),
     }
   }
 
@@ -418,11 +488,17 @@ export function createStudioV2MacbookFocus({
       -((event.clientY - rect.top) / rect.height) * 2 + 1,
     )
     raycaster.setFromCamera(pointer, camera)
-    return raycaster.intersectObject(target, true).length > 0
+    return Array.isArray(target)
+      ? raycaster.intersectObjects(target, true).length > 0
+      : raycaster.intersectObject(target, true).length > 0
   }
 
   function tableHit(event) {
     return Boolean(tableTarget && hit(event, tableTarget))
+  }
+
+  function openingReturnHit(event) {
+    return openingReturnTargets.length > 0 && hit(event, openingReturnTargets)
   }
 
   function chromeHit(event) {
@@ -458,7 +534,7 @@ export function createStudioV2MacbookFocus({
     const state = cameraDirector.getCurrentState()
     const radioOpen = Boolean(getRadioState()?.screenPlayerOpen)
     return !radioOpen && [
-      'ROOM_WIDE_START', 'AMBIENT_DRIFT', 'AMBIENT_USER_OVERRIDE', 'TABLE_SKIP_TRANSITION',
+      'ROOM_WIDE_START', 'IDLE_OBSERVATION', 'AMBIENT_DRIFT', 'AMBIENT_USER_OVERRIDE', 'TABLE_SKIP_TRANSITION',
       'TABLE_OVERVIEW', 'TABLE_FREE_ORBIT', 'ROOM_ORBIT',
     ].includes(state)
   }
@@ -474,10 +550,19 @@ export function createStudioV2MacbookFocus({
       return false
     }
     const pose = currentPose()
-    const accepted = cameraDirector.requestMacbookFocus(pose, {
+    const destination = new THREE.Vector3().fromArray(pose.position)
+    const flightDistance = camera.position.distanceTo(destination)
+    const flightPose = {
+      ...pose,
+      intermediatePosition: camera.position.clone()
+        .lerp(destination, 0.56)
+        .add(new THREE.Vector3(0, THREE.MathUtils.clamp(flightDistance * 0.016, 0.06, 0.15), 0))
+        .toArray(),
+    }
+    const accepted = cameraDirector.requestMacbookFocus(flightPose, {
       reducedMotionOverride,
       source,
-      intermediatePosition: pose.intermediatePosition,
+      intermediatePosition: flightPose.intermediatePosition,
       focusSafety: {
         macbookBounds: (() => {
           const bounds = new THREE.Box3().setFromObject(macbookRoot)
@@ -519,6 +604,10 @@ export function createStudioV2MacbookFocus({
 
   function onPointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return
+    if (isPriorityTarget(event)) {
+      pointerIntent = null
+      return
+    }
     if (isInteractionLocked()) {
       pointerIntent = null
       return
@@ -532,8 +621,10 @@ export function createStudioV2MacbookFocus({
       moved: false,
       downOnMacbook: !focusOwned && canEnter() && hit(event),
       downOnChrome: focusOwned && chromeHit(event),
-      downOnTable: !focusOwned && ['ROOM_WIDE_START', 'AMBIENT_DRIFT', 'AMBIENT_USER_OVERRIDE']
-        .includes(state) && tableHit(event),
+      downOnTable: !focusOwned && ['ROOM_WIDE_START', 'IDLE_OBSERVATION', 'AMBIENT_DRIFT', 'AMBIENT_USER_OVERRIDE']
+        .includes(state) && !openingReturnHit(event) && tableHit(event),
+      downOnOpeningReturn: !focusOwned && ['TABLE_OVERVIEW', 'TABLE_FREE_ORBIT']
+        .includes(state) && openingReturnHit(event),
       focusOwned,
     }
   }
@@ -562,6 +653,12 @@ export function createStudioV2MacbookFocus({
     }
     if (intent.downOnMacbook && hit(event)) {
       requestFocus(event.pointerType === 'touch' ? 'TOUCH' : 'CLICK')
+      return
+    }
+    if (intent.downOnOpeningReturn && openingReturnHit(event)) {
+      const accepted = cameraDirector.requestOpeningReturn({ reducedMotionOverride })
+      lastRequest = accepted ? 'OPENING_RETURN' : 'OPENING_RETURN_REJECTED'
+      publish()
       return
     }
     if (intent.downOnTable && tableHit(event)) {
@@ -603,6 +700,7 @@ export function createStudioV2MacbookFocus({
       listeners.clear()
       portalOpenListeners.clear()
       domElement.style.cursor = ''
+      distanceMaterialStabilizer.dispose()
       chromeDock.dispose()
     },
     getContract() {
@@ -621,6 +719,10 @@ export function createStudioV2MacbookFocus({
         worldThickness: round(semantic.thickness),
         targetOccupancy: STUDIO_V2_MACBOOK_FOCUS_CONFIG.occupancy,
         tableInteractionTarget: tableTarget?.userData?.studioV2SemanticId ?? null,
+        openingReturnTarget: openingReturnTargets.length
+          ? 'RETURN_TO_OPENING'
+          : null,
+        openingReturnTargetCount: openingReturnTargets.length,
         solvedPose: {
           position: pose.position.map((value) => round(value)),
           target: pose.target.map((value) => round(value)),
@@ -669,6 +771,7 @@ export function createStudioV2MacbookFocus({
       return () => portalOpenListeners.delete(listener)
     },
     update(time = performance.now()) {
+      const materialStability = distanceMaterialStabilizer.update()
       if (cameraDirector.getCurrentState() !== 'MACBOOK_FOCUS' || isInteractionLocked()) {
         setChromeHovered(false)
       }
@@ -686,7 +789,7 @@ export function createStudioV2MacbookFocus({
       chromeDock.icon.scale.setScalar(chromeScale)
       chromeDock.hitTarget.scale.setScalar(chromeScale)
       domElement.style.cursor = chromeHovered ? 'pointer' : ''
-      return { chromeHovered, chromeScale, launching }
+      return { chromeHovered, chromeScale, launching, materialStability }
     },
   })
 }

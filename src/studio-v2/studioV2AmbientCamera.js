@@ -7,6 +7,16 @@ import {
 export const STUDIO_V2_AMBIENT_CAMERA_CONFIG = Object.freeze({
   durationMs: 96000,
   startDelayMs: 0,
+  observation: Object.freeze({
+    entryBlendSeconds: 3.5,
+    macbookAttentionMeters: 0.055,
+    maximumYawRadians: THREE.MathUtils.degToRad(0.34),
+    maximumPitchRadians: THREE.MathUtils.degToRad(0.18),
+    targetDriftMeters: Object.freeze([0.018, 0.014]),
+    targetDriftPeriodsSeconds: Object.freeze([29.3, 41.9, 57.7]),
+    yawPeriodsSeconds: Object.freeze([18.7, 31.1, 47.3]),
+    pitchPeriodsSeconds: Object.freeze([23.9, 37.7, 53.9]),
+  }),
   overrideDragThresholdPx: 5,
   overrideYawMin: THREE.MathUtils.degToRad(-25),
   overrideYawMax: THREE.MathUtils.degToRad(25),
