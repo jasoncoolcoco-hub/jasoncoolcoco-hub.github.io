@@ -25,6 +25,7 @@ const requests = resolveStudioV2EntryRequests({
   photoBoardUrl: '/photo-board.glb',
   photoManifestUrl: '/photo-manifest.json',
   polaroidCameraUrl: '/polaroid-camera.glb',
+  speakerUrl: '/speaker.glb',
 })
 
 assert.deepEqual(
@@ -40,8 +41,9 @@ assert.deepEqual(
   resolveStudioV2VisualReadyManifest({
     photoManifestUrl: '/photo-manifest.json',
     polaroidCameraUrl: '/polaroid-camera.glb',
+    speakerUrl: '/speaker.glb',
   }).map(({ url }) => url),
-  ['/polaroid-camera.glb', '/photo-manifest.json'],
+  ['/polaroid-camera.glb', '/speaker.glb', '/photo-manifest.json'],
 )
 
 const gate = createStudioV2EntryGate({
@@ -51,6 +53,7 @@ const gate = createStudioV2EntryGate({
     photoBoardUrl: '/photo-board.glb',
     photoManifestUrl: '/photo-manifest.json',
     polaroidCameraUrl: '/polaroid-camera.glb',
+    speakerUrl: '/speaker.glb',
   },
   startedAt: 0,
 })

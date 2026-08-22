@@ -16,7 +16,9 @@ for (const state of [
 
 assert.match(poses, /const acceptedPhotoWallReview = STUDIO_V2_CAMERA_PRESETS\.PHOTO_WALL_REVIEW/)
 assert.match(poses, /export const STUDIO_V2_PHOTO_WALL_FOCUS_POSE/)
-assert.match(interaction, /return state === STUDIO_V2_CAMERA_STATES\.TABLE_FREE_ORBIT/)
+assert.match(interaction, /STUDIO_V2_CAMERA_STATES\.IDLE_OBSERVATION/)
+assert.match(interaction, /STUDIO_V2_CAMERA_STATES\.TABLE_FREE_ORBIT/)
+assert.match(interaction, /\.includes\(state\)/)
 assert.match(interaction, /raycaster\.intersectObject\(photoBoardRoot, true\)/)
 assert.match(interaction, /event\.key === 'Escape'/)
 assert.match(interaction, /isInteractionLocked\(\)/)

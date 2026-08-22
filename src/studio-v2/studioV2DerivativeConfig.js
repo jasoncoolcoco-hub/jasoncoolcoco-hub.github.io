@@ -73,6 +73,7 @@ export function createStudioV2DeliveryConfig(requested = {}, allowDerivatives = 
     photoBoardUrl: assetUrl(STUDIO_V2_ASSET_PATHS.photoBoard),
     photoManifestUrl: assetUrl(STUDIO_V2_ASSET_PATHS.photoManifest),
     polaroidCameraUrl: assetUrl(STUDIO_V2_ASSET_PATHS.polaroidCamera),
+    speakerUrl: assetUrl(STUDIO_V2_ASSET_PATHS.speaker),
     requiresKtx2: textures === 'ktx2',
     requiresMeshopt: meshCompression === 'meshopt',
   })

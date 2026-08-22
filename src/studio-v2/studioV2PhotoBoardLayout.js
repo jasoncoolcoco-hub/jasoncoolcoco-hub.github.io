@@ -115,6 +115,7 @@ export function studioV2PhotoSlotOverlayEnabled(searchParams, debug = false) {
 
 export function studioV2PhotoWallDebugPanelEnabled(searchParams, debug = false) {
   if (!debug) return false
+  if (searchParams?.get?.('debugPanel') === '0') return false
   return !studioV2PhotoWallReviewEnabled(searchParams, debug)
     || searchParams?.get?.('debugPanel') === '1'
 }

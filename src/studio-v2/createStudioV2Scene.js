@@ -9,6 +9,7 @@ import {
   OFFICIAL_VIEW_MIN_AZIMUTH,
   OFFICIAL_VIEW_SECTOR,
   STUDIO_V2_CAMERA_PRESETS,
+  STUDIO_V2_COLLISION_POLICY,
   STUDIO_V2_CONTROLS,
   STUDIO_V2_DEFAULT_CAMERA,
   STUDIO_V2_LIGHTING,
@@ -196,6 +197,19 @@ function createTableInteractionTarget() {
   target.position.copy(min).add(max).multiplyScalar(0.5)
   target.updateMatrixWorld(true)
   return target
+}
+
+function findOpeningReturnStoolTargets(root) {
+  const stoolRecord = STUDIO_V2_COLLISION_POLICY.majorFurnitureColliders
+    .find(({ name }) => name === 'KITCHEN STOOLS / ROW')
+  const sourceMeshNames = new Set(stoolRecord?.sourceMeshes ?? [])
+  const targets = []
+  root?.traverse((object) => {
+    if (!object.isMesh || !sourceMeshNames.has(object.name)) return
+    object.userData.studioV2SemanticId = 'RETURN_TO_OPENING'
+    targets.push(object)
+  })
+  return targets
 }
 
 const SHADOW_MAP_TYPES = Object.freeze({
@@ -527,6 +541,7 @@ export function createStudioV2Scene({
   let photoDetail = null
   let photoWallAdjustmentController = null
   let tableInteractionTarget = null
+  let openingReturnStoolTargets = []
   let spatialDebug = null
   let modelAudit = null
   let environmentRenderTarget = null
@@ -670,6 +685,7 @@ export function createStudioV2Scene({
   mount.dataset.interactionsEnabled = 'false'
   const visualReadyDatasetKeys = Object.fromEntries(VISUAL_READY_ASSETS.map(({ id }) => [id, {
     POLAROID_CAMERA_01: 'polaroidCameraVisibleMs',
+    STANMORE_SPEAKER_01: 'speakerVisibleMs',
   }[id]]))
 
   function textureFormatsFor(root) {
@@ -723,8 +739,8 @@ export function createStudioV2Scene({
       'Material.005',
       'Material.007',
       'StudioV2KitchenPainted',
-      'StudioV2KitchenMetal',
       'StudioV2KitchenHandle',
+      'StudioV2KitchenMetal',
       'StudioV2KitchenAppliance',
       'StudioV2KitchenGlass',
       'StudioV2IslandPainted',
@@ -934,12 +950,14 @@ export function createStudioV2Scene({
       entryRoot.add(tableInteractionTarget)
       cameraInteractionTargets.push(tableInteractionTarget)
     }
+    openingReturnStoolTargets = findOpeningReturnStoolTargets(modelRoot)
     macbookFocus = createStudioV2MacbookFocus({
       camera,
       cameraDirector,
       domElement: renderer.domElement,
       isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
       macbookRoot,
+      openingReturnTargets: openingReturnStoolTargets,
       renderSize,
       tableTarget: tableInteractionTarget,
     })
@@ -1952,6 +1970,7 @@ export function createStudioV2Scene({
       tableInteractionTarget?.material.dispose()
       tableInteractionTarget?.removeFromParent()
       tableInteractionTarget = null
+      openingReturnStoolTargets = []
       cameraDirector.dispose()
       controls.dispose()
       placedObjectsResource?.dispose()
@@ -1981,6 +2000,7 @@ export function createStudioV2Scene({
       delete mount.dataset.visualReadyMs
       delete mount.dataset.visualReadyDelayMs
       delete mount.dataset.polaroidCameraVisibleMs
+      delete mount.dataset.speakerVisibleMs
       delete mount.dataset.audioState
       delete mount.dataset.audioCurrentTime
       delete mount.dataset.audioTrackId

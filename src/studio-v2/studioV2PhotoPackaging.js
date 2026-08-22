@@ -553,7 +553,6 @@ function createPhotoTextureTierController({ cards, manifestUrl, qualityTiers, re
 
   function applyTexture(card, texture) {
     card.surface.material.map = texture
-    card.surface.material.needsUpdate = true
   }
 
   function preloadFocusQuality() {
@@ -571,6 +570,7 @@ function createPhotoTextureTierController({ cards, manifestUrl, qualityTiers, re
         textureLoader,
         renderer,
       )
+      renderer.initTexture?.(loaded.texture)
       pendingFocusTextures.set(card.entry.id, loaded.texture)
     })).then(() => {
       if (disposed) {

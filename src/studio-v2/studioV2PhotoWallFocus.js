@@ -13,7 +13,16 @@ export const STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG = Object.freeze({
 })
 
 export function studioV2PhotoWallFocusCanEnter(state) {
-  return state === STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT
+  return [
+    STUDIO_V2_CAMERA_STATES.ROOM_WIDE_START,
+    STUDIO_V2_CAMERA_STATES.IDLE_OBSERVATION,
+    STUDIO_V2_CAMERA_STATES.AMBIENT_DRIFT,
+    STUDIO_V2_CAMERA_STATES.AMBIENT_USER_OVERRIDE,
+    STUDIO_V2_CAMERA_STATES.TABLE_SKIP_TRANSITION,
+    STUDIO_V2_CAMERA_STATES.TABLE_OVERVIEW,
+    STUDIO_V2_CAMERA_STATES.TABLE_FREE_ORBIT,
+    STUDIO_V2_CAMERA_STATES.ROOM_ORBIT,
+  ].includes(state)
 }
 
 export function createStudioV2PhotoWallFocus({
@@ -77,9 +86,15 @@ export function createStudioV2PhotoWallFocus({
       publish()
       return false
     }
+    const destination = new THREE.Vector3().fromArray(STUDIO_V2_PHOTO_WALL_FOCUS_POSE.position)
+    const flightDistance = camera.position.distanceTo(destination)
+    const intermediatePosition = camera.position.clone()
+      .lerp(destination, 0.55)
+      .add(new THREE.Vector3(0, THREE.MathUtils.clamp(flightDistance * 0.025, 0.12, 0.28), 0))
+      .toArray()
     const accepted = cameraDirector.requestPhotoWallFocus(STUDIO_V2_PHOTO_WALL_FOCUS_POSE, {
       duration: STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG.durationMs,
-      intermediatePosition: STUDIO_V2_PHOTO_WALL_FOCUS_CONFIG.intermediatePosition,
+      intermediatePosition,
       reducedMotionOverride,
       source,
     })

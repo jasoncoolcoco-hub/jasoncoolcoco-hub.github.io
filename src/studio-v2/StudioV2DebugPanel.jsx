@@ -532,6 +532,9 @@ export default function StudioV2DebugPanel({
           <InspectorRow label="TRANSITION PROGRESS" value={cameraDirector.transition ? cameraDirector.transition.progress : 'N.A.'} />
           <InspectorRow label="AMBIENT PROGRESS" value={ambient.railProgress} />
           <InspectorRow label="AMBIENT TIME" value={`${ambient.driftElapsedMs ?? '—'} / ${ambient.driftDurationMs ?? '—'} MS`} />
+          <InspectorRow label="OBSERVATION TIME" value={`${ambient.observationElapsedMs ?? '—'} MS`} />
+          <InspectorRow label="OBSERVATION YAW" value={`${ambient.observationYawDegrees ?? '—'}°`} />
+          <InspectorRow label="OBSERVATION PITCH" value={`${ambient.observationPitchDegrees ?? '—'}°`} />
           <InspectorRow label="OFFICIAL RAIL" value={ambient.officialLockedRail ? 'LOCKED' : 'DEBUG / MANUAL'} />
           <InspectorRow label="ENTRY START" value={ambient.entryStartedAt == null ? 'N.A.' : `${ambient.entryStartedAt} MS`} />
           <InspectorRow label="PATH CANDIDATE" value={ambientReport.rail?.selectedCandidate || 'N.A.'} />
@@ -652,7 +655,7 @@ export default function StudioV2DebugPanel({
         </label>
         <div className="studio-v2__debug-actions">
           <button type="button" onClick={() => runtime.startAmbientCamera({ immediate: true })}>
-            START AMBIENT
+            START IDLE OBSERVATION
           </button>
           <button type="button" onClick={() => runtime.resetAmbientCamera()}>
             RESET ROOM WIDE

@@ -9,6 +9,7 @@ export const STUDIO_V2_SCENE_EXPANSION_IDS = Object.freeze({
   photoBoardSurface: 'PHOTO_BOARD_SURFACE',
   photoBoardFrame: 'PHOTO_BOARD_FRAME',
   camera: 'POLAROID_CAMERA_01',
+  speaker: 'STANMORE_SPEAKER_01',
 })
 
 const ASSET_CONFIG = Object.freeze({
@@ -30,6 +31,13 @@ const ASSET_CONFIG = Object.freeze({
     targetAxis: 'x',
     targetSize: 0.17,
     role: 'camera',
+  }),
+  speaker: Object.freeze({
+    id: STUDIO_V2_SCENE_EXPANSION_IDS.speaker,
+    resourceKey: 'speakerUrl',
+    targetAxis: 'x',
+    targetSize: 0.35,
+    role: 'speaker',
   }),
 })
 
@@ -56,6 +64,19 @@ export const STUDIO_V2_POLAROID_STABILITY_PROFILE = Object.freeze({
   polygonOffsetUnits: -1,
   receiveShadow: false,
   castShadow: false,
+})
+
+export const STUDIO_V2_SPEAKER_STABILITY_PROFILE = Object.freeze({
+  architecture: 'FULL_GEOMETRY_SHADOW_FREE_TRILINEAR_SATIN',
+  castShadow: false,
+  disabledMaps: Object.freeze(['emissiveMap', 'metalnessMap', 'normalMap', 'roughnessMap']),
+  emissiveIntensity: 0,
+  envMapIntensity: 0.12,
+  metalness: 0.06,
+  normalScale: 0,
+  receiveShadow: false,
+  roughness: 0.82,
+  textureAnisotropy: 1,
 })
 
 function createStablePhotoBoardSurfaceGeometry() {
@@ -99,6 +120,24 @@ function tuneMaterial(source, role) {
     if ('metalness' in material && source.name !== 'metal') material.metalness = 0
     if ('envMapIntensity' in material) material.envMapIntensity = source.name === 'metal' ? 0.5 : 0.52
     if (material.normalScale) material.normalScale.setScalar(0.18)
+  } else if (role === 'speaker') {
+    if ('envMapIntensity' in material) {
+      material.envMapIntensity = STUDIO_V2_SPEAKER_STABILITY_PROFILE.envMapIntensity
+    }
+    if ('emissiveIntensity' in material) {
+      material.emissiveIntensity = STUDIO_V2_SPEAKER_STABILITY_PROFILE.emissiveIntensity
+    }
+    if (material.emissive?.isColor) material.emissive.set('#000000')
+    if ('metalness' in material) material.metalness = STUDIO_V2_SPEAKER_STABILITY_PROFILE.metalness
+    if ('roughness' in material) material.roughness = STUDIO_V2_SPEAKER_STABILITY_PROFILE.roughness
+    if ('clearcoat' in material) material.clearcoat = 0
+    if ('clearcoatRoughness' in material) material.clearcoatRoughness = 1
+    if (material.normalScale) {
+      material.normalScale.setScalar(STUDIO_V2_SPEAKER_STABILITY_PROFILE.normalScale)
+    }
+    STUDIO_V2_SPEAKER_STABILITY_PROFILE.disabledMaps.forEach((property) => {
+      if (property in material) material[property] = null
+    })
   } else if (role === 'photoBoard') {
     const isSurface = source.name.includes('SURFACE')
     if ('metalness' in material) material.metalness = 0
@@ -145,15 +184,20 @@ function configureModel(model, role, renderer) {
       detachedGeometries.add(object.geometry)
       object.geometry = createStablePhotoBoardSurfaceGeometry()
     }
+    const isPolaroidCamera = role === 'camera'
+    const isSpeaker = role === 'speaker'
     meshes += 1
     triangles += (object.geometry?.index?.count ?? object.geometry?.attributes?.position?.count ?? 0) / 3
-    const isPolaroidCamera = role === 'camera'
     object.castShadow = isPolaroidCamera
       ? STUDIO_V2_POLAROID_STABILITY_PROFILE.castShadow
       : role !== 'photo' && role !== 'photoBoard'
     object.receiveShadow = isPolaroidCamera
       ? STUDIO_V2_POLAROID_STABILITY_PROFILE.receiveShadow
       : true
+    if (isSpeaker) {
+      object.castShadow = STUDIO_V2_SPEAKER_STABILITY_PROFILE.castShadow
+      object.receiveShadow = STUDIO_V2_SPEAKER_STABILITY_PROFILE.receiveShadow
+    }
     if (!object.castShadow) shadowDisabledMeshes.push(object.name)
     const nearPlanarPolaroidSurface = isNearPlanarPolaroidSurface(object, role)
     if (nearPlanarPolaroidSurface) depthBiasedMeshes.push(object.name)
@@ -167,7 +211,14 @@ function configureModel(model, role, renderer) {
       TEXTURE_PROPERTIES.forEach((property) => {
         const texture = refined[property]
         if (!texture) return
-        texture.anisotropy = maxAnisotropy
+        texture.anisotropy = isSpeaker
+          ? STUDIO_V2_SPEAKER_STABILITY_PROFILE.textureAnisotropy
+          : maxAnisotropy
+        if (isSpeaker) {
+          texture.magFilter = THREE.LinearFilter
+          texture.minFilter = THREE.LinearMipmapLinearFilter
+          texture.generateMipmaps = true
+        }
         texture.needsUpdate = true
         textures.add(texture)
       })
@@ -187,7 +238,9 @@ function configureModel(model, role, renderer) {
         ...STUDIO_V2_POLAROID_STABILITY_PROFILE,
         depthBiasedMeshes,
       }
-      : null,
+      : role === 'speaker'
+        ? STUDIO_V2_SPEAKER_STABILITY_PROFILE
+        : null,
     shadowDisabledMeshes,
     textureFormats: [...new Set([...textures].map(textureFormatName).filter(Boolean))].sort(),
     textures: textures.size,
@@ -245,6 +298,7 @@ function placementRecord({ anchor, config, gltf, normalized, placement, resource
       materials: resources.materials,
       meshes: resources.meshes,
       seamStabilization: resources.seamStabilization,
+      shimmerStabilization: resources.shimmerStabilization,
       shadowDisabledMeshes: resources.shadowDisabledMeshes,
       textures: resources.textures,
       textureFormats: resources.textureFormats,
@@ -387,6 +441,7 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   const urls = {
     photoBoard: deliveryConfig.photoBoardUrl,
     camera: deliveryConfig.polaroidCameraUrl,
+    speaker: deliveryConfig.speakerUrl,
   }
   const photoBoardGltf = await loadAsset(
     loaderSupport.loader,
@@ -447,13 +502,22 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   photoBoardPlacement.record.photoPackaging = photoPackaging.report
   photoBoardPlacement.record.semanticIds.push(...photoPackaging.records.map(({ id }) => id))
 
-  const visualReadyGltfPromise = loadAsset(
-    loaderSupport.loader,
-    urls.camera,
-    STUDIO_V2_SCENE_EXPANSION_IDS.camera,
-    testConfig,
-    onAssetProgress,
-  )
+  const visualReadyGltfPromise = Promise.all([
+    loadAsset(
+      loaderSupport.loader,
+      urls.camera,
+      STUDIO_V2_SCENE_EXPANSION_IDS.camera,
+      testConfig,
+      onAssetProgress,
+    ),
+    loadAsset(
+      loaderSupport.loader,
+      urls.speaker,
+      STUDIO_V2_SCENE_EXPANSION_IDS.speaker,
+      testConfig,
+      onAssetProgress,
+    ),
+  ])
   visualReadyGltfPromise.catch(() => {})
 
   const placements = [photoBoardPlacement]
@@ -476,10 +540,11 @@ export async function loadStudioV2SceneExpansion(scene, renderer, deliveryConfig
   const loadVisualReadyAssets = () => {
     if (disposed) return Promise.resolve({ records: [], status: 'disposed' })
     if (visualReadyPromise) return visualReadyPromise
-    visualReadyPromise = visualReadyGltfPromise.then((cameraGltf) => {
+    visualReadyPromise = visualReadyGltfPromise.then(([cameraGltf, speakerGltf]) => {
       if (disposed) return { records: [], status: 'disposed' }
       const visualReadyPlacements = [
         createStaticPlacement(cameraGltf, renderer, ASSET_CONFIG.camera, urls.camera),
+        createStaticPlacement(speakerGltf, renderer, ASSET_CONFIG.speaker, urls.speaker),
       ]
       visualReadyPlacements.forEach(({ placement }) => group.add(placement))
       visualReadyPlacements.forEach(({ record }) => onAssetReady?.(record.anchorName, {
