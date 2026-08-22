@@ -426,6 +426,7 @@ export function createStudioV2MacbookFocus({
   domElement,
   getRadioState = () => null,
   isInteractionLocked = () => false,
+  isPriorityTarget = () => false,
   macbookRoot,
   openingReturnTargets = [],
   renderSize,
@@ -603,6 +604,10 @@ export function createStudioV2MacbookFocus({
 
   function onPointerDown(event) {
     if (event.button !== 0 && event.pointerType !== 'touch') return
+    if (isPriorityTarget(event)) {
+      pointerIntent = null
+      return
+    }
     if (isInteractionLocked()) {
       pointerIntent = null
       return

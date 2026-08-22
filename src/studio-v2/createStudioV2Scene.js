@@ -55,6 +55,9 @@ import { createStudioV2PhotoHover } from './studioV2PhotoHover'
 import { createStudioV2PhotoDetail } from './studioV2PhotoDetail'
 import { createStudioV2PhotoWallAdjustment } from './studioV2PhotoWallAdjustment'
 import {
+  createStudioV2SpeakerMusicInteraction,
+} from './createStudioV2SpeakerMusicInteraction'
+import {
   loadStudioV2SceneExpansion,
   STUDIO_V2_SCENE_EXPANSION_IDS,
 } from './studioV2SceneExpansion'
@@ -230,6 +233,7 @@ export function createStudioV2Scene({
   onRoomReady,
   onStudioV2Ready,
   audioController,
+  backgroundMusicManager,
   deliveryConfig,
   entryTestConfig,
   initialCameraPreset = STUDIO_V2_DEFAULT_CAMERA,
@@ -540,6 +544,7 @@ export function createStudioV2Scene({
   let photoHover = null
   let photoDetail = null
   let photoWallAdjustmentController = null
+  let speakerMusicInteraction = null
   let tableInteractionTarget = null
   let openingReturnStoolTargets = []
   let spatialDebug = null
@@ -956,6 +961,7 @@ export function createStudioV2Scene({
       cameraDirector,
       domElement: renderer.domElement,
       isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
+      isPriorityTarget: (event) => speakerMusicInteraction?.hit(event) ?? false,
       macbookRoot,
       openingReturnTargets: openingReturnStoolTargets,
       renderSize,
@@ -1080,6 +1086,21 @@ export function createStudioV2Scene({
     if (disposed || visualReadyResult.status !== 'ready') return null
     placedObjectRecords.push(...visualReadyResult.records)
     entryRoot.updateMatrixWorld(true)
+    const speakerRoot = entryRoot.getObjectByName(STUDIO_V2_SCENE_EXPANSION_IDS.speaker)
+    if (speakerRoot && backgroundMusicManager && !staticPhotoWallReview) {
+      cameraInteractionTargets.push(speakerRoot)
+      speakerMusicInteraction = createStudioV2SpeakerMusicInteraction({
+        backgroundMusicManager,
+        camera,
+        domElement: renderer.domElement,
+        isInteractionLocked: () => studioV2MacbookSiteLocksStudio(macbookSiteState),
+        onStateChange: (speakerState) => {
+          mount.dataset.speakerMusicTarget = speakerState.id
+          mount.dataset.speakerMusicLastAction = speakerState.lastAction
+        },
+        speakerRoot,
+      })
+    }
     if (typeof renderer.compileAsync === 'function') await renderer.compileAsync(scene, camera)
     else renderer.compile(scene, camera)
     if (floorReflection) {
@@ -1136,6 +1157,8 @@ export function createStudioV2Scene({
         mount.dataset.audioVolume = Number(audioState.volume ?? 0).toFixed(6)
         mount.dataset.audioPaused = String(audioState.paused ?? true)
         mount.dataset.audioRampOwnerCount = String(audioState.rampOwnerCount ?? 0)
+        mount.dataset.audioRampSource = audioState.rampSource ?? ''
+        mount.dataset.audioRampTargetVolume = audioState.rampTargetVolume ?? ''
         mount.dataset.audioFallbackArmed = String(audioState.fallbackArmed ?? false)
         mount.dataset.audioFallbackUsed = String(audioState.firstGestureFallbackUsed ?? false)
         mount.dataset.audioErrorCode = audioState.errorCode ?? ''
@@ -1954,6 +1977,8 @@ export function createStudioV2Scene({
       cancelAnimationFrame(animationFrame)
       resizeObserver.disconnect()
       unsubscribeAudioState?.()
+      speakerMusicInteraction?.dispose()
+      speakerMusicInteraction = null
       macbookFocus?.dispose()
       macbookFocus = null
       macbookSiteState = STUDIO_V2_MACBOOK_SITE_STATES.CLOSED
@@ -2001,9 +2026,13 @@ export function createStudioV2Scene({
       delete mount.dataset.visualReadyDelayMs
       delete mount.dataset.polaroidCameraVisibleMs
       delete mount.dataset.speakerVisibleMs
+      delete mount.dataset.speakerMusicTarget
+      delete mount.dataset.speakerMusicLastAction
       delete mount.dataset.audioState
       delete mount.dataset.audioCurrentTime
       delete mount.dataset.audioTrackId
+      delete mount.dataset.audioRampSource
+      delete mount.dataset.audioRampTargetVolume
       delete mount.dataset.renderFps
       delete mount.dataset.renderCalls
       delete mount.dataset.renderTriangles

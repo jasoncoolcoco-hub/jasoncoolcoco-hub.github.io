@@ -1,7 +1,8 @@
-import { useReducedMotion, useScroll, useTransform } from 'motion/react'
+import { useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import FootprintsSection from '../sections/FootprintsSection'
 import HomeSection from '../sections/HomeSection'
+import { useBackgroundMusic } from '../studio-v2/BackgroundMusicContext'
 import TransitionChapterNavigation from './TransitionChapterNavigation'
 
 const transitionScrollDistance = 170
@@ -22,11 +23,14 @@ export default function HomeTransitionShell({
   scrollContainerRef,
 }) {
   const shellRef = useRef(null)
+  const previousScrollProgressRef = useRef(0)
+  const footprintsExitArmedRef = useRef(true)
   const [homeReady, setHomeReady] = useState(false)
   const [compactTransition, setCompactTransition] = useState(() =>
     window.matchMedia(compactTransitionQuery).matches,
   )
   const reducedMotion = Boolean(useReducedMotion())
+  const backgroundMusic = useBackgroundMusic()
   const includeProjects = releaseScope !== 'v0.9'
   const totalScrollDistance = includeProjects
     ? fullScrollDistance
@@ -51,6 +55,24 @@ export default function HomeTransitionShell({
     container: scrollContainerRef,
     target: shellRef,
     offset: ['start start', 'end end'],
+  })
+  const footprintsExitThreshold = includeProjects ? footprintsEnd : 0.965
+  useMotionValueEvent(scrollYProgress, 'change', (nextProgress) => {
+    const previousProgress = previousScrollProgressRef.current
+    const movingDown = nextProgress > previousProgress
+    if (nextProgress < footprintsExitThreshold - 0.025) {
+      footprintsExitArmedRef.current = true
+    }
+    if (movingDown
+      && footprintsExitArmedRef.current
+      && previousProgress < footprintsExitThreshold
+      && nextProgress >= footprintsExitThreshold) {
+      footprintsExitArmedRef.current = false
+      void backgroundMusic?.suspendForContent?.({
+        source: 'footprints-exit',
+      })
+    }
+    previousScrollProgressRef.current = nextProgress
   })
   const transitionProgress = useTransform(
     scrollYProgress,

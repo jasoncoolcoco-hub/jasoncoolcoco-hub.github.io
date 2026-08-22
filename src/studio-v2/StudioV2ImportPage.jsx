@@ -10,7 +10,8 @@ import {
 import { studioV2EntryTestConfig } from './studioV2EntryGate'
 import { createStudioV2AudioController } from './studioV2AudioController'
 import { resolveStudioV2AudioCatalogue } from './studioV2AudioCatalogue'
-import StudioV2MusicControl from './StudioV2MusicControl'
+import { createBackgroundMusicManager } from './backgroundMusicManager'
+import StudioV2MusicAccessibilityControl from './StudioV2MusicAccessibilityControl'
 import {
   studioV2PhotoBoardGridEnabled,
   studioV2PhotoSlotOverlayEnabled,
@@ -46,6 +47,7 @@ export default function StudioV2ImportPage() {
   const [ready, setReady] = useState(false)
   const [runtime, setRuntime] = useState(null)
   const [audioController, setAudioController] = useState(null)
+  const [backgroundMusicManager, setBackgroundMusicManager] = useState(null)
   const searchParams = new URLSearchParams(window.location.search)
   const debugEnabled = searchParams.get('debug') === '1'
   const captureEnabled = searchParams.get('capture') === '1'
@@ -150,7 +152,9 @@ export default function StudioV2ImportPage() {
     const controller = createStudioV2AudioController({
       catalogueUrl: catalogueSource.url,
     })
+    const musicManager = createBackgroundMusicManager(controller)
     setAudioController(controller)
+    setBackgroundMusicManager(musicManager)
     controller.startEntryExperience()
     const scene = createStudioV2Scene({
       mount: mountRef.current,
@@ -187,6 +191,7 @@ export default function StudioV2ImportPage() {
       deliveryConfig,
       entryTestConfig,
       audioController: controller,
+      backgroundMusicManager: musicManager,
       onRoomReady: (roomAudit) => {
         setAudit(roomAudit)
       },
@@ -219,9 +224,11 @@ export default function StudioV2ImportPage() {
       window.clearTimeout(fadeTimerRef.current)
       window.cancelAnimationFrame(revealFrameRef.current)
       scene.dispose()
+      musicManager.destroy()
       controller.destroy()
       setRuntime(null)
       setAudioController(null)
+      setBackgroundMusicManager(null)
       document.documentElement.classList.remove('studio-v2-active')
       document.body.classList.remove('studio-v2-active')
     }
@@ -289,13 +296,14 @@ export default function StudioV2ImportPage() {
         onRetry={() => setAttempt((value) => value + 1)}
       />
       <MacbookSitePortal
+        backgroundMusicManager={backgroundMusicManager}
         runtime={runtime}
         sceneReady={ready}
         onPhaseChange={setMacbookSitePhase}
         onStateChange={setMacbookSiteState}
       />
-      {ready && audioController && !captureEnabled && !performanceEnabled && (
-        <StudioV2MusicControl audioController={audioController} />
+      {ready && backgroundMusicManager && !captureEnabled && !performanceEnabled && (
+        <StudioV2MusicAccessibilityControl manager={backgroundMusicManager} />
       )}
       {debugEnabled && !captureEnabled && !performanceEnabled && photoWallDebugPanelEnabled && (
         <Suspense fallback={null}>

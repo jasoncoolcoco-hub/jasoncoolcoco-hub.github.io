@@ -134,6 +134,7 @@ export function createStudioV2CameraDirector({
   let observationElapsedMs = 0
   let observationYaw = 0
   let observationPitch = 0
+  let idleObservationHandoffPending = false
   let frozenProgress = null
   let currentPathDistance = 0
   let baseRailFov = STUDIO_V2_ROOM_WIDE_START_POSE.fov
@@ -280,6 +281,7 @@ export function createStudioV2CameraDirector({
     overrideIdleDeadline = null
     pointerCandidate = null
     debugScrubFrozen = false
+    idleObservationHandoffPending = false
     return true
   }
 
@@ -813,6 +815,8 @@ export function createStudioV2CameraDirector({
     return transitionTo(STUDIO_V2_TABLE_OVERVIEW_POSE, {
       allowOfficial: true,
       duration: focusReducedMotion(options.reducedMotionOverride) ? 200 : 1300,
+      easing: 'smootherstep',
+      orientationBlend: true,
       onComplete: () => {
         captureEndpointSnapshot('MACBOOK_EXIT_FINAL_TRANSITION')
         endpointPhase = 'TABLE_OVERVIEW'
@@ -921,6 +925,8 @@ export function createStudioV2CameraDirector({
       duration: focusReducedMotion(options.reducedMotionOverride)
         ? 200
         : (options.duration ?? 1350),
+      easing: 'smootherstep',
+      orientationBlend: true,
       intermediatePosition: focusReducedMotion(options.reducedMotionOverride)
         ? null
         : options.intermediatePosition,
@@ -1023,7 +1029,8 @@ export function createStudioV2CameraDirector({
       if (isPaused(time)) return true
       inputOwner = 'CAMERA_DIRECTOR'
       inputType = 'IDLE_OBSERVATION'
-      updateIdleObservation(deltaMs)
+      updateIdleObservation(idleObservationHandoffPending ? 0 : deltaMs)
+      idleObservationHandoffPending = false
       return true
     }
     return false
@@ -1110,6 +1117,7 @@ export function createStudioV2CameraDirector({
     observationElapsedMs = 0
     observationYaw = 0
     observationPitch = 0
+    idleObservationHandoffPending = false
     debugScrubFrozen = false
     driftWallStartedAt = null
     entryStartedAt = startedAt
@@ -1216,6 +1224,8 @@ export function createStudioV2CameraDirector({
     }, {
       allowOfficial: true,
       duration,
+      easing: 'smootherstep',
+      orientationBlend: true,
       onComplete: () => enterTableFreeOrbit(),
     })
     tableSkipAudit = {
@@ -1268,7 +1278,7 @@ export function createStudioV2CameraDirector({
         endpointPhase = 'IDLE_OBSERVATION'
         inputOwner = 'CAMERA_DIRECTOR'
         inputType = 'IDLE_OBSERVATION'
-        updateIdleObservation(0)
+        idleObservationHandoffPending = true
       },
     })
   }

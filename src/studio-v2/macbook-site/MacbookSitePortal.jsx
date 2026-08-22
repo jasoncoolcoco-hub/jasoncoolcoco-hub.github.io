@@ -7,6 +7,8 @@ import {
   studioV2MacbookSiteCanOpen,
   studioV2MacbookSiteCanTransition,
 } from './studioV2MacbookPortal'
+import { BackgroundMusicProvider } from '../BackgroundMusicContext'
+import GlobalBackgroundMusicControl from '../GlobalBackgroundMusicControl'
 
 let homeModulePromise = null
 const loadHomeModule = () => {
@@ -26,7 +28,13 @@ function preloadImage(source) {
   })
 }
 
-export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtime, sceneReady }) {
+export default function MacbookSitePortal({
+  backgroundMusicManager,
+  onPhaseChange,
+  onStateChange,
+  runtime,
+  sceneReady,
+}) {
   const [phase, setPhase] = useState(STUDIO_V2_MACBOOK_SITE_PHASES.CLOSED)
   const [siteState, setSiteState] = useState(STUDIO_V2_MACBOOK_SITE_STATES.CLOSED)
   const [sitePrepared, setSitePrepared] = useState(false)
@@ -99,6 +107,9 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
     clearScheduled()
     setSiteMounted(true)
     if (!updateSiteState(STUDIO_V2_MACBOOK_SITE_STATES.OPENING)) return false
+    void backgroundMusicManager?.suspendForContent?.({
+      source: 'macbook-site-opening',
+    })
     updatePhase(STUDIO_V2_MACBOOK_SITE_PHASES.LAUNCHING)
     const homeReady = prepareHome()
     const launchDuration = reducedMotion
@@ -123,7 +134,7 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
       }))
     }, launchDuration)
     return source
-  }, [clearScheduled, prepareHome, reducedMotion, runtime, scheduleFrame, scheduleTimer, updatePhase, updateSiteState])
+  }, [backgroundMusicManager, clearScheduled, prepareHome, reducedMotion, runtime, scheduleFrame, scheduleTimer, updatePhase, updateSiteState])
 
   const closeSite = useCallback((source = 'CONTROL') => {
     if (siteStateRef.current !== STUDIO_V2_MACBOOK_SITE_STATES.OPEN) return false
@@ -214,31 +225,34 @@ export default function MacbookSitePortal({ onPhaseChange, onStateChange, runtim
       aria-label="Jason Li home page inside Fred Studio"
       style={style}
     >
-      <button
-        ref={backButtonRef}
-        className="macbook-site-portal__back"
-        type="button"
-        tabIndex={siteActive ? 0 : -1}
-        onClick={() => closeSite('BACK_CONTROL')}
-      >
-        ← STUDIO
-      </button>
-      <div
-        ref={scrollContainerRef}
-        className="macbook-site-portal__scroll"
-        data-scroll-owner="MACBOOK_SITE_MODE"
-        onScroll={(event) => {
-          savedScrollTopRef.current = event.currentTarget.scrollTop
-        }}
-      >
-        <Suspense fallback={<div className="macbook-site-portal__loading">LOADING HOME</div>}>
-          <HomeTransitionShell
-            annotationsActive={siteActive}
-            releaseScope="v0.9"
-            scrollContainerRef={scrollContainerRef}
-          />
-        </Suspense>
-      </div>
+      <BackgroundMusicProvider manager={backgroundMusicManager}>
+        <button
+          ref={backButtonRef}
+          className="macbook-site-portal__back"
+          type="button"
+          tabIndex={siteActive ? 0 : -1}
+          onClick={() => closeSite('BACK_CONTROL')}
+        >
+          ← STUDIO
+        </button>
+        <GlobalBackgroundMusicControl active={siteActive} />
+        <div
+          ref={scrollContainerRef}
+          className="macbook-site-portal__scroll"
+          data-scroll-owner="MACBOOK_SITE_MODE"
+          onScroll={(event) => {
+            savedScrollTopRef.current = event.currentTarget.scrollTop
+          }}
+        >
+          <Suspense fallback={<div className="macbook-site-portal__loading">LOADING HOME</div>}>
+            <HomeTransitionShell
+              annotationsActive={siteActive}
+              releaseScope="v0.9"
+              scrollContainerRef={scrollContainerRef}
+            />
+          </Suspense>
+        </div>
+      </BackgroundMusicProvider>
       <div className="macbook-site-portal__exit-veil" aria-hidden="true" />
     </section>
   )

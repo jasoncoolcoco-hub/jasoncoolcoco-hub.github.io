@@ -1,4 +1,7 @@
 const DEFAULT_CATALOGUE_URL = '/audio/fred-studio/catalog.published.json'
+const TAIL_FADE_WINDOW_SECONDS = 10
+const TAIL_SILENCE_WINDOW_SECONDS = 2
+const TAIL_FADE_RESUME_RAMP_MS = 300
 
 const INITIAL_STATE = Object.freeze({
   status: 'idle',
@@ -12,6 +15,15 @@ const INITIAL_STATE = Object.freeze({
   volume: 1,
   paused: true,
   rampOwnerCount: 0,
+  rampSource: null,
+  rampTargetVolume: null,
+  fadePausePending: false,
+  tailFadeActive: false,
+  tailFadeStarted: false,
+  tailFadeStartedAtMediaTime: null,
+  tailSilenceLocked: false,
+  tailFadeWindowSeconds: TAIL_FADE_WINDOW_SECONDS,
+  tailSilenceWindowSeconds: TAIL_SILENCE_WINDOW_SECONDS,
   loop: false,
   error: null,
   errorCode: null,
@@ -21,7 +33,7 @@ const INITIAL_STATE = Object.freeze({
   entryStatus: 'idle',
   entryStartedAt: null,
   entryPlaybackStartedAt: null,
-  entryFadeDurationMs: 4500,
+  entryFadeDurationMs: 1200,
   entryTargetVolume: 0.1,
   autoplayPolicy: 'untested',
   fallbackArmed: false,
@@ -113,10 +125,15 @@ export function createStudioV2AudioController({
   let cataloguePromise = null
   let catalogueAbortController = null
   let selectedTrack = null
-  let togglePromise = null
   let destroyed = false
   let fadeFrame = null
+  let fadeResolve = null
+  let fadeRevision = 0
   let manualIntentRevision = 0
+  let playbackRequested = false
+  let tailFadeSequenceRevision = 0
+  let tailFadeStartedForPass = false
+  let tailResumeVolume = null
   let state = {
     ...INITIAL_STATE,
     catalogueUrl,
@@ -151,25 +168,51 @@ export function createStudioV2AudioController({
     errorCode,
   })
 
-  const syncTime = () => publish({
-    currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
-    duration: Number.isFinite(audio.duration) ? audio.duration : null,
-  })
-  const handleLoadedMetadata = () => publish({
-    currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
-    duration: Number.isFinite(audio.duration) ? audio.duration : null,
-    status: state.status === 'track-loading' ? 'ready' : state.status,
-  })
+  const syncTime = () => {
+    const currentTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0
+    const duration = Number.isFinite(audio.duration) ? audio.duration : null
+    const next = publish({ currentTime, duration })
+    if (
+      duration !== null
+      && currentTime < duration - TAIL_FADE_WINDOW_SECONDS
+      && tailFadeStartedForPass
+      && !audio.paused
+    ) {
+      resetTailFadePass({ cancelRamp: true })
+    }
+    maybeStartTailFade()
+    return next
+  }
+  const handleLoadedMetadata = () => {
+    const next = publish({
+      currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+      duration: Number.isFinite(audio.duration) ? audio.duration : null,
+      status: state.status === 'track-loading' ? 'ready' : state.status,
+    })
+    maybeStartTailFade()
+    return next
+  }
   const handlePlaying = () => publish({ status: 'playing', paused: false, error: null, errorCode: null })
   const handlePause = () => {
     if (!selectedTrack || state.status === 'ready' || state.status === 'error') return
     publish({ status: 'paused', paused: true, currentTime: audio.currentTime })
   }
-  const handleEnded = () => publish({
-    status: 'ready',
-    paused: true,
-    currentTime: Number.isFinite(audio.duration) ? audio.duration : audio.currentTime,
-  })
+  const handleEnded = () => {
+    playbackRequested = false
+    tailFadeSequenceRevision += 1
+    tailFadeStartedForPass = true
+    tailResumeVolume = null
+    cancelVolumeRamp()
+    audio.volume = 0
+    return publish({
+      status: 'ready',
+      paused: true,
+      volume: 0,
+      currentTime: Number.isFinite(audio.duration) ? audio.duration : audio.currentTime,
+      tailFadeActive: false,
+      tailSilenceLocked: true,
+    })
+  }
   const handleAudioError = () => {
     const message = mediaErrorMessage(audio.error)
     publish({ latestMediaError: message })
@@ -195,6 +238,7 @@ export function createStudioV2AudioController({
     if (cataloguePromise && !force) return cataloguePromise
 
     if (force && selectedTrack) {
+      playbackRequested = false
       audio.pause()
       selectedTrack = null
       audio.removeAttribute('src')
@@ -286,7 +330,7 @@ export function createStudioV2AudioController({
     return cataloguePromise
   }
 
-  async function setTrack(trackId, { preload = true } = {}) {
+  async function setTrack(trackId, { preload = true, preservePlaybackRequest = false } = {}) {
     if (destroyed) return snapshot()
     if (!catalogue) await loadCatalogue()
     if (!catalogue) return snapshot()
@@ -295,7 +339,9 @@ export function createStudioV2AudioController({
     if (!nextTrack.enabled) return setError(new Error(`Track ${trackId} is disabled.`))
     if (selectedTrack?.id === nextTrack.id) return snapshot()
 
+    resetTailFadePass({ cancelRamp: true })
     audio.pause()
+    if (!preservePlaybackRequest) playbackRequested = false
     selectedTrack = nextTrack
     audio.src = nextTrack.file
     audio.preload = preload ? 'auto' : 'none'
@@ -359,7 +405,7 @@ export function createStudioV2AudioController({
     })
   }
 
-  async function loadDefaultTrack() {
+  async function loadDefaultTrack({ preservePlaybackRequest = false } = {}) {
     if (!catalogue) await loadCatalogue()
     if (!catalogue) return snapshot()
     if (catalogue.defaultTrackId === null) {
@@ -370,12 +416,15 @@ export function createStudioV2AudioController({
         errorCode: 'NO_PUBLISHED_TRACK',
       })
     }
-    return setTrack(catalogue.defaultTrackId)
+    return setTrack(catalogue.defaultTrackId, { preservePlaybackRequest })
   }
 
-  async function play() {
+  async function play({ durationMs = 1200, source = 'manual-control' } = {}) {
     if (destroyed) return snapshot()
-    manualIntentRevision += 1
+    const intentRevision = ++manualIntentRevision
+    playbackRequested = true
+    cancelTailFadeSequence({ rememberVolume: true })
+    cancelVolumeRamp()
     publish({
       manualIntentState: 'play',
       playAttemptState: 'attempting',
@@ -383,31 +432,44 @@ export function createStudioV2AudioController({
       error: null,
       errorCode: null,
     })
-    if (!selectedTrack) await loadDefaultTrack()
-    if (!selectedTrack) return snapshot()
-    const isFirstPlayback = state.entryPlaybackStartedAt === null
-    audio.preload = 'auto'
-    if (isFirstPlayback) {
-      audio.volume = 0
-      publish({ volume: 0 })
+    if (!selectedTrack) await loadDefaultTrack({ preservePlaybackRequest: true })
+    if (!selectedTrack || intentRevision !== manualIntentRevision || !playbackRequested) {
+      return snapshot()
     }
+    audio.preload = 'auto'
     try {
-      await audio.play()
+      if (getTailFadeTiming()?.isSilenceZone) lockTailSilence()
+      if (audio.paused) await audio.play()
+      if (intentRevision !== manualIntentRevision || !playbackRequested) {
+        if (!playbackRequested && !audio.paused) audio.pause()
+        return snapshot()
+      }
       const playbackStartedAt = performance.now()
       const targetVolume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
-      if (isFirstPlayback) {
-        fadeToEntryVolume(playbackStartedAt)
-      } else if (audio.volume < targetVolume) {
-        fadeToEntryVolume(playbackStartedAt, 900, audio.volume)
-      }
-      return publish({
+      publish({
         status: 'playing', paused: false, error: null, errorCode: null,
         playAttemptState: 'playing', latestPlayPromiseResult: 'resolved',
         entryStatus: 'playing-by-control',
         entryPlaybackStartedAt: state.entryPlaybackStartedAt ?? playbackStartedAt,
         autoplayPolicy: 'explicit-control',
       })
+      const tailTiming = getTailFadeTiming()
+      if (tailTiming?.isSilenceZone) {
+        lockTailSilence()
+      } else if (tailTiming) {
+        void startTailFade({ force: true, resumeTargetVolume: targetVolume })
+      } else {
+        resetTailFadePass()
+        void rampVolume({
+          durationMs,
+          source,
+          targetVolume,
+        })
+      }
+      return snapshot()
     } catch (error) {
+      if (intentRevision !== manualIntentRevision || !playbackRequested) return snapshot()
+      playbackRequested = false
       return publish({
         status: 'paused',
         paused: true,
@@ -424,7 +486,9 @@ export function createStudioV2AudioController({
   function pause() {
     if (destroyed || !selectedTrack) return snapshot()
     manualIntentRevision += 1
+    playbackRequested = false
     publish({ manualIntentState: 'pause' })
+    cancelTailFadeSequence({ rememberVolume: true })
     cancelVolumeRamp()
     audio.pause()
     return publish({
@@ -435,10 +499,54 @@ export function createStudioV2AudioController({
     })
   }
 
+  function fadePause({ durationMs = 850, source = 'manual-control' } = {}) {
+    if (destroyed) return Promise.resolve(snapshot())
+    manualIntentRevision += 1
+    playbackRequested = false
+    if (!selectedTrack) return Promise.resolve(snapshot())
+    cancelTailFadeSequence({ rememberVolume: true })
+    if (audio.paused) {
+      cancelVolumeRamp()
+      return Promise.resolve(publish({
+        status: 'paused',
+        paused: true,
+        fadePausePending: false,
+        currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+      }))
+    }
+    return rampVolume({
+      durationMs,
+      source,
+      targetVolume: 0,
+      startPatch: {
+        status: 'fading-out',
+        paused: false,
+        fadePausePending: true,
+        manualIntentState: source === 'macbook-site-opening'
+          ? state.manualIntentState
+          : 'pause',
+      },
+      completePatch: () => {
+        audio.pause()
+        return {
+          status: 'paused',
+          paused: true,
+          fadePausePending: false,
+          currentTime: Number.isFinite(audio.currentTime) ? audio.currentTime : 0,
+          entryStatus: source === 'macbook-site-opening'
+            ? 'paused-by-macbook-site'
+            : 'paused-by-control',
+        }
+      },
+    })
+  }
+
   function stop() {
     if (destroyed || !selectedTrack) return snapshot()
     manualIntentRevision += 1
+    playbackRequested = false
     publish({ manualIntentState: 'stop' })
+    resetTailFadePass()
     cancelVolumeRamp()
     audio.pause()
     try {
@@ -449,16 +557,10 @@ export function createStudioV2AudioController({
     return publish({ status: 'ready', paused: true, currentTime: 0, entryStatus: 'control-ready' })
   }
 
-  function toggle() {
+  function toggle({ fadeInMs = 1200, fadeOutMs = 850, source = 'manual-control' } = {}) {
     if (destroyed) return Promise.resolve(snapshot())
-    if (togglePromise) return togglePromise
-    togglePromise = (async () => {
-      if (state.status === 'playing' || !audio.paused) return pause()
-      return play()
-    })().finally(() => {
-      togglePromise = null
-    })
-    return togglePromise
+    if (!playbackRequested) return play({ durationMs: fadeInMs, source })
+    return fadePause({ durationMs: fadeOutMs, source })
   }
 
   async function moveTrack(direction) {
@@ -474,6 +576,8 @@ export function createStudioV2AudioController({
 
   function destroy() {
     if (destroyed) return
+    playbackRequested = false
+    tailFadeSequenceRevision += 1
     audio.pause()
     cancelVolumeRamp()
     destroyed = true
@@ -488,31 +592,226 @@ export function createStudioV2AudioController({
     selectedTrack = null
   }
 
-  function cancelVolumeRamp() {
-    if (fadeFrame === null) return
-    cancelAnimationFrame(fadeFrame)
-    fadeFrame = null
-    publish({ rampOwnerCount: 0 })
+  function getTailFadeTiming() {
+    const duration = Number.isFinite(audio.duration) ? audio.duration : null
+    const currentTime = Number.isFinite(audio.currentTime) ? audio.currentTime : null
+    if (duration === null || duration <= 0 || currentTime === null) return null
+    const remainingSeconds = duration - currentTime
+    if (remainingSeconds <= 0 || remainingSeconds > TAIL_FADE_WINDOW_SECONDS) return null
+    return {
+      duration,
+      currentTime,
+      remainingSeconds,
+      isSilenceZone: remainingSeconds <= TAIL_SILENCE_WINDOW_SECONDS,
+      fadeDurationMs: Math.max(
+        1,
+        (remainingSeconds - TAIL_SILENCE_WINDOW_SECONDS) * 1000,
+      ),
+    }
   }
 
-  function fadeToEntryVolume(startedAt, durationMs = 4500, startVolume = 0) {
+  function cancelTailFadeSequence({ rememberVolume = false } = {}) {
+    if (rememberVolume && tailFadeStartedForPass && getTailFadeTiming()) {
+      const currentVolume = Math.max(0, Math.min(1, audio.volume))
+      if (currentVolume > 0 || tailResumeVolume === null) tailResumeVolume = currentVolume
+    }
+    tailFadeSequenceRevision += 1
+    if (!state.tailFadeActive) return snapshot()
+    return publish({ tailFadeActive: false })
+  }
+
+  function resetTailFadePass({ cancelRamp = false } = {}) {
+    const wasTailRamp = state.rampSource === 'track-tail-fade'
+      || state.rampSource === 'track-tail-resume'
+    tailFadeSequenceRevision += 1
+    tailFadeStartedForPass = false
+    tailResumeVolume = null
+    if (cancelRamp && wasTailRamp) cancelVolumeRamp()
+    return publish({
+      tailFadeActive: false,
+      tailFadeStarted: false,
+      tailFadeStartedAtMediaTime: null,
+      tailSilenceLocked: false,
+    })
+  }
+
+  function lockTailSilence() {
+    const timing = getTailFadeTiming()
+    if (!timing?.isSilenceZone) return snapshot()
+    const shouldPause = state.fadePausePending || !playbackRequested
+    tailFadeSequenceRevision += 1
+    tailFadeStartedForPass = true
+    tailResumeVolume = 0
+    if (audio.loop) audio.loop = false
     cancelVolumeRamp()
-    const targetVolume = Math.min(0.1, selectedTrack?.volume ?? 0.1)
-    const tick = (now) => {
-      if (destroyed || audio.paused) {
+    audio.volume = 0
+    if (shouldPause && !audio.paused) audio.pause()
+    return publish({
+      loop: false,
+      volume: 0,
+      tailFadeActive: false,
+      tailFadeStarted: true,
+      tailFadeStartedAtMediaTime: state.tailFadeStartedAtMediaTime ?? timing.currentTime,
+      tailSilenceLocked: true,
+    })
+  }
+
+  function maybeStartTailFade() {
+    const timing = getTailFadeTiming()
+    if (timing?.isSilenceZone) {
+      lockTailSilence()
+      return
+    }
+    if (
+      destroyed
+      || audio.paused
+      || !playbackRequested
+      || tailFadeStartedForPass
+      || !timing
+    ) return
+    void startTailFade()
+  }
+
+  async function startTailFade({ force = false, resumeTargetVolume = null } = {}) {
+    const timing = getTailFadeTiming()
+    if (destroyed || audio.paused || !playbackRequested || !timing) return snapshot()
+    if (timing.isSilenceZone) return lockTailSilence()
+    if (tailFadeStartedForPass && !force) return snapshot()
+
+    tailFadeStartedForPass = true
+    const sequenceRevision = ++tailFadeSequenceRevision
+    const targetVolume = Math.min(0.1, resumeTargetVolume ?? selectedTrack?.volume ?? 0.1)
+    const expectedEnvelopeVolume = targetVolume * Math.min(
+      1,
+      Math.max(0, (
+        timing.remainingSeconds - TAIL_SILENCE_WINDOW_SECONDS
+      ) / (
+        TAIL_FADE_WINDOW_SECONDS - TAIL_SILENCE_WINDOW_SECONDS
+      )),
+    )
+    const resumePeakVolume = Math.min(
+      expectedEnvelopeVolume,
+      tailResumeVolume ?? expectedEnvelopeVolume,
+    )
+    tailResumeVolume = null
+
+    // A looping media element may never emit `ended`; disarm it before the bad
+    // terminal sample so the controlled fade always resolves into silence.
+    if (audio.loop) audio.loop = false
+    publish({
+      loop: false,
+      tailFadeActive: true,
+      tailFadeStarted: true,
+      tailFadeStartedAtMediaTime: state.tailFadeStartedAtMediaTime ?? timing.currentTime,
+    })
+
+    if (audio.volume === 0 && resumePeakVolume > 0) {
+      const resumeRampMs = Math.min(
+        TAIL_FADE_RESUME_RAMP_MS,
+        Math.max(80, timing.fadeDurationMs * 0.15),
+      )
+      await rampVolume({
+        durationMs: resumeRampMs,
+        source: 'track-tail-resume',
+        targetVolume: resumePeakVolume,
+      })
+      if (
+        destroyed
+        || sequenceRevision !== tailFadeSequenceRevision
+        || audio.paused
+        || !playbackRequested
+      ) return snapshot()
+    }
+
+    const remainingTiming = getTailFadeTiming()
+    if (!remainingTiming) {
+      publish({ tailFadeActive: false })
+      return snapshot()
+    }
+    if (remainingTiming.isSilenceZone) return lockTailSilence()
+    await rampVolume({
+      durationMs: remainingTiming.fadeDurationMs,
+      source: 'track-tail-fade',
+      targetVolume: 0,
+    })
+    if (sequenceRevision === tailFadeSequenceRevision && !destroyed) {
+      audio.volume = 0
+      publish({
+        tailFadeActive: false,
+        tailSilenceLocked: true,
+        volume: 0,
+      })
+    }
+    return snapshot()
+  }
+
+  function cancelVolumeRamp() {
+    fadeRevision += 1
+    if (fadeFrame !== null) cancelAnimationFrame(fadeFrame)
+    fadeFrame = null
+    const resolve = fadeResolve
+    fadeResolve = null
+    publish({
+      rampOwnerCount: 0,
+      rampSource: null,
+      rampTargetVolume: null,
+      fadePausePending: false,
+      volume: audio.volume,
+    })
+    resolve?.(snapshot())
+  }
+
+  function rampVolume({
+    completePatch = null,
+    durationMs,
+    source,
+    startPatch = null,
+    targetVolume,
+  }) {
+    cancelVolumeRamp()
+    const revision = ++fadeRevision
+    const startedAt = performance.now()
+    const startVolume = audio.volume
+    const safeDuration = Math.max(0, Number(durationMs) || 0)
+    publish({
+      ...(startPatch ?? {}),
+      rampOwnerCount: safeDuration > 0 && startVolume !== targetVolume ? 1 : 0,
+      rampSource: source,
+      rampTargetVolume: targetVolume,
+      volume: startVolume,
+    })
+    return new Promise((resolve) => {
+      fadeResolve = resolve
+      const finish = () => {
+        if (revision !== fadeRevision || destroyed) return
+        audio.volume = targetVolume
         fadeFrame = null
-        publish({ rampOwnerCount: 0 })
+        fadeResolve = null
+        const patch = typeof completePatch === 'function' ? completePatch() : completePatch
+        const next = publish({
+          ...(patch ?? {}),
+          volume: audio.volume,
+          rampOwnerCount: 0,
+          rampSource: null,
+          rampTargetVolume: null,
+        })
+        resolve(next)
+      }
+      if (safeDuration === 0 || startVolume === targetVolume) {
+        finish()
         return
       }
-      const progress = Math.min(1, Math.max(0, (now - startedAt) / durationMs))
-      const eased = 1 - (1 - progress) ** 3
-      audio.volume = startVolume + ((targetVolume - startVolume) * eased)
-      publish({ volume: audio.volume, rampOwnerCount: progress < 1 ? 1 : 0 })
-      if (progress < 1) fadeFrame = requestAnimationFrame(tick)
-      else fadeFrame = null
-    }
-    fadeFrame = requestAnimationFrame(tick)
-    publish({ rampOwnerCount: 1 })
+      const tick = (now) => {
+        if (destroyed || revision !== fadeRevision) return
+        const progress = Math.min(1, Math.max(0, (now - startedAt) / safeDuration))
+        const eased = 1 - (1 - progress) ** 3
+        audio.volume = startVolume + ((targetVolume - startVolume) * eased)
+        publish({ volume: audio.volume, rampOwnerCount: 1 })
+        if (progress < 1) fadeFrame = requestAnimationFrame(tick)
+        else finish()
+      }
+      fadeFrame = requestAnimationFrame(tick)
+    })
   }
 
   async function prepareEntry() {
@@ -546,6 +845,7 @@ export function createStudioV2AudioController({
     prepareEntry,
     startEntryExperience,
     next: () => moveTrack(1),
+    fadePause,
     pause,
     play,
     previous: () => moveTrack(-1),

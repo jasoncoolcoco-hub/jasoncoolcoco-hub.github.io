@@ -5,6 +5,13 @@ function source(name) {
   return fs.readFileSync(new URL(`./${name}`, import.meta.url), 'utf8')
 }
 
+function functionSlice(contents, functionName, nextFunctionName) {
+  const start = contents.indexOf(`function ${functionName}`)
+  const end = contents.indexOf(`function ${nextFunctionName}`, start + 1)
+  assert.ok(start >= 0 && end > start, `${functionName} source block should exist`)
+  return contents.slice(start, end)
+}
+
 const ambient = source('studioV2AmbientCamera.js')
 const director = source('studioV2CameraDirector.js')
 const focus = source('studioV2PhotoWallFocus.js')
@@ -28,7 +35,7 @@ assert.doesNotMatch(idleUpdate, /camera\.position\.(?:add|lerp)|applyRailPose/)
 
 const ambientUpdate = director.match(/function updateAmbient\(time, deltaMs\) \{[\s\S]*?\n  \}/)?.[0] ?? ''
 assert.match(ambientUpdate, /state === STUDIO_V2_CAMERA_STATES\.IDLE_OBSERVATION/)
-assert.match(ambientUpdate, /updateIdleObservation\(deltaMs\)/)
+assert.match(ambientUpdate, /updateIdleObservation\(idleObservationHandoffPending \? 0 : deltaMs\)/)
 assert.doesNotMatch(ambientUpdate, /driftElapsedMs \+ deltaMs|applyRailPose/)
 
 assert.match(director, /photoWallFocusSourcePose = getCurrentPose\(\)/)
@@ -42,7 +49,19 @@ assert.match(director, /easing: 'smootherstep'/)
 assert.match(director, /orientationBlend: true/)
 assert.match(director, /\.slerp\(transition\.orientation\.to, eased\)/)
 assert.match(director, /function requestOpeningReturn\(options = \{\}\)/)
-assert.match(director, /state = STUDIO_V2_CAMERA_STATES\.IDLE_OBSERVATION[\s\S]*?updateIdleObservation\(0\)/)
+const tableSkip = functionSlice(director, 'requestTableSkip', 'requestOpeningReturn')
+const openingReturn = functionSlice(director, 'requestOpeningReturn', 'enterTableFreeOrbit')
+const macbookExit = functionSlice(director, 'closeMacbookFocus', 'refreshMacbookFocus')
+const photoWallExit = functionSlice(director, 'closePhotoWallFocus', 'refreshPhotoWallFocus')
+for (const transitionSource of [tableSkip, macbookExit, photoWallExit]) {
+  assert.match(transitionSource, /easing: 'smootherstep'/)
+  assert.match(transitionSource, /orientationBlend: true/)
+  assert.doesNotMatch(transitionSource, /exactFov: true/)
+}
+assert.match(openingReturn, /idleObservationHandoffPending = true/)
+assert.doesNotMatch(openingReturn, /updateIdleObservation\(0\)/)
+assert.match(director, /updateIdleObservation\(idleObservationHandoffPending \? 0 : deltaMs\)/)
+assert.match(director, /idleObservationHandoffPending = false/)
 assert.match(macbook, /openingReturnTargets/)
 assert.match(macbook, /raycaster\.intersectObjects\(target, true\)/)
 assert.match(macbook, /createMacbookDistanceMaterialStabilizer/)
