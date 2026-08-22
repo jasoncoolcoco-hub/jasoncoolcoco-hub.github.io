@@ -97,7 +97,7 @@ export const siteContent = {
     metaDescription: 'A large-scale 3D studio hard-shell study for Jason Li\'s personal website.',
   },
   studioV2: {
-    metaTitle: 'Fred Studio Imported Loft V2 — Jason Li',
+    metaTitle: 'Jason Li — Personal Space',
     metaDescription: 'A faithful browser presentation of the furnished loft model in Fred Studio V2.',
   },
   navigation: {
